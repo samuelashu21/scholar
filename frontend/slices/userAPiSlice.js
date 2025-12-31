@@ -114,7 +114,7 @@ export const userApiSlice = apiSlice.injectEndpoints({
       }),
       providesTags: ["User"],
     }),
-
+ 
     getSellerById: builder.query({
       query: (userId) => `/api/users/${userId}`, // your backend route
       keepUnusedDataFor: 5,

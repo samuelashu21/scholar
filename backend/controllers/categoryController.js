@@ -1,31 +1,39 @@
 import asyncHandler from "../middleware/asyncHandler.js";
 import Category from "../models/categoryModel.js";
-
+ 
 // @desc    Get all categories
 const getCategories = asyncHandler(async (req, res) => {
   const categories = await Category.find({});
   res.json(categories);
 });
-
+ 
 // @desc    Add new category (admin only)
 const createCategory = asyncHandler(async (req, res) => {
-  const { categoryname, image } = req.body;
+  try {
+    const { categoryname, image } = req.body;
 
-  if (!categoryname || !image) {
-    res.status(400);
-    throw new Error("Category name and image are required");
+    if (!categoryname || !image) {
+      throw new Error("Category name and image are required");
+    }
+    const categoryExists = await Category.findOne({ categoryname });
+
+    if (categoryExists) {
+      res.status(400);
+      throw new Error("Category already exists");
+    }
+    
+    const category = new Category({ categoryname, image });
+
+    const createdCategory = await category.save();
+    res.status(201).json(createdCategory);
+  } catch (error) {
+    res.status(500).json({
+      message: error.message || "Server error while creating category",
+      error: error.stack,
+    });
   }
-
-  const categoryExists = await Category.findOne({ categoryname });
-  if (categoryExists) {
-    res.status(400);
-    throw new Error("Category already exists");
-  }
-
-  const category = new Category({ categoryname, image });
-  const createdCategory = await category.save();
-  res.status(201).json(createdCategory);
 });
+
 
 // @desc    Update category (admin only)
 const updateCategory = asyncHandler(async (req, res) => {

@@ -5,7 +5,7 @@ import {
   TextInput,
   ScrollView, 
   ActivityIndicator, 
-  Image,
+  Image, 
   Platform,
   SafeAreaView,
   KeyboardAvoidingView,

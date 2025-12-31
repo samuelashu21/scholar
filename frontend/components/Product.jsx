@@ -1,175 +1,266 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
-import { Link } from "expo-router";
+import { useState, useEffect } from "react";
 import Rating from "./Rating";
 import { Colors } from "../constants/Utils";
 import { BASE_URL } from "../constants/Urls";
+import { Ionicons } from "@expo/vector-icons";
 import { timeAgo } from "../utils/timeAgo";
 
+import { useRouter } from "expo-router";
+import { useSelector } from "react-redux";
+
+import { getDeviceId } from "../utils/deviceId";
+ 
+import {
+  useAddToWishlistMutation,
+  useRemoveFromWishlistMutation,  
+  useGetWishlistQuery,
+} from "../slices/wishlistApiSlice";
+
+import {
+  useToggleLikeMutation,
+  useAddViewMutation,
+} from "../slices/productsApiSlice";
+
 function Product({ product }) {
-  // Helper function to ensure we have a full URL
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return null;
-    if (imagePath.startsWith("http")) {
-      return imagePath;
+  const router = useRouter();
+  const { userInfo } = useSelector((state) => state.auth);
+
+  /* ---------------- Wishlist ---------------- */
+  const { data: wishlist } = useGetWishlistQuery();
+  const [addToWishlist] = useAddToWishlistMutation();
+  const [removeFromWishlist] = useRemoveFromWishlistMutation();
+
+  const isWishlisted = wishlist?.some((item) => item._id === product._id);
+
+/* ---------------- Views Logic ---------------- */
+  // Helper to determine the count regardless of if backend sends an array or a number
+  const getInitialViews = (data) => {
+    if (Array.isArray(data)) return data.length;
+    return typeof data === "number" ? data : 0;
+  }; 
+
+  const [views, setViews] = useState(product.views || 0); // <-- local state
+
+  const [addView] = useAddViewMutation();
+
+
+// Sync state when product prop updates (e.g., after an API re-fetch)
+  useEffect(() => {
+    setViews(getInitialViews(product?.views)); 
+  }, [product?.views]); 
+   
+  /* ---------------- Like State (LOCAL) ---------------- */
+  const [liked, setLiked] = useState(product.isLiked || false);
+  const [likesCount, setLikesCount] = useState(product.likesCount || 0);
+
+  const [toggleLike, { isLoading }] = useToggleLikeMutation();
+
+  /* Keep UI in sync if product changes */
+  useEffect(() => {
+    setLiked(product?.isLiked || false);
+    setLikesCount(product?.likesCount || 0);
+  }, [product?.isLiked, product?.likesCount]);
+ 
+
+  /* ---------------- Handlers ---------------- */
+  const toggleWishlist = async () => {
+    if (!userInfo) {
+      router.push({ pathname: "(screens)/LoginScreen" });
+      return;
     }
-    const fullUrl = `${BASE_URL}${imagePath}`;
-    return fullUrl;
+    try {
+      if (isWishlisted) {
+        await removeFromWishlist(product._id).unwrap();
+      } else {
+        await addToWishlist(product._id).unwrap();
+      }
+    } catch (err) {
+      console.log("Wishlist error:", err);
+    }
   };
 
+  const handleLike = async (e) => {
+    e?.stopPropagation?.();
+    if (!userInfo) {
+      router.push({ pathname: "(screens)/LoginScreen" });
+      return;
+    }
+    if (isLoading) return;
+    const prevLiked = liked;
+    const prevCount = likesCount;
+    setLiked(!prevLiked);
+    setLikesCount(prevLiked ? prevCount - 1 : prevCount + 1);
+    try {
+      await toggleLike(product._id).unwrap();
+    } catch (err) {
+      setLiked(prevLiked);
+      setLikesCount(prevCount);
+    }
+  };
+
+
+const handlePress = async () => {
+  // Safety check
+  if (!product?._id) {
+    console.error("❌ Product ID is missing");
+    return;
+  } 
+  try {
+    const deviceId = await getDeviceId();
+    // Call backend
+    const response = await addView({
+      productId: product._id,
+      deviceId,
+    }).unwrap();
+ 
+    if (response?.views !== undefined) {
+      setViews(response.views); // ✅ backend truth
+    }
+  } catch (err) {
+    console.log("Add view error:", err);
+  }
+  // ✅ KEEP NAVIGATION (unchanged)
+  router.push({
+    pathname: "/ProductScreen",
+    params: { productId: product._id },
+  });
+};
+
+
+  const getImageUrl = () => {
+    if (!product.image) return null;
+    if (product.image.startsWith("http")) return product.image;
+    return `${BASE_URL}${product.image}`;
+  };
+
+  /* ---------------- UI ---------------- */
   return (
-    <Link
-      href={{ pathname: "/ProductScreen", params: { productId: product._id } }}
-      asChild
+    <TouchableOpacity
+      activeOpacity={0.9}
+      style={styles.card}
+      onPress={handlePress}
     >
-      <TouchableOpacity activeOpacity={0.8} style={styles.container}>
-        <View style={styles.imageWrapper}>
-          <Image
-            style={styles.image}
-            source={{
-              uri: getImageUrl(product.image),
-            }}
-            resizeMode="contain"
-            onError={(e) => {
-              console.error("Product - Image load error:", e.nativeEvent.error);
-              console.error(
-                "Product - Failed URL:",
-                getImageUrl(product.image)
-              );
-            }}
-          />
-        </View>
-        <View style={styles.infoArea}>
-          <Text
-            style={styles.productName}
-            numberOfLines={1}
-            ellipsizeMode="tail"
+      {/* IMAGE */}
+      <Image
+        source={{ uri: getImageUrl() }}
+        style={styles.image}
+        resizeMode="contain"
+      />
+
+      {/* INFO */}
+      <View style={styles.info}>
+        <Text numberOfLines={1} style={styles.name}>
+          {product.name}
+        </Text>
+
+        <Text style={styles.price}>${product.price}</Text>
+
+        <Rating value={product.rating} text={`${product.numReviews} reviews`} />
+      </View>
+
+      {/* SOCIAL BAR */}
+     {/* SOCIAL BAR */}
+      <View style={styles.actionBar}>
+        <View style={styles.leftActions}>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={handleLike}
+            disabled={isLoading}
           >
-            {product.name}
-          </Text>
-
-          <View style={styles.pricing}>
-            <Text style={styles.currentPrice}>${product.price}</Text>
-            <View
-              style={[
-                styles.availability,
-                product.countInStock > 0
-                  ? styles.available
-                  : styles.unavailable,
-              ]}
-            >
-              <Text style={styles.availabilityText}>
-                {product.countInStock > 0 ? "In Stock" : "Sold Out"}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.ratingRow}>
-            <Rating 
-              value={product.rating}
-              text={`${product.numReviews} reviews`}
+            <Ionicons
+              name={liked ? "heart" : "heart-outline"}
+              size={22}
+              color={liked ? "red" : Colors.darkGray}
             />
-          </View>
-          <View style={styles.postInfo}>
-            <Text style={styles.postedBy}>
-              Posted by:{" "}
-              <Text style={styles.bold}>
-                {product?.user
-                  ? `${product.user.FirstName || ""} ${
-                      product.user.LastName || ""
-                    }`.trim()
-                  : "Unknown"}
-              </Text> 
-            </Text>
+          </TouchableOpacity>
 
-            <Text style={styles.postedTime}>{timeAgo(product?.createdAt)}</Text>
+          <Text style={styles.likeCount}>{likesCount}</Text>
+
+          <View style={styles.views}>
+            <Ionicons name="eye-outline" size={18} color={Colors.gray} />
+            <Text style={styles.viewsText}>{views}</Text>
           </View>
         </View>
-      </TouchableOpacity>
-    </Link>
+
+        <TouchableOpacity onPress={toggleWishlist}>
+          <Ionicons
+            name={isWishlisted ? "bookmark" : "bookmark-outline"}
+            size={22}
+            color={isWishlisted ? Colors.primary : Colors.darkGray}
+          />
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.time}>{timeAgo(product.createdAt)}</Text>
+    </TouchableOpacity>
   );
 }
 
+export default Product;
+
+/* ---------------- Styles ---------------- */
 const styles = StyleSheet.create({
-  container: {
-    width: "46%",
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 16,
-    marginVertical: 8,
-    marginHorizontal: "2%",
-    shadowColor: Colors.darkGray,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+  card: {
+    width: "48%",
+    backgroundColor: "#FFF",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 14,
     elevation: 2,
-    borderWidth: 1,
-    borderColor: Colors.lightGray,
-  },
-  imageWrapper: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    overflow: "hidden",
-    marginBottom: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    height: 140,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: Colors.lightGray,
   },
   image: {
     width: "100%",
-    height: "100%",
+    height: 140,
+    borderRadius: 10,
   },
-  infoArea: {
-    paddingHorizontal: 4,
+  info: {
+    marginTop: 8,
   },
-  productName: {
-    fontSize: 15,
+  name: {
+    fontSize: 14,
     fontWeight: "600",
-    color: Colors.textColor,
-    marginBottom: 10,
-    height: 36,
-    lineHeight: 20,
   },
-  pricing: {
+  price: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.primary,
+    marginTop: 2,
+  },
+  actionBar: {
+    marginTop: 8,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderColor: Colors.lightGray,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
   },
-  currentPrice: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: Colors.primary,
+  leftActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
-  availability: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
+  iconBtn: {
+    padding: 2,
   },
-  availabilityText: {
-    fontSize: 10,
-    fontWeight: "500",
-    color: Colors.white,
+  views: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
-  available: {
-    backgroundColor: Colors.inStock,
-  },
-  unavailable: {
-    backgroundColor: Colors.soldOut,
-  },
-  ratingRow: {
-    marginTop: 6,
-  },
-  postedBy: {
+  viewsText: {
     fontSize: 12,
-    color: Colors.darkGray,
-    marginTop: 4,
+    color: Colors.gray,
   },
-  bold: {
-    fontWeight: "700",
+  likeCount: {
+    fontSize: 12,
+    color: Colors.gray,
+  },
+  time: {
+    marginTop: 4,
+    fontSize: 11,
+    color: Colors.gray,
+    textAlign: "right",
   },
 });
-
-export default Product;

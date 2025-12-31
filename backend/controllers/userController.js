@@ -87,7 +87,7 @@ const authUser = asyncHandler(async (req, res) => {
     accountStatus: user.accountStatus,
     verified: user.verified, 
     sellerRequest: sellerInfo,
-  });
+  });v
 });
 
 
@@ -544,6 +544,32 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 
 
 
+const uploadProfileImage = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    res.status(400);
+    throw new Error("No file uploaded");
+  }
+
+  const imagePath = `/uploadsprofile/${req.file.filename}`;
+
+  // Update user's profileImage
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+
+  user.profileImage = imagePath;
+  await user.save();
+
+  res.status(200).json({
+    message: "Image uploaded successfully",
+    profileImage: imagePath,
+  });
+});
+
+
+
 const getUsers = asyncHandler(async (req, res) => {
   const users = await User.find({});
   res.json(users);
@@ -857,6 +883,7 @@ export {
   requestResetPassword,  
   getUserProfile,
   updateUserProfile,
+  uploadProfileImage,
   getUsers,
   getSellerById,
   deleteUser,

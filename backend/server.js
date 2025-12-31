@@ -11,7 +11,8 @@ import cors from "cors";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import uploadProfileRoutes from "./routes/uploadProfileRoutes.js";
 import User from "./models/userModel.js"; 
- 
+ import wishlistRoutes from "./routes/wishlistRoutes.js";
+
 import path from "path"; 
 
 dotenv.config();
@@ -23,10 +24,15 @@ app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
- 
-const uploadsDir = path.join(process.cwd(), "..", "uploads");
+  
+// Serve product uploads 
+const uploadsDir = path.join(process.cwd(), "uploads");
 app.use("/uploads", express.static(uploadsDir));
 
+// Serve profile uploads
+const profileUploadsDir = path.join(process.cwd(), "uploadsprofile");
+app.use("/uploadsprofile", express.static(profileUploadsDir));
+ 
 const port=9090;
  
 app.use("/api/products",productRoutes);   
@@ -35,6 +41,7 @@ app.use("/api/orders",orderRoutes);
 app.use("/api/categories", categoryRoutes); // added 
 app.use("/api/upload", uploadRoutes); 
 app.use("/api/uploadprofile", uploadProfileRoutes); 
+app.use("/api/wishlist", wishlistRoutes);
  
 
 // Auto-clean expired OTP every 10 mins

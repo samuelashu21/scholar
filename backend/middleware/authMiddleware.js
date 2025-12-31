@@ -25,6 +25,22 @@ const protect = asyncHandler(async (req, res, next) => {
   }
 }); 
 
+const protectOptional = asyncHandler(async (req, res, next) => {
+  let token;
+  token = req.cookies.jwt;
+
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = await User.findById(decoded.userId).select("-password");
+    } catch (error) {
+      req.user = null;
+    }
+  } 
+  next(); // 🚨 ALWAYS CONTINUE
+});
+
+
 const admin = (req, res, next) => {
   if (req.user && req.user.isAdmin) {
     next();
@@ -52,6 +68,6 @@ const sellerOrAdmin = (req, res, next) => {
     throw new Error("Not authorized, seller or admin only");
   }
 }; 
-
-export { protect, admin,seller,sellerOrAdmin };
+ 
+export { protect,protectOptional, admin,seller,sellerOrAdmin };
  

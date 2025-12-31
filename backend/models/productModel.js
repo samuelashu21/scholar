@@ -50,8 +50,28 @@ const productSchema = new mongoose.Schema(
     price: {
       type: Number,
       required: true,
+    },  
+    views: {
+      type: Number,
+      default: 0,
     },
-    reviews: [reviewSchema],
+ 
+    viewedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: [],
+      }, 
+    ], 
+    viewedByDevices: [
+      {
+        type: String, 
+      },
+    ], 
+    reviews: {
+      type: [reviewSchema],
+      default: [],
+    }, 
     rating: {
       type: Number,
       required: true,
@@ -61,13 +81,13 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       required: true,
-    },
+    }, 
     countInStock: {
       type: Number,
       required: true,
       default: 0,
-    },
-  },
+    }, 
+  }, 
   { timestamps: true }
 );
 

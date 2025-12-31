@@ -7,20 +7,28 @@ import {
   updateProduct,
   deleteProduct,
   createProductReview, 
+  addView
 } from "../controllers/productController.js";
- import { protect, admin  } from "../middleware/authMiddleware.js"; 
-
+  
+import { toggleLike } from "../controllers/likeController.js";
+ 
+ import { protect,protectOptional, admin  } from "../middleware/authMiddleware.js"; 
+ 
 const router = express.Router();  
 
-router.route("/")   
+router.route("/")    
   .get(getProducts)                     // Anyone can view products
   .post(protect, admin, createProduct); // Only sellers or admins
-
+ 
 router.route("/:id") 
   .get(getProductById)                   // Anyone can view product
   .put(protect, admin, updateProduct)   // Only seller (owner) or admin
   .delete(protect, admin, deleteProduct); // Only seller (owner) or admin
+ 
+router.put("/:id/view", protectOptional, addView);
+router.put("/:id/like", protect, toggleLike); 
 
+  
 router.route("/:id/reviews")
   .post(protect, createProductReview);  // Any logged-in user can review
  

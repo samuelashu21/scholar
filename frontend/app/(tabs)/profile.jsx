@@ -18,6 +18,7 @@ import { logout } from "../../slices/authSlice";
 import { resetCart } from "../../slices/cartSlice";
 import Message from "../../components/Message";
 import { Colors } from "../../constants/Utils";
+import { BASE_URL } from "../../constants/Urls";
 
 const Profile = () => {
   const { userInfo } = useSelector((state) => state.auth);
@@ -37,6 +38,11 @@ const Profile = () => {
     } catch (error) {
       console.log("logout error:", error);
     }
+  };
+
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    return imagePath.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
   };
 
   if (!userInfo) {
@@ -77,7 +83,11 @@ const Profile = () => {
         <View style={styles.profileCard}>
           <View style={styles.profileImageWrapper}>
             <Image
-              source={require("../../assets/images/profile.png")}
+              source={{
+                uri: userInfo.profileImage
+                  ? getImageUrl(userInfo.profileImage)
+                  : "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+              }}
               style={styles.profileImage}
             />
           </View>
@@ -85,6 +95,7 @@ const Profile = () => {
             {userInfo.name.split(" ")[0] || "User"}
           </Text>
           <Text style={styles.userEmail}>{userInfo.email}</Text>
+          <Text style={styles.userEmail}>{userInfo.phone}</Text>
         </View>
 
         {/* -------- Menu List Card -------- */}
@@ -95,13 +106,13 @@ const Profile = () => {
             onPress={() => router.push("/AccountInformation")}
           />
 
-          {!userInfo.isSeller && ( 
+          {!userInfo.isSeller && (
             <>
               <MenuItem
                 icon="person-outline"
                 title="Become a Seller"
                 onPress={() => router.push("/(screens)/RequestToBeSeller")}
-              />  
+              />
               <MenuItem
                 icon="document-text-outline"
                 title="Orders"
@@ -127,11 +138,11 @@ const Profile = () => {
                 title="Categories"
                 onPress={() => router.push("/admin/CategoryScreen")}
               />
-               <MenuItem
+              <MenuItem
                 icon="cube-outline"
                 title="Seller Request List"
                 onPress={() => router.push("/admin/SellerRequestListScreen")}
-              /> 
+              />
               <MenuItem
                 icon="list-outline"
                 title="All Orders"
@@ -267,7 +278,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
   },
- 
+
   messageText: {
     fontSize: 16,
     textAlign: "center",

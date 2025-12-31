@@ -1,5 +1,9 @@
 import express from "express";
 
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
 import {
   authUser,
   registerUser,
@@ -11,6 +15,7 @@ import {
   resendResetPasswordOTP,
   getUserProfile,
   updateUserProfile,
+  uploadProfileImage, 
   getUsers,
   getUserById,
   getSellerById,
@@ -38,6 +43,45 @@ router.post("/reset-password", resetPassword);
 router.post("/resend-reset-password-otp", resendResetPasswordOTP);
 router.post("/logout", logoutUser);
 
+
+
+
+// ---------------------------
+// MULTER SETUP FOR PROFILE IMAGE
+// ---------------------------
+const uploadsDir = path.join(process.cwd(), "uploadsprofile");
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination(req, file, cb) {
+    cb(null, uploadsDir);
+  },
+  filename(req, file, cb) {
+    const filename = `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`;
+    cb(null, filename);
+  },
+});
+
+function checkFileType(file, cb) {
+  const filetypes = /jpg|jpeg|png/;
+  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = filetypes.test(file.mimetype);
+  if (extname && mimetype) {
+    return cb(null, true);
+  } else {
+    cb(new Error("Images only (jpg, jpeg, png)"));
+  }
+}
+
+const upload = multer({
+  storage,
+  fileFilter: checkFileType,
+});
+
+ 
 // ---------------------------
 // USER PROFILE ROUTES
 // ---------------------------
@@ -46,9 +90,12 @@ router
   .get(protect, getUserProfile)
   .put(protect, updateUserProfile); 
 
+// Profile image upload
+router.post("/uploadprofile", protect, upload.single("image"), uploadProfileImage);
+ 
 // ---------------------------
 // SELLER REQUEST ROUTES
-// ---------------------------
+// --------------------------- 
 router.post("/request-seller", protect, requestSeller);
 
 // ---------------------------
@@ -64,11 +111,12 @@ router.put("/reject-seller/:id", protect, admin, rejectSeller);
 router.get("/", protect, admin, getUsers);
 
 // VERY LAST ROUTE — MUST STAY LAST 
-router
-  .route("/:id")
-  .get(protect, admin, getUserById)   
-   .get(protect, getSellerById) 
-  .put(protect, admin, updateUser)
-  .delete(protect, admin, deleteUser);
+// Admin: get user by ID
+router.get("/:id", protect, admin, getUserById);
 
+// Public or protected seller info by ID
+router.get("/seller/:id", protect, getSellerById);
+// Update & delete (admin only)
+router.put("/:id", protect, admin, updateUser);
+router.delete("/:id", protect, admin, deleteUser); 
 export default router;

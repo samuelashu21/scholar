@@ -13,29 +13,31 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../../constants/Utils";
 import { useGetProductsQuery } from "../../slices/productsApiSlice";
 import ProductCard from "../../components/ProductCard";
- 
- const ShopScreen = () => {
+
+const ShopScreen = () => {
   const [search, setSearch] = useState("");
 
   const { data: products, isLoading } = useGetProductsQuery({
-    keyword: search,
+    keyword: search || "",
+    pageNumber: 1,
   });
 
   const categories = [
-    { id: 1, name: "Phones", icon: require("../../assets/phone.png") },
-    { id: 2, name: "Fashion", icon: require("../../assets/fashion.png") },
-    { id: 3, name: "Electronics", icon: require("../../assets/electronics.png") },
-    { id: 4, name: "Beauty", icon: require("../../assets/beauty.png") },
+    { id: 1, name: "Phones", icon: require("../../assets/adaptive-icon.png") },
+    { id: 2, name: "Fashion", icon: require("../../assets/adaptive-icon.png") },
+    { id: 3, name: "Electronics", icon: require("../../assets/adaptive-icon.png") },
+    { id: 4, name: "Beauty", icon: require("../../assets/adaptive-icon.png") },
   ];
 
   return (
     <View style={styles.container}>
 
-      {/* 🔍 Search Bar */}
+      {/* Search Bar */}
       <View style={styles.searchBox}>
-        <Ionicons name="search-outline" size={22} color={Colors.darkGray} />
+        <Ionicons name="search-outline" size={20} color={Colors.gray} />
         <TextInput
-          placeholder="Search products"
+          placeholder="Search products..."
+          placeholderTextColor={Colors.gray}
           value={search}
           onChangeText={setSearch}
           style={styles.searchInput}
@@ -43,39 +45,45 @@ import ProductCard from "../../components/ProductCard";
         <Ionicons name="options-outline" size={22} color={Colors.primary} />
       </View>
 
-      {/* 🔥 Flash Deals */}
+      {/* Flash Deals */}
       <View style={styles.flashContainer}>
-        <Text style={styles.flashTitle}>🔥 Flash Deals</Text>
+        <Text style={styles.sectionHeader}>🔥 Flash Deals</Text>
+
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {(products?.slice(0, 6) || []).map((item) => (
-            <TouchableOpacity key={item._id} style={styles.flashItem}>
+          {(products?.products?.slice(0, 6) || []).map((item) => (
+            <TouchableOpacity key={item._id} style={styles.flashCard}>
               <Image source={{ uri: item.image }} style={styles.flashImage} />
-              <Text style={styles.flashPrice}>${item.price}</Text>
+              <View style={styles.flashBadge}>
+                <Text style={styles.flashPrice}>${item.price}</Text>
+              </View>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {/* 🧭 Categories */}
-      <Text style={styles.sectionTitle}>Categories</Text>
+      {/* Categories */}
+      <Text style={styles.sectionHeader}>Categories</Text>
+
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {categories.map((cat) => (
-          <View key={cat.id} style={styles.categoryItem}>
-            <Image source={cat.icon} style={styles.categoryIcon} />
+          <TouchableOpacity key={cat.id} style={styles.categoryCard}>
+            <View style={styles.categoryIconBox}>
+              <Image source={cat.icon} style={styles.categoryIcon} />
+            </View>
             <Text style={styles.categoryText}>{cat.name}</Text>
-          </View>
+          </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {/* 🛍 Products Grid */}
-      <Text style={styles.sectionTitle}>Best Deals for You</Text>
+      {/* Product Grid */}
+      <Text style={styles.sectionHeader}>Best Deals for You</Text>
 
       <FlatList
-        data={products || []}
+        data={products?.products || []}
         numColumns={2}
         showsVerticalScrollIndicator={false}
-        columnWrapperStyle={{ justifyContent: "space-between" }}
         keyExtractor={(item) => item._id}
+        columnWrapperStyle={{ justifyContent: "space-between" }}
         renderItem={({ item }) => <ProductCard product={item} />}
         contentContainerStyle={{ paddingBottom: 150 }}
       />
@@ -88,71 +96,95 @@ export default ShopScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.offWhite,
+    backgroundColor: "#F5F6FA",
     padding: 12,
   },
 
+  /** Search Bar **/
   searchBox: {
     flexDirection: "row",
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 16,
     alignItems: "center",
-    backgroundColor: Colors.white,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-    gap: 10,
-    marginBottom: 15,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 3,
+    marginBottom: 18,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    marginLeft: 10,
+    fontSize: 15,
   },
 
-  flashContainer: {
-    marginBottom: 20,
+  /** Flash Deals **/
+  flashContainer: { marginBottom: 25 },
+  sectionHeader: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 10,
+    color: "#1A1A1A",
   },
-  flashTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  flashItem: {
+  flashCard: {
+    width: 120,
+    height: 150,
+    backgroundColor: "#fff",
+    borderRadius: 14,
     marginRight: 12,
-    backgroundColor: Colors.white,
-    borderRadius: 10,
-    padding: 8,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
   },
   flashImage: {
-    width: 100,
-    height: 90,
-    borderRadius: 8,
+    width: "100",
+    height: "75%",
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+  },
+  flashBadge: {
+    position: "absolute",
+    bottom: 8,
+    left: 8,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   flashPrice: {
-    textAlign: "center",
+    color: "#fff",
     fontWeight: "700",
-    marginTop: 5,
-    color: Colors.primary,
+    fontSize: 14,
   },
 
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginVertical: 10,
-  },
-
-  categoryItem: {
+  /** Categories **/
+  categoryCard: {
     alignItems: "center",
-    marginRight: 15,
+    marginRight: 18,
+  },
+  categoryIconBox: {
+    width: 70,
+    height: 70,
+    backgroundColor: "#fff",
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
   },
   categoryIcon: {
-    width: 55,
-    height: 55,
-    borderRadius: 50,
-    backgroundColor: Colors.white,
-    padding: 10,
-  },
+    width: 45,
+    height: 45,
+  }, 
   categoryText: {
     fontSize: 14,
-    marginTop: 5,
+    marginTop: 6,
+    fontWeight: "600",
   },
 });
- 

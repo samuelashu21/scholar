@@ -5,14 +5,14 @@
  
  const router = express.Router();
  
- const uploadsDir = path.join(process.cwd(), "..", "uploadsprofile");
+ const uploadsDir = path.join(process.cwd(), "uploadsprofile"); 
  
  if (!fs.existsSync(uploadsDir)) { 
    fs.mkdirSync(uploadsDir, { recursive: true });
  }
  
  const storage = multer.diskStorage({
-   destination(req, file, cb) {
+   destination(req, file, cb) { 
      cb(null, uploadsDir); 
    },
    filename(req, file, cb) {

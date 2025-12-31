@@ -5,13 +5,13 @@ import {
   TextInput,
   ScrollView,
   ActivityIndicator,
-  Image,
+  Image, 
   TouchableOpacity,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -27,7 +27,7 @@ import {
   useUploadCategoryImageMutation,
 } from "../../../slices/categoryApiSlice.js";
 
-const CategoryScreen = () => { 
+const CategoryScreen = () => {
   const router = useRouter();
 
   const [categoryname, setCategoryname] = useState("");
@@ -61,15 +61,16 @@ const CategoryScreen = () => {
 
     try {
       if (editingId) {
-        await updateCategory({ categoryId: editingId, categoryname, image }).unwrap(); 
+        const response = await updateCategory({ categoryId: editingId, categoryname, image });
         Toast.show({ type: "success", text1: "Success", text2: "Category updated" });
       } else {
-        await createCategory({ categoryname, image }).unwrap();
+        const response = await createCategory({ categoryname, image });
         Toast.show({ type: "success", text1: "Success", text2: "Category added" });
       }
       resetForm();
       refetch();
     } catch (error) {
+      console.error("❌ Submit handler error:", error);
       Toast.show({
         type: "error",
         text1: "Error",
@@ -80,7 +81,7 @@ const CategoryScreen = () => {
 
   const deleteHandler = async (id) => {
     try {
-      
+      const response = await deleteCategory(id);
       Toast.show({ type: "success", text1: "Deleted", text2: "Category removed" });
       refetch();
     } catch (error) {
@@ -103,7 +104,6 @@ const CategoryScreen = () => {
         });
         return;
       }
-
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: false,
@@ -117,11 +117,16 @@ const CategoryScreen = () => {
           type: "image/jpeg",
           name: "image.jpg",
         });
-        const response = await uploadCategoryImage(formData).unwrap();
-        setImage(response.image);
+
+        const response = await uploadCategoryImage(formData);
+
+        setImage(response.data?.image || response.image);
         Toast.show({ type: "success", text1: "Uploaded", text2: "Image uploaded successfully" });
+      } else {
+        console.log("❌ Image picker cancelled");
       }
     } catch (error) {
+      console.error("❌ Upload failed:", error);
       Toast.show({
         type: "error",
         text1: "Upload failed",
@@ -130,11 +135,21 @@ const CategoryScreen = () => {
     }
   };
 
-  if (isLoading) return <ActivityIndicator size="large" color={Colors.primary} style={{ flex: 1, justifyContent: "center" }} />;
+  if (isLoading)
+    return (
+      <ActivityIndicator
+        size="large"
+        color={Colors.primary}
+        style={{ flex: 1, justifyContent: "center" }}
+      />
+    );
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
         <ScrollView contentContainerStyle={styles.container}>
           {/* Form */}
           <View style={styles.form}>
@@ -146,15 +161,28 @@ const CategoryScreen = () => {
               value={categoryname}
               onChangeText={setCategoryname}
             />
-
-            {image && <Image source={{ uri: image.startsWith("http") ? image : `${BASE_URL}${image}` }} style={styles.imagePreview} />}
+ 
+            {image && (
+              <Image
+                source={{ uri: image.startsWith("http") ? image : `${BASE_URL}${image}` }}
+                style={styles.imagePreview}
+              />
+            )}
 
             <TouchableOpacity style={styles.uploadButton} onPress={uploadFileHandler}>
-              <Text style={styles.uploadButtonText}>{loadingUpload ? "Uploading..." : "Upload Image"}</Text>
+              <Text style={styles.uploadButtonText}>
+                {loadingUpload ? "Uploading..." : "Upload Image"}
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.submitButton} onPress={submitHandler} disabled={loadingCreate || loadingUpdate}>
-              <Text style={styles.submitButtonText}>{editingId ? "Update Category" : "Add Category"}</Text>
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={submitHandler}
+              disabled={loadingCreate || loadingUpdate}
+            >
+              <Text style={styles.submitButtonText}>
+                {editingId ? "Update Category" : "Add Category"}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -162,7 +190,10 @@ const CategoryScreen = () => {
           <View style={styles.listContainer}>
             {categories?.map((cat) => (
               <View key={cat._id} style={styles.categoryItem}>
-                <Image source={{ uri: cat.image.startsWith("http") ? cat.image : `${BASE_URL}${cat.image}` }} style={styles.categoryImage} />
+                <Image
+                  source={{ uri: cat.image.startsWith("http") ? cat.image : `${BASE_URL}${cat.image}` }}
+                  style={styles.categoryImage}
+                />
                 <Text style={styles.categoryName}>{cat.categoryname}</Text>
                 <View style={styles.actions}>
                   <TouchableOpacity onPress={() => editHandler(cat)}>
@@ -186,7 +217,16 @@ export default CategoryScreen;
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: Colors.offWhite, paddingTop: Platform.OS === "android" ? 20 : 0 },
   container: { padding: 20, gap: 20 },
-  form: { backgroundColor: Colors.white, padding: 15, borderRadius: 12, shadowColor: Colors.darkGray, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
+  form: {
+    backgroundColor: Colors.white,
+    padding: 15,
+    borderRadius: 12,
+    shadowColor: Colors.darkGray,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   title: { fontSize: 20, fontWeight: "600", marginBottom: 10, color: Colors.primary },
   input: { borderWidth: 1, borderColor: Colors.lightGray, borderRadius: 8, padding: 12, marginBottom: 10, color: Colors.textColor },
   uploadButton: { backgroundColor: Colors.secondary, padding: 12, borderRadius: 8, alignItems: "center", marginBottom: 10 },
@@ -200,4 +240,3 @@ const styles = StyleSheet.create({
   categoryName: { flex: 1, fontSize: 16, fontWeight: "500", color: Colors.textColor },
   actions: { flexDirection: "row", gap: 15 },
 });
-  

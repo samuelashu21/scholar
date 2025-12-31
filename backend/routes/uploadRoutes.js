@@ -1,11 +1,12 @@
 import express from "express";
 import multer from "multer";
-import path from "path";
+import path from "path"; 
 import fs from "fs";
 
 const router = express.Router();
 
-const uploadsDir = path.join(process.cwd(), "..", "uploads");
+//const uploadsDir = path.join(process.cwd(), "..", "uploads");
+const uploadsDir = path.join(process.cwd(), "uploads");
 
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -14,7 +15,7 @@ if (!fs.existsSync(uploadsDir)) {
 const storage = multer.diskStorage({
   destination(req, file, cb) {
     cb(null, uploadsDir); 
-  },
+  }, 
   filename(req, file, cb) {
     const filename = `${file.fieldname}-${Date.now()}${path.extname(
       file.originalname

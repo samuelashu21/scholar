@@ -2,30 +2,30 @@ import { PRODUCT_URL } from "../constants/Urls";
 import { apiSlice } from "./apiSlice";
 
 export const productsApiSlice = apiSlice.injectEndpoints({
-   overrideExisting: true, 
-  endpoints: (builder) => ({ 
+  overrideExisting: true,
+  endpoints: (builder) => ({
     getProducts: builder.query({
       query: ({ keyword, pageNumber }) => ({
         url: PRODUCT_URL,
         params: { keyword, pageNumber },
       }),
       keepUnusedDataFor: 5,
-      providesTags: ["Product"],
-    }), 
+      providesTags: ["Product", "Auth"],
+    }),
     getProductDetails: builder.query({
       query: (productId) => ({
         url: `${PRODUCT_URL}/${productId}`,
       }),
       keepUnusedDataFor: 5,
       providesTags: ["Product"],
-    }), 
-     
+    }),
+
     createReview: builder.mutation({
       query: (data) => ({
         url: `${PRODUCT_URL}/${data.productId}/reviews`,
         method: "POST",
         body: data,
-      }), 
+      }),
       invalidatesTags: ["Product"],
     }),
     deleteProduct: builder.mutation({
@@ -45,7 +45,7 @@ export const productsApiSlice = apiSlice.injectEndpoints({
     }),
     uploadProductImage: builder.mutation({
       query: (data) => ({
-        url: "/api/upload", 
+        url: "/api/upload",
         method: "POST",
         body: data,
       }),
@@ -57,6 +57,21 @@ export const productsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["Product"],
     }),
+
+    addView: builder.mutation({
+      query: ({ productId, deviceId }) => ({
+        url: `/api/products/${productId}/view`,
+        method: "PUT",
+        body: { deviceId },
+      }), 
+    }),  
+
+    toggleLike: builder.mutation({
+      query: (productId) => ({
+        url: `/api/products/${productId}/like`,
+        method: "PUT",
+      }),
+    }),
   }),
 });
 
@@ -64,8 +79,10 @@ export const {
   useGetProductsQuery,
   useGetProductDetailsQuery,
   useCreateReviewMutation,
-  useDeleteProductMutation, 
+  useDeleteProductMutation,
   useUpdateProductMutation,
   useUploadProductImageMutation,
   useCreateProductMutation,
+  useAddViewMutation,
+  useToggleLikeMutation,
 } = productsApiSlice;

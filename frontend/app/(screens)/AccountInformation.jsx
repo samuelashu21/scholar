@@ -15,7 +15,7 @@ import { KeyboardAvoidingView } from "react-native";
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import Ionicons from "@expo/vector-icons/Ionicons"; 
 import { useUpdateUserProfileMutation,useUploadProfileImageMutation } from "../../slices/userAPiSlice";
 import { setCredentials } from "../../slices/authSlice";
 import { Colors } from "../../constants/Utils";
@@ -25,7 +25,7 @@ import { BASE_URL } from "../../constants/Urls";
 import Toast from "react-native-toast-message";
 
 const AccountInformation = () => { 
-  const router = useRouter();
+  const router = useRouter(); 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -38,16 +38,16 @@ const AccountInformation = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [image, setImage] = useState("");
   const [error, setError] = useState("");
-
+  
 const { userInfo } = useSelector((state) => state.auth);
 const [profileImage, setProfileImage] = useState(userInfo?.profileImage || "");
 
   const [updateProfile, { isLoading: loadingUpdateProfile }] =
     useUpdateUserProfileMutation();
 
-  const [uploadProductImage, { isLoading: loadingUpload }] =
+  const [uploadProfileImage, { isLoading: loadingUpload }] =
     useUploadProfileImageMutation();
-
+ 
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -69,8 +69,6 @@ const [profileImage, setProfileImage] = useState(userInfo?.profileImage || "");
   };
 
 const submitHandler = async () => {
-  console.log("Update button clicked");
-
   // Password match check
   if (password && password !== confirmPassword) {
     Toast.show({
@@ -166,9 +164,9 @@ const submitHandler = async () => {
           type: "image/jpeg",
           name: "image.jpg",
         });
-        const response = await uploadProductImage(formData).unwrap();
+        const response = await uploadProfileImage(formData).unwrap();
         setProfileImage(response.image);
-        Toast.show({
+        Toast.show({ 
           type: "success",
           text1: "Uploaded",
           text2: "Image uploaded successfully",

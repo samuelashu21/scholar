@@ -14,7 +14,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Message from "../../../components/Message";
 
-import {
+import { 
   useGetProductsQuery,
   useDeleteProductMutation, 
   useCreateProductMutation, 
