@@ -9,12 +9,18 @@ const RootLayout = () => {
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="(screens)" options={{ headerShown: false }} />
+          
+          {/* ✅ WELCOME / ENTRY SCREEN */}
+          <Stack.Screen name="index" />
+
+          {/* MAIN APP */}
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(screens)" />
+
         </Stack>
         <Toast />
       </PersistGate>
-    </Provider> 
+    </Provider>
   );
 };
 

@@ -46,7 +46,7 @@ export const categoriesApiSlice = apiSlice.injectEndpoints({
         url: "/api/upload",
         method: "POST",
         body: formData,
-      }),
+      }), 
     }),
   }),
 });

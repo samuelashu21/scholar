@@ -37,7 +37,7 @@ function Product({ product }) {
   // Helper to determine the count regardless of if backend sends an array or a number
   const getInitialViews = (data) => {
     if (Array.isArray(data)) return data.length;
-    return typeof data === "number" ? data : 0;
+    return typeof data === "number" ? data : 0; 
   }; 
 
   const [views, setViews] = useState(product.views || 0); // <-- local state

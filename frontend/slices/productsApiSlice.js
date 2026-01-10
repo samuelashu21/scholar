@@ -5,9 +5,9 @@ export const productsApiSlice = apiSlice.injectEndpoints({
   overrideExisting: true,
   endpoints: (builder) => ({
     getProducts: builder.query({
-      query: ({ keyword, pageNumber }) => ({
+      query: ({ keyword, pageNumber, category }) => ({
         url: PRODUCT_URL,
-        params: { keyword, pageNumber },
+        params: { keyword, pageNumber, category },
       }),
       keepUnusedDataFor: 5,
       providesTags: ["Product", "Auth"],
@@ -18,7 +18,7 @@ export const productsApiSlice = apiSlice.injectEndpoints({
       }),
       keepUnusedDataFor: 5,
       providesTags: ["Product"],
-    }),
+    }), 
 
     createReview: builder.mutation({
       query: (data) => ({

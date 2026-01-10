@@ -11,7 +11,7 @@ const getCategories = asyncHandler(async (req, res) => {
 const createCategory = asyncHandler(async (req, res) => {
   try {
     const { categoryname, image } = req.body;
-
+ 
     if (!categoryname || !image) {
       throw new Error("Category name and image are required");
     }

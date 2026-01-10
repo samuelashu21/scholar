@@ -87,7 +87,7 @@ const authUser = asyncHandler(async (req, res) => {
     accountStatus: user.accountStatus,
     verified: user.verified, 
     sellerRequest: sellerInfo,
-  });v
+  }); 
 });
 
 

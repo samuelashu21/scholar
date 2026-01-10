@@ -14,7 +14,7 @@ const ProductCard = ({ product, isWishlistItem = false, onRemove }) => {
     return `${BASE_URL}${product.image}`;
   };
 
-  return (
+  return ( 
     <View style={styles.cardWrapper}>
       {/* ❌ Remove button only in wishlist */}
       {isWishlistItem && (
@@ -31,7 +31,7 @@ const ProductCard = ({ product, isWishlistItem = false, onRemove }) => {
           source={{ uri: getImageUrl() }}
           style={styles.image}
           resizeMode="contain"
-        />
+        /> 
 
         <Text numberOfLines={2} style={styles.name}>
           {product.name}

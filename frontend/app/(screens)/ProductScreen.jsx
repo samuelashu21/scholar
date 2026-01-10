@@ -34,7 +34,7 @@ const ProductScreen = () => {
   const { productId } = useLocalSearchParams();
   const { userInfo } = useSelector((state) => state.auth);
 
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState(1); 
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");

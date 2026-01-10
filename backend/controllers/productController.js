@@ -2,7 +2,6 @@ import asyncHandler from "../middleware/asyncHandler.js";
 import Product from "../models/productModel.js";
 import Category from "../models/categoryModel.js";
 import Like from "../models/likeModel.js";
- 
 
 const getProducts = asyncHandler(async (req, res) => {
   const pageSize = 8;
@@ -11,18 +10,23 @@ const getProducts = asyncHandler(async (req, res) => {
   const keyword = req.query.keyword
     ? { name: { $regex: req.query.keyword, $options: "i" } }
     : {};
- 
-  const filter = { ...keyword };
 
+     // 🗂 Category filter (ObjectId)  
+  const category = req.query.category ? { category: req.query.category } : {};
+
+  const filter = {
+    ...keyword, 
+    ...category,
+  };
   const count = await Product.countDocuments(filter);
 
   const products = await Product.find(filter)
     .limit(pageSize)
     .skip(pageSize * (page - 1))
-    .populate("category", "categoryname")
+    .populate("category", "categoryname image")
     .populate("user", "FirstName LastName")
     .sort({ createdAt: -1 });
-
+ 
   const userId = req.user?._id?.toString();
 
   /* =======================
@@ -30,7 +34,7 @@ const getProducts = asyncHandler(async (req, res) => {
      ======================= */
 
   // 1️⃣ All likes for these products
-  const productIds = products.map(p => p._id);
+  const productIds = products.map((p) => p._id);
 
   const likes = await Like.find({
     product: { $in: productIds },
@@ -38,7 +42,7 @@ const getProducts = asyncHandler(async (req, res) => {
 
   // 2️⃣ Count likes per product
   const likeCountMap = {};
-  likes.forEach(like => {
+  likes.forEach((like) => {
     const pid = like.product.toString();
     likeCountMap[pid] = (likeCountMap[pid] || 0) + 1;
   });
@@ -47,10 +51,10 @@ const getProducts = asyncHandler(async (req, res) => {
   const userLikedSet = new Set(
     userId
       ? likes
-          .filter(like => like.user.toString() === userId)
-          .map(like => like.product.toString())
+          .filter((like) => like.user.toString() === userId)
+          .map((like) => like.product.toString())
       : []
-  ); 
+  );
 
   /* ======================= */
 
@@ -78,8 +82,6 @@ const getProducts = asyncHandler(async (req, res) => {
     total: count,
   });
 });
- 
- 
 
 const getProductById = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id)
@@ -97,7 +99,7 @@ const getProductById = asyncHandler(async (req, res) => {
 
   // Defensive default for arrays
   product.likes = product.likes || [];
-  product.reviews = product.reviews || []; 
+  product.reviews = product.reviews || [];
 
   const userId = req.user?._id?.toString();
 
@@ -124,7 +126,6 @@ const getProductById = asyncHandler(async (req, res) => {
     isLiked,
   });
 });
- 
 
 const createProduct = asyncHandler(async (req, res) => {
   const { categoryId } = req.body || {}; // <-- safe destructuring
@@ -153,20 +154,22 @@ const createProduct = asyncHandler(async (req, res) => {
   res.status(201).json(createdProduct);
 });
 
- 
-
 const updateProduct = asyncHandler(async (req, res) => {
-  const { name, price, description, image, categoryId, countInStock } = req.body;
+  const { name, price, description, image, categoryId, countInStock } =
+    req.body;
 
   const product = await Product.findById(req.params.id);
 
   if (!product) {
-    res.status(404); 
+    res.status(404);
     throw new Error("Product not found");
   }
 
   // Only the seller who owns the product or admin can update
-  if (product.user.toString() !== req.user._id.toString() && !req.user.isAdmin) {
+  if (
+    product.user.toString() !== req.user._id.toString() &&
+    !req.user.isAdmin
+  ) {
     res.status(401);
     throw new Error("Not authorized to update this product");
   }
@@ -176,7 +179,7 @@ const updateProduct = asyncHandler(async (req, res) => {
   product.description = description || product.description;
   product.image = image || product.image;
   product.countInStock = countInStock || product.countInStock;
- 
+
   if (categoryId) {
     product.category = categoryId;
   }
@@ -189,8 +192,6 @@ const updateProduct = asyncHandler(async (req, res) => {
   res.json(updatedProduct);
 });
 
- 
-
 // @desc    Delete product (seller only if owner, admin can delete any)
 const deleteProduct = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
@@ -201,30 +202,32 @@ const deleteProduct = asyncHandler(async (req, res) => {
   }
 
   // Only the seller who owns the product or admin can delete
-  if (product.user.toString() !== req.user._id.toString() && !req.user.isAdmin) {
+  if (
+    product.user.toString() !== req.user._id.toString() &&
+    !req.user.isAdmin
+  ) {
     res.status(401);
     throw new Error("Not authorized to delete this product");
   }
 
   await Product.deleteOne({ _id: product._id });
   res.json({ message: "Product successfully deleted" });
-}); 
-  
- 
+});
+
 export const addView = async (req, res) => {
   const { deviceId } = req.body;
 
   const product = await Product.findById(req.params.id);
-  if (!product) { 
+  if (!product) {
     res.status(404);
     throw new Error("Product not found");
   }
-  // 👤 Logged-in user 
+  // 👤 Logged-in user
   if (req.user) {
     const alreadyViewed = product.viewedBy.some(
       (id) => id.toString() === req.user._id.toString()
     );
- 
+
     if (!alreadyViewed) {
       product.views = (product.views || 0) + 1;
       product.viewedBy.push(req.user._id);
@@ -234,15 +237,14 @@ export const addView = async (req, res) => {
   // 👥 Guest user (device-based)
   else if (deviceId) {
     if (!product.viewedByDevices.includes(deviceId)) {
-      product.views = (product.views || 0) + 1; 
+      product.views = (product.views || 0) + 1;
       product.viewedByDevices.push(deviceId);
       await product.save();
     }
   }
   res.json({ views: product.views });
 };
- 
-  
+
 /* ================================================
    Create a product review
 ================================================= */
@@ -258,7 +260,7 @@ const createProductReview = asyncHandler(async (req, res) => {
   product.reviews = product.reviews || [];
 
   const alreadyReviewed = product.reviews.find(
-    r => r.user.toString() === req.user._id.toString()
+    (r) => r.user.toString() === req.user._id.toString()
   );
 
   if (alreadyReviewed) {
@@ -283,12 +285,11 @@ const createProductReview = asyncHandler(async (req, res) => {
   res.status(201).json({ message: "Review added" });
 });
 
-
-export{
-    getProducts,
-    getProductById,
-    createProduct,
-    updateProduct,
-    deleteProduct,
-    createProductReview
-} 
+export {
+  getProducts,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  createProductReview,
+};
