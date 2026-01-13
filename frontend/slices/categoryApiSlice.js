@@ -9,7 +9,7 @@ export const categoriesApiSlice = apiSlice.injectEndpoints({
       query: () => CATEGORY_URL,
       keepUnusedDataFor: 5,
       providesTags: ["Category"],
-    }),
+    }), 
 
     // Create a new category (admin only)
     createCategory: builder.mutation({

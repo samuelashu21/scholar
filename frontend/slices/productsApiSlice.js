@@ -5,10 +5,10 @@ export const productsApiSlice = apiSlice.injectEndpoints({
   overrideExisting: true,
   endpoints: (builder) => ({
     getProducts: builder.query({
-      query: ({ keyword, pageNumber, category }) => ({
+      query: ({ keyword, pageNumber, category, subcategory, sort }) => ({
         url: PRODUCT_URL,
-        params: { keyword, pageNumber, category },
-      }),
+        params: { keyword, pageNumber, category, subcategory, sort },
+      }), 
       keepUnusedDataFor: 5,
       providesTags: ["Product", "Auth"],
     }),
@@ -39,7 +39,7 @@ export const productsApiSlice = apiSlice.injectEndpoints({
       query: (data) => ({
         url: `${PRODUCT_URL}/${data.productId}`,
         method: "PUT",
-        body: data,
+        body: data, 
       }),
       invalidatesTags: ["Product"],
     }),
@@ -50,10 +50,11 @@ export const productsApiSlice = apiSlice.injectEndpoints({
         body: data,
       }),
     }),
-    createProduct: builder.mutation({
-      query: () => ({
+   createProduct: builder.mutation({
+      query: (data) => ({        // 1. Add (data) here
         url: PRODUCT_URL,
         method: "POST",
+        body: data,              // 2. Add body: data here
       }),
       invalidatesTags: ["Product"],
     }),

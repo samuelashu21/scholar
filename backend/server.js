@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 import errorHandler from "./middleware/errorHandler.js"; 
 import orderRoutes from "./routes/orderRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
+import subcategoryRoutes from "./routes/subcategoryRoutes.js";
 import cors from "cors";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import uploadProfileRoutes from "./routes/uploadProfileRoutes.js";
@@ -39,6 +40,7 @@ app.use("/api/products",productRoutes);
 app.use("/api/users",userRoutes);    
 app.use("/api/orders",orderRoutes); 
 app.use("/api/categories", categoryRoutes); // added 
+app.use("/api/subcategories", subcategoryRoutes); // added  
 app.use("/api/upload", uploadRoutes); 
 app.use("/api/uploadprofile", uploadProfileRoutes); 
 app.use("/api/wishlist", wishlistRoutes);

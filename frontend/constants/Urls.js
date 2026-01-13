@@ -11,3 +11,5 @@ export const ORDERS_URL = "/api/orders";
 
 // Category API endpoints
 export const CATEGORY_URL = "/api/categories";  
+
+export const SUBCATEGORY_URL = "/api/subcategories"; 

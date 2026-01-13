@@ -11,7 +11,7 @@ const reviewSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    rating: {
+    rating: { 
       type: Number,
       required: true,
     },
@@ -37,12 +37,17 @@ const productSchema = new mongoose.Schema(
     image: { 
       type: String,
       required: true,
-    },
+    }, 
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
       required: true, 
     },
+     subcategory: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Subcategory",
+      required: true, 
+    }, 
     description: {
       type: String,
       required: true,

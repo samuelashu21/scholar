@@ -19,6 +19,8 @@ import {
   useDeleteProductMutation,
   useCreateProductMutation,
 } from "../../../slices/productsApiSlice";
+import { useGetCategoriesQuery } from "../../../slices/categoryApiSlice";
+import { useGetSubcategoriesQuery } from "../../../slices/subcategoryApiSlice"; // Import Subcategory Slice
 import { Colors } from "../../../constants/Utils";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
@@ -30,10 +32,12 @@ const ProductListScreen = () => {
     pageNumber: Number(pageNumber),
   });
 
-  const [deleteProduct, { isLoading: loadingDelete }] =
-    useDeleteProductMutation();
-  const [createProduct, { isLoading: loadingCreate }] =
-    useCreateProductMutation();
+  // Fetch categories and subcategories to get default IDs for new products
+  const { data: categories } = useGetCategoriesQuery();
+  const { data: subcategories } = useGetSubcategoriesQuery();
+
+  const [deleteProduct, { isLoading: loadingDelete }] = useDeleteProductMutation();
+  const [createProduct, { isLoading: loadingCreate }] = useCreateProductMutation();
 
   // Delete handler
   const deleteHandler = async (id) => {
@@ -69,13 +73,24 @@ const ProductListScreen = () => {
           text: "Create",
           onPress: async () => {
             try {
-              // Use the first category as default if available
+              // 1. Try to get default Category ID
               const defaultCategoryId =
-                data?.products?.[0]?.category?._id || "";
+                data?.products?.[0]?.category?._id || 
+                categories?.[0]?._id || 
+                "";
 
-              // Create product
-              const createdProduct = await createProduct({ 
+              // 2. Try to get default Subcategory ID 
+              // (Filters for subcategories belonging to the default category)
+              const defaultSubcategoryId =
+                data?.products?.[0]?.subcategory?._id ||
+                subcategories?.find(s => s.category === defaultCategoryId)?._id ||
+                subcategories?.[0]?._id ||
+                "";
+
+              // Create product with both IDs
+              const createdProduct = await createProduct({
                 categoryId: defaultCategoryId,
+                subcategoryId: defaultSubcategoryId, // FIXED: Now sending subcategoryId
               }).unwrap();
 
               // Redirect to edit screen
@@ -152,6 +167,7 @@ const ProductListScreen = () => {
           <TouchableOpacity
             style={styles.addButton}
             onPress={createProductHandler}
+            disabled={loadingCreate}
           >
             {loadingCreate ? (
               <ActivityIndicator size="small" color={Colors.white} />

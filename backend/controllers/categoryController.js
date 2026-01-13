@@ -5,7 +5,7 @@ import Category from "../models/categoryModel.js";
 const getCategories = asyncHandler(async (req, res) => {
   const categories = await Category.find({});
   res.json(categories);
-});
+}); 
  
 // @desc    Add new category (admin only)
 const createCategory = asyncHandler(async (req, res) => {
