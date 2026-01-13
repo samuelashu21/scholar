@@ -76,7 +76,7 @@ function Product({ product }) {
         await addToWishlist(product._id).unwrap();
       }
     } catch (err) {
-      console.log("Wishlist error:", err);
+      console.log("Wishlist error:", err); 
     }
   };
 

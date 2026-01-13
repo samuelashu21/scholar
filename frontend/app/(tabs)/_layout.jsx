@@ -39,13 +39,13 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="shop"
+        name="shop" 
         options={{
           title: "shop",
           tabBarIcon: ({ focused }) => (
             <Ionicons
               size={27}
-              name={focused ? "home" : "home-outline"}
+              name={focused ? "grid" : "grid-outline"}
               color={focused ? Colors.primary : Colors.secondary}
             />
           ),

@@ -72,7 +72,7 @@ const getProducts = asyncHandler(async (req, res) => {
 
     // ✅ CORRECT LIKE DATA
     likesCount: likeCountMap[p._id.toString()] || 0,
-    isLiked: userLikedSet.has(p._id.toString()),
+    isLiked: userLikedSet.has(p._id.toString()), 
   }));
 
   res.json({

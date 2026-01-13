@@ -4,187 +4,319 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  FlatList,
-  TextInput,
   TouchableOpacity,
   Image,
+  SafeAreaView,
+  Dimensions,
+  StatusBar,
+  Platform,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "../../constants/Utils";
-import { useGetProductsQuery } from "../../slices/productsApiSlice";
-import ProductCard from "../../components/ProductCard";
+import { Ionicons, Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
-const ShopScreen = () => {
-  const [search, setSearch] = useState("");
+const { width } = Dimensions.get("window");
 
-  const { data: products, isLoading } = useGetProductsQuery({
-    keyword: search || "",
-    pageNumber: 1,
-  });
+const CategoryScreen = () => {
+  const router = useRouter();
+  const [selectedCategory, setSelectedCategory] = useState(1);
 
-  const categories = [
-    { id: 1, name: "Phones", icon: require("../../assets/adaptive-icon.png") },
-    { id: 2, name: "Fashion", icon: require("../../assets/adaptive-icon.png") },
-    { id: 3, name: "Electronics", icon: require("../../assets/adaptive-icon.png") },
-    { id: 4, name: "Beauty", icon: require("../../assets/adaptive-icon.png") },
+  // --- DATA SOURCE ---
+  const mainCategories = [
+    { id: 1, name: "Women's Fashion" },
+    { id: 2, name: "Men's Fashion" },
+    { id: 3, name: "Phones & Telecom" },
+    { id: 4, name: "Electronics" },
+    { id: 5, name: "Home & Pet" },
+    { id: 6, name: "Bags & Shoes" },
+    { id: 7, name: "Jewelry" },
+    { id: 8, name: "Outdoor Fun" },
   ];
 
+  const categoryData = {
+    1: [
+      { id: 101, name: "Dresses", img: "https://picsum.photos/200?random=1" },
+      { id: 102, name: "T-Shirts", img: "https://picsum.photos/200?random=2" },
+      { id: 103, name: "Skirts", img: "https://picsum.photos/200?random=3" },
+      { id: 104, name: "Hoodies", img: "https://picsum.photos/200?random=4" },
+    ],
+    2: [
+      { id: 201, name: "Suits", img: "https://picsum.photos/200?random=5" },
+      { id: 202, name: "Jackets", img: "https://picsum.photos/200?random=6" },
+      { id: 203, name: "Jeans", img: "https://picsum.photos/200?random=7" },
+    ],
+    3: [
+      { id: 301, name: "iPhone", img: "https://picsum.photos/200?random=8" },
+      { id: 302, name: "Android", img: "https://picsum.photos/200?random=9" },
+      { id: 303, name: "Cases", img: "https://picsum.photos/200?random=10" },
+    ],
+  };
+
+  const currentProducts = categoryData[selectedCategory] || [];
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
 
-      {/* Search Bar */}
-      <View style={styles.searchBox}>
-        <Ionicons name="search-outline" size={20} color={Colors.gray} />
-        <TextInput
-          placeholder="Search products..."
-          placeholderTextColor={Colors.gray}
-          value={search}
-          onChangeText={setSearch}
-          style={styles.searchInput}
-        />
-        <Ionicons name="options-outline" size={22} color={Colors.primary} />
-      </View>
-
-      {/* Flash Deals */}
-      <View style={styles.flashContainer}>
-        <Text style={styles.sectionHeader}>🔥 Flash Deals</Text>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {(products?.products?.slice(0, 6) || []).map((item) => (
-            <TouchableOpacity key={item._id} style={styles.flashCard}>
-              <Image source={{ uri: item.image }} style={styles.flashImage} />
-              <View style={styles.flashBadge}>
-                <Text style={styles.flashPrice}>${item.price}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Categories */}
-      <Text style={styles.sectionHeader}>Categories</Text>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {categories.map((cat) => (
-          <TouchableOpacity key={cat.id} style={styles.categoryCard}>
-            <View style={styles.categoryIconBox}>
-              <Image source={cat.icon} style={styles.categoryIcon} />
+      {/* --- ALIEXPRESS STYLE HEADER --- */}
+      <View style={styles.headerContainer}>
+        {/* LOGO ADDED HERE */} 
+        <View style={styles.logoContainer}>
+           <Image 
+             source={require("../../assets/images/logo.png")} 
+             style={styles.logo} 
+             resizeMode="contain"
+           />
+        </View>
+        <TouchableOpacity 
+          style={styles.searchBarWrapper} 
+          activeOpacity={0.9}
+          onPress={() => router.push("/SearchPage")}
+        >
+          <View style={styles.searchInner}>
+            <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
+            <Text style={styles.searchText}>I'm shopping for...</Text>
+          </View>
+          
+          <View style={styles.rightIcons}>
+            <View style={styles.cameraBtn}>
+               <Feather name="camera" size={20} color="#666" />
             </View>
-            <Text style={styles.categoryText}>{cat.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+            <TouchableOpacity 
+              style={styles.searchActionBtn}
+              onPress={() => router.push("/SearchPage")}
+            >
+              <Text style={styles.searchActionText}>Search</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </View>
 
-      {/* Product Grid */}
-      <Text style={styles.sectionHeader}>Best Deals for You</Text>
+      <View style={styles.content}>
+        {/* --- LEFT: SIDEBAR --- */}
+        <View style={styles.sidebar}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {mainCategories.map((cat) => (
+              <TouchableOpacity
+                key={cat.id}
+                onPress={() => setSelectedCategory(cat.id)}
+                style={[
+                  styles.sideItem,
+                  selectedCategory === cat.id && styles.activeSideItem,
+                ]}
+              >
+                {selectedCategory === cat.id && <View style={styles.activeIndicator} />}
+                <Text
+                  style={[
+                    styles.sideText,
+                    selectedCategory === cat.id && styles.activeSideText,
+                  ]}
+                >
+                  {cat.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
 
-      <FlatList
-        data={products?.products || []}
-        numColumns={2}
-        showsVerticalScrollIndicator={false}
-        keyExtractor={(item) => item._id}
-        columnWrapperStyle={{ justifyContent: "space-between" }}
-        renderItem={({ item }) => <ProductCard product={item} />}
-        contentContainerStyle={{ paddingBottom: 150 }}
-      />
-    </View>
+        {/* --- RIGHT: DYNAMIC CONTENT --- */}
+        <View style={styles.mainContent}>
+          <ScrollView 
+            key={selectedCategory} 
+            showsVerticalScrollIndicator={false} 
+            contentContainerStyle={styles.rightPadding}
+          >
+            <View style={styles.promoBanner}>
+              <Text style={styles.promoTitle}>
+                {mainCategories.find(c => c.id === selectedCategory)?.name}
+              </Text>
+              <Text style={styles.promoSubtitle}>Discover the latest trends</Text>
+            </View>
+
+            <Text style={styles.gridTitle}>Top Categories</Text>
+            
+            <View style={styles.productGrid}>
+              {currentProducts.length > 0 ? (
+                currentProducts.map((item) => (
+                  <TouchableOpacity key={item.id} style={styles.productItem}>
+                    <View style={styles.imgWrapper}>
+                      <Image source={{ uri: item.img }} style={styles.img} />
+                    </View>
+                    <Text style={styles.productLabel} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={styles.emptyText}>Items coming soon...</Text>
+              )}
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 };
 
-export default ShopScreen;
+export default CategoryScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F6FA",
-    padding: 12,
+    backgroundColor: "#FFF",
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
-
-  /** Search Bar **/
-  searchBox: {
+  headerContainer: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#FFF',
+  },
+  logoContainer: {
+    alignItems: 'center', 
+    justifyContent: 'center',
+    marginVertical: 10, // Adjust spacing above/below logo
+  },
+  logo: {
+    width: 120, // Adjust width based on your logo design
+    height: 40,  // Adjust height based on your logo design
+  },
+  searchBarWrapper: {
     flexDirection: "row",
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 16,
+    backgroundColor: "#FFF",
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 3,
-    marginBottom: 18,
+    justifyContent: 'space-between',
+    borderWidth: 1.5,
+    borderColor: "#FF4747",
+    paddingLeft: 12,
+    overflow: 'hidden'
   },
-  searchInput: {
+  searchInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
-    marginLeft: 10,
-    fontSize: 15,
   },
-
-  /** Flash Deals **/
-  flashContainer: { marginBottom: 25 },
-  sectionHeader: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 10,
-    color: "#1A1A1A",
+  searchIcon: {
+    marginRight: 8,
   },
-  flashCard: {
-    width: 120,
-    height: 150,
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    marginRight: 12,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
+  searchText: {
+    color: "#999",
+    fontSize: 13,
   },
-  flashImage: {
-    width: "100",
-    height: "75%",
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
+  rightIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: '100%',
   },
-  flashBadge: {
+  cameraBtn: {
+    paddingHorizontal: 10,
+  },
+  searchActionBtn: {
+    backgroundColor: '#FF4747',
+    height: '100%',
+    paddingHorizontal: 18,
+    justifyContent: 'center',
+  },
+  searchActionText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  content: {
+    flex: 1,
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: "#F5F5F5",
+  },
+  sidebar: {
+    width: width * 0.28,
+    backgroundColor: "#F8F8F8",
+  },
+  sideItem: {
+    height: 65,
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  activeSideItem: {
+    backgroundColor: "#FFF",
+  },
+  activeIndicator: {
     position: "absolute",
-    bottom: 8,
-    left: 8,
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    left: 0,
+    width: 3,
+    height: 25,
+    backgroundColor: "#FF4747",
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
   },
-  flashPrice: {
-    color: "#fff",
+  sideText: {
+    fontSize: 12,
+    color: "#666",
+    textAlign: "center",
+  },
+  activeSideText: {
+    color: "#000",
+    fontWeight: "bold",
+  },
+  mainContent: {
+    flex: 1,
+  },
+  rightPadding: {
+    padding: 15,
+  },
+  promoBanner: {
+    width: "100%",
+    height: 90,
+    backgroundColor: "#333",
+    borderRadius: 10,
+    justifyContent: "center",
+    paddingHorizontal: 15,
+    marginBottom: 20,
+  },
+  promoTitle: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  promoSubtitle: {
+    color: "#CCC",
+    fontSize: 12,
+  },
+  gridTitle: {
     fontWeight: "700",
     fontSize: 14,
+    marginBottom: 15,
+    color: "#333",
   },
-
-  /** Categories **/
-  categoryCard: {
+  productGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  productItem: {
+    width: "33.3%",
     alignItems: "center",
-    marginRight: 18,
+    marginBottom: 15,
   },
-  categoryIconBox: {
+  imgWrapper: {
     width: 70,
     height: 70,
-    backgroundColor: "#fff",
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    backgroundColor: "#F2F2F2",
+    borderRadius: 35,
+    marginBottom: 5,
+    overflow: 'hidden'
   },
-  categoryIcon: {
-    width: 45,
-    height: 45,
-  }, 
-  categoryText: {
-    fontSize: 14,
-    marginTop: 6,
-    fontWeight: "600",
+  img: {
+    width: "100%",
+    height: "100%",
   },
-});
+  productLabel: {
+    fontSize: 10,
+    color: "#444",
+  },
+  emptyText: {
+    color: "#999",
+    marginTop: 20,
+    width: "100%",
+    textAlign: "center",
+  },
+}); 
