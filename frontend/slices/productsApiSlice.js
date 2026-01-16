@@ -10,7 +10,7 @@ export const productsApiSlice = apiSlice.injectEndpoints({
         params: { keyword, pageNumber, category, subcategory, sort },
       }), 
       keepUnusedDataFor: 5,
-      providesTags: ["Product", "Auth"],
+      providesTags: ["Product", "Auth"], 
     }),
     getProductDetails: builder.query({ 
       query: (productId) => ({
@@ -65,6 +65,7 @@ export const productsApiSlice = apiSlice.injectEndpoints({
         method: "PUT",
         body: { deviceId },
       }), 
+      invalidatesTags: ["Product"],
     }),  
 
     toggleLike: builder.mutation({
@@ -72,6 +73,7 @@ export const productsApiSlice = apiSlice.injectEndpoints({
         url: `/api/products/${productId}/like`,
         method: "PUT",
       }),
+      invalidatesTags: ["Product"], // This refreshes the product data in the UI 
     }),
   }),
 });

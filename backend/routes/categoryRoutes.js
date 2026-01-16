@@ -1,11 +1,11 @@
  import express from "express";
 import { getCategories, createCategory,updateCategory,deleteCategory } from "../controllers/categoryController.js";
-import { protect, admin } from "../middleware/authMiddleware.js";
+import { protectOptional,protect, admin } from "../middleware/authMiddleware.js";
 
 const router = express.Router(); 
  
 // Public: get all categories 
-router.get("/", getCategories);
+router.get("/", protectOptional,getCategories);
 
 // Admin-only: create category
 router.post("/", protect, admin, createCategory);

@@ -90,6 +90,24 @@ export default function TabLayout() {
         }}
       />
 
+      {/* 💬 CHATS TAB (NEW) */}
+      <Tabs.Screen
+        name="ChatListScreen"   
+        options={{
+          title: "ChatListScreen",
+          tabBarIcon: ({ focused }) => (
+            <View>
+              <Ionicons 
+                size={26}
+                name={focused ? "chatbubbles" : "chatbubbles-outline"}
+                color={focused ? Colors.primary : Colors.secondary}
+              />
+              {/* Optional: Add a badge here later for unread messages */}
+            </View>
+          ),
+        }}
+      /> 
+
       <Tabs.Screen
         name="orders"
         options={{
@@ -105,9 +123,9 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-  name="profile"
+  name="account"
   options={{
-    title: "Profile",
+    title: "Account",
     tabBarIcon: ({ focused }) => {
       if (userInfo?.profileImage) {
         return (

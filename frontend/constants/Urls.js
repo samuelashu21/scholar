@@ -13,3 +13,5 @@ export const ORDERS_URL = "/api/orders";
 export const CATEGORY_URL = "/api/categories";  
 
 export const SUBCATEGORY_URL = "/api/subcategories"; 
+
+export const CHATS_URL = "/api/chats"; 

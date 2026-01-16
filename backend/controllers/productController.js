@@ -3,98 +3,7 @@ import Product from "../models/productModel.js";
 import Category from "../models/categoryModel.js";
 import Subcategory from "../models/subcategoryModel.js"; // Import Subcategory
 import Like from "../models/likeModel.js";
-
-// const getProducts = asyncHandler(async (req, res) => {
-//   const pageSize = 8; 
-//   const page = Number(req.query.pageNumber) || 1;
-
-//   // 1. Handle Keyword Search
-//   const keyword = req.query.keyword
-//     ? { name: { $regex: req.query.keyword, $options: "i" } }
-//     : {};
-
-//      // 2. Handle Category/Subcategory filters
-//   const category = req.query.category ? { category: req.query.category } : {};
-//   const subcategory = req.query.subcategory ? { subcategory: req.query.subcategory } : {};
-   
-//   const filter = {
-//     ...keyword, 
-//     ...category,
-//     ...subcategory, // Added to filter 
-//   };
-
-//   // 3. DYNAMIC SORTING LOGIC 
-//   // We look for req.query.sort (e.g., "-price", "price", "-rating")
-//   // If nothing is provided, we default to newest (-createdAt)
-//   const sortOrder = req.query.sort ? req.query.sort.split(',').join(' ') : "-createdAt";
-
-//   const count = await Product.countDocuments(filter);
-
-//   const products = await Product.find(filter)
-//     .limit(pageSize)
-//     .skip(pageSize * (page - 1))
-//     .populate("category", "categoryname image")
-//     .populate("subcategory", "subcategoryName image") // Added populate 
-//     .populate("user", "FirstName LastName")
-//     .sort(sortOrder); // <--- Apply the dynamic sort here 
  
-//   const userId = req.user?._id?.toString();
-
-//   /* =======================
-//      ✅ FIXED LIKE HANDLING
-//      ======================= */
-
-//   // 1️⃣ All likes for these products
-//   const productIds = products.map((p) => p._id);
-
-//   const likes = await Like.find({
-//     product: { $in: productIds },
-//   }).select("user product");
-
-//   // 2️⃣ Count likes per product
-//   const likeCountMap = {};
-//   likes.forEach((like) => {
-//     const pid = like.product.toString();
-//     likeCountMap[pid] = (likeCountMap[pid] || 0) + 1;
-//   });
-
-//   // 3️⃣ Products liked by current user
-//   const userLikedSet = new Set(
-//     userId
-//       ? likes
-//           .filter((like) => like.user.toString() === userId)
-//           .map((like) => like.product.toString())
-//       : []
-//   );
-
-//   /* ======================= */
-
-//   const sanitizedProducts = products.map((p) => ({
-//     _id: p._id,
-//     name: p.name,
-//     price: p.price,
-//     image: p.image,
-//     category: p.category,
-//     subcategory: p.subcategory, // Added to response 
-//     user: p.user,
-//     countInStock: p.countInStock,
-//     rating: p.rating,
-//     numReviews: p.numReviews,
-//     createdAt: p.createdAt,
-
-//     // ✅ CORRECT LIKE DATA
-//     likesCount: likeCountMap[p._id.toString()] || 0,
-//     isLiked: userLikedSet.has(p._id.toString()), 
-//   }));
-
-//   res.json({
-//     products: sanitizedProducts,
-//     page,
-//     pages: Math.ceil(count / pageSize),
-//     total: count,
-//   });
-// });
-
 
 // @desc    Get all products with global search (Name, Category, Subcategory)
 // @route   GET /api/products
@@ -193,11 +102,14 @@ const getProductById = asyncHandler(async (req, res) => {
   product.reviews = product.reviews || [];
 
   const userId = req.user?._id?.toString();
+   
+  // Count likes from the Like collection
+  const likesCount = await Like.countDocuments({ product: req.params.id });
 
-  const isLiked = userId
-    ? product.likes.some((id) => id.toString() === userId)
-    : false;
-
+  const isLiked = userId 
+    ? await Like.exists({ product: req.params.id, user: userId }) 
+    : false; 
+ 
   res.json({
     _id: product._id,
     name: product.name,
@@ -214,8 +126,8 @@ const getProductById = asyncHandler(async (req, res) => {
     createdAt: product.createdAt,
 
     // ✅ SAFE
-    likesCount: product.likes.length,
-    isLiked,
+    likesCount,
+    isLiked: !!isLiked, 
   });
 });
 
@@ -325,33 +237,29 @@ const deleteProduct = asyncHandler(async (req, res) => {
 });
 
 export const addView = async (req, res) => {
-  const { deviceId } = req.body;
-
   const product = await Product.findById(req.params.id);
-  if (!product) {
-    res.status(404);
-    throw new Error("Product not found");
-  }
-  // 👤 Logged-in user
-  if (req.user) {
-    const alreadyViewed = product.viewedBy.some(
-      (id) => id.toString() === req.user._id.toString()
-    );
+  if (!product) return res.status(404).json({ message: "Not found" });
 
-    if (!alreadyViewed) {
-      product.views = (product.views || 0) + 1;
+  const { deviceId } = req.body;
+  let hasViewed = false;
+
+  if (req.user) {
+    hasViewed = product.viewedBy.includes(req.user._id);
+    if (!hasViewed) {
       product.viewedBy.push(req.user._id);
-      await product.save();
     }
-  }
-  // 👥 Guest user (device-based)
-  else if (deviceId) {
-    if (!product.viewedByDevices.includes(deviceId)) {
-      product.views = (product.views || 0) + 1;
+  } else if (deviceId) {
+    hasViewed = product.viewedByDevices.includes(deviceId);
+    if (!hasViewed) {
       product.viewedByDevices.push(deviceId);
-      await product.save();
     }
   }
+
+  if (!hasViewed) {
+    product.views = (product.views || 0) + 1;
+    await product.save();
+  }
+
   res.json({ views: product.views });
 };
 
@@ -396,8 +304,7 @@ const createProductReview = asyncHandler(async (req, res) => {
 });
 
 export {
-  getProducts,
-  getProductById,
+  getProductById, 
   createProduct,
   updateProduct,
   deleteProduct,

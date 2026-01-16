@@ -20,7 +20,7 @@ import Message from "../../components/Message";
 import { Colors } from "../../constants/Utils";
 import { BASE_URL } from "../../constants/Urls";
 
-const Profile = () => {
+const  Account = () => {
   const { userInfo } = useSelector((state) => state.auth);
 
   const dispatch = useDispatch();
@@ -55,7 +55,7 @@ const Profile = () => {
               <Text style={styles.loginLink} onPress={handleLogin}>
                 login
               </Text>{" "}
-              to view your profile
+              to view your Account
             </Text>
           </Message>
         </View>
@@ -79,7 +79,7 @@ const Profile = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* -------- Profile Header Card -------- */}
+        {/* -------- Account Header Card -------- */}
         <View style={styles.profileCard}>
           <View style={styles.profileImageWrapper}>
             <Image
@@ -176,7 +176,7 @@ const Profile = () => {
   );
 };
 
-export default Profile;
+export default Account;
 
 const styles = StyleSheet.create({
   safeArea: {

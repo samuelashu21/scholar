@@ -88,7 +88,7 @@ const UserListScreen = () => {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.push("../../profile")}
+            onPress={() => router.push("../../account")}
             style={styles.backButton}
           >
             <Ionicons name="chevron-back" size={28} color="#333" />

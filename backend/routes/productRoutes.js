@@ -12,20 +12,20 @@ import {
   
 import { toggleLike } from "../controllers/likeController.js";
  
- import { protect,protectOptional, admin  } from "../middleware/authMiddleware.js"; 
+ import { protect,protectOptional, admin,sellerOrAdmin  } from "../middleware/authMiddleware.js"; 
  
 const router = express.Router();  
 
 router.route("/")    
-  .get(getProducts)                     // Anyone can view products
-  .post(protect, admin, createProduct); // Only sellers or admins
- 
+  .get(protectOptional,getProducts)                     // Anyone can view products
+  .post(protect, sellerOrAdmin, createProduct); // Only sellers or admins
+  
 router.route("/:id") 
-  .get(getProductById)                   // Anyone can view product
-  .put(protect, admin, updateProduct)   // Only seller (owner) or admin
-  .delete(protect, admin, deleteProduct); // Only seller (owner) or admin
+  .get(protectOptional,getProductById)                   // Anyone can view product
+  .put(protect, sellerOrAdmin, updateProduct)   // Only seller (owner) or admin
+  .delete(protect, sellerOrAdmin, deleteProduct); // Only seller (owner) or admin
  
-router.put("/:id/view", protectOptional, addView);
+router.put("/:id/view", protectOptional, addView); 
 router.put("/:id/like", protect, toggleLike); 
 
   

@@ -1,11 +1,12 @@
-import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity, Alert } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Rating from "./Rating";
 import { Colors } from "../constants/Utils";
 import React from "react";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { timeAgo } from "../utils/timeAgo";
+import { useSelector } from "react-redux";
 
 const ProductDetailsCard = ({
   product,
@@ -14,9 +15,40 @@ const ProductDetailsCard = ({
   handleAddToCart,
   disableAddToCart,
 }) => {
+  const router = useRouter();
+  
+  // 1. Get the logged-in user from Redux
+  const { userInfo } = useSelector((state) => state.auth);
+
   if (!product) return null;
 
-  const user = product?.user;
+  const seller = product?.user;
+
+  // 2. Logic: Check if the viewer is the owner
+  const isMyProduct = userInfo?._id === seller?._id;
+
+  // 3. Handle Chat Navigation
+  const handleChatPress = () => {
+    if (!userInfo) {
+      router.push("/LoginScreen");
+      return;
+    }
+
+    // Double check logic: Don't allow chat if it's your own product
+    if (isMyProduct) {
+      Alert.alert("Notice", "You cannot chat with yourself about your own product.");
+      return;
+    }
+
+    router.push({
+      pathname: "/ChatScreen",
+      params: {
+        receiverId: seller._id,
+        receiverName: `${seller.FirstName} ${seller.LastName}`,
+        productId: product._id,
+      },
+    });
+  };
 
   return (
     <View style={styles.card}>
@@ -34,7 +66,7 @@ const ProductDetailsCard = ({
       {/* Description */}
       <Text style={styles.description}>{product.description}</Text>
 
-      {/* Status + Quantity */}
+      {/* Status + Quantity Section */}
       <View style={styles.section}>
         <View style={styles.rowBetween}>
           <Text style={styles.label}>Status</Text>
@@ -48,10 +80,9 @@ const ProductDetailsCard = ({
           </Text>
         </View>
 
-        {product.countInStock > 0 && (
+        {!isMyProduct && product.countInStock > 0 && (
           <View style={styles.rowBetween}>
             <Text style={styles.label}>Quantity</Text>
-
             <View style={styles.pickerHolder}>
               <Picker
                 selectedValue={qty}
@@ -72,46 +103,58 @@ const ProductDetailsCard = ({
         )}
       </View>
 
-      {/* Seller Info */}
+      {/* Seller Info Card */}
       <View style={styles.sellerCard}>
         <Ionicons name="person-circle-outline" size={42} color={Colors.primary} />
 
         <View style={{ flex: 1 }}>
           <Text style={styles.sellerLabel}>Seller</Text>
-
-          {user ? (
+          <View style={styles.sellerActionRow}>
             <Link
               href={{
                 pathname: "/SellerProfile",
-                params: { sellerId: user._id },
+                params: { sellerId: seller?._id },
               }}
               asChild
-            > 
+            >
               <TouchableOpacity>
                 <Text style={styles.sellerName}>
-                  {`${user.FirstName || ""} ${user.LastName || ""}`.trim()}
+                  {isMyProduct 
+                    ? "You (Owner)" 
+                    : `${seller?.FirstName || ""} ${seller?.LastName || ""}`.trim()}
                 </Text>
               </TouchableOpacity>
             </Link>
-          ) : (
-            <Text style={styles.sellerName}>Unknown</Text>
-          )}
 
+            {/* 💬 CHAT BUTTON: Hidden if product belongs to user */}
+            {!isMyProduct && seller && (
+              <TouchableOpacity onPress={handleChatPress} style={styles.chatIconBtn}>
+                <Ionicons name="chatbubble-ellipses" size={24} color={Colors.primary} />
+                <Text style={styles.chatBtnText}>Chat</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <Text style={styles.postedTime}>{timeAgo(product?.createdAt)}</Text>
         </View>
       </View>
 
-      {/* Add To Cart */}
+      {/* Add To Cart / Manage Button */}
       <TouchableOpacity
         style={[
-          styles.addToCartButton,
-          disableAddToCart && styles.disabledButton,
+          styles.mainButton,
+          (disableAddToCart || isMyProduct) && styles.disabledButton,
         ]}
-        onPress={handleAddToCart}
-        disabled={disableAddToCart}
+        onPress={isMyProduct ? () => router.push("/account") : handleAddToCart}
+        disabled={disableAddToCart && !isMyProduct}
       >
-        <Ionicons name="cart-outline" size={22} color={Colors.white} />
-        <Text style={styles.cartText}>Add To Cart</Text>
+        <Ionicons 
+          name={isMyProduct ? "settings-outline" : "cart-outline"} 
+          size={22} 
+          color={Colors.white} 
+        />
+        <Text style={styles.cartText}>
+          {isMyProduct ? "Manage Listing" : "Add To Cart"}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -125,84 +168,23 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 18,
     marginBottom: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    elevation: 3,
   },
-
-  productName: {
-    fontSize: 26,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 12,
-  },
-
-  priceRatingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-
-  price: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: Colors.primary,
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: Colors.lightGray,
-    marginVertical: 16,
-  },
-
-  description: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: Colors.darkGray,
-    marginBottom: 16,
-  },
-
-  section: {
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: Colors.lightGray,
-  },
-
-  rowBetween: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-
-  statusText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  productName: { fontSize: 26, fontWeight: "700", textAlign: "center", marginBottom: 12 },
+  priceRatingRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  price: { fontSize: 20, fontWeight: "700", color: Colors.primary },
+  divider: { height: 1, backgroundColor: Colors.lightGray, marginVertical: 16 },
+  description: { fontSize: 15, lineHeight: 22, color: Colors.darkGray, marginBottom: 16 },
+  section: { paddingVertical: 10, borderTopWidth: 1, borderTopColor: Colors.lightGray },
+  rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
+  label: { fontSize: 16, fontWeight: "600" },
+  statusText: { fontSize: 16, fontWeight: "600" },
   inStock: { color: Colors.success },
   outOfStock: { color: Colors.danger },
-
-  pickerHolder: {
-    width: 120,
-    borderWidth: 1,
-    borderColor: Colors.lightGray,
-    borderRadius: 12,
-    overflow: "hidden",
-    backgroundColor: Colors.white,
-  },
-
+  pickerHolder: { width: 100, borderWidth: 1, borderColor: Colors.lightGray, borderRadius: 12, overflow: "hidden" },
   picker: { height: 50 },
-
-  /* Seller Card */
-
+  
+  /* Seller Info */
   sellerCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -210,32 +192,32 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 14,
     marginVertical: 12,
-    gap: 12,
     borderWidth: 1,
     borderColor: Colors.lightGray,
   },
-
-  sellerLabel: {
-    fontSize: 12,
-    color: Colors.darkGray,
-    marginBottom: 2,
+  sellerActionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-
-  sellerName: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: Colors.primary,
+  chatIconBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.white,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: Colors.primary,
   },
+  chatBtnText: { color: Colors.primary, fontWeight: "600", fontSize: 12 },
+  sellerLabel: { fontSize: 12, color: Colors.darkGray },
+  sellerName: { fontSize: 16, fontWeight: "700", color: Colors.primary },
+  postedTime: { fontSize: 13, color: Colors.darkGray, marginTop: 2 },
 
-  postedTime: {
-    fontSize: 13,
-    color: Colors.darkGray,
-    marginTop: 2,
-  },
-
-  /* Add to Cart */
-
-  addToCartButton: {
+  /* Buttons */
+  mainButton: {
     flexDirection: "row",
     backgroundColor: Colors.primary,
     paddingVertical: 14,
@@ -243,17 +225,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 10,
-    elevation: 3,
   },
-
-  cartText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-
-  disabledButton: {
-    backgroundColor: Colors.lightGray,
-    opacity: 0.7,
-  },
+  cartText: { color: Colors.white, fontSize: 16, fontWeight: "700" },
+  disabledButton: { backgroundColor: Colors.darkGray, opacity: 0.8 },
 });

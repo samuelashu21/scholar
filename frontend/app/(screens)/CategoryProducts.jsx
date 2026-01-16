@@ -225,7 +225,7 @@ headerWrapper: {
       ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3 },
       android: { elevation: 3 }
     })
-  },
+  }, 
 navRow: {
     flexDirection: "row",
     alignItems: "center",

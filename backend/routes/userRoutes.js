@@ -27,8 +27,8 @@ import {
   rejectSeller,
 } from "../controllers/userController.js";
 
-import { protect, admin } from "../middleware/authMiddleware.js";
-
+import { protect, admin ,sellerOrAdmin} from "../middleware/authMiddleware.js";
+ 
 const router = express.Router();
 
 // ---------------------------
@@ -93,29 +93,35 @@ router
 // Profile image upload
 router.post("/uploadprofile", protect, upload.single("image"), uploadProfileImage);
  
+
+// ---------------------------
+// ---------------------------
+// 4. SELLER ROUTES (Must be above Admin /:id)
+// ---------------------------
 // ---------------------------
 // SELLER REQUEST ROUTES
 // --------------------------- 
 router.post("/request-seller", protect, requestSeller);
 
-// ---------------------------
-// ADMIN SELLER MANAGEMENT
+// Public or protected seller info by ID
+router.get("/seller/:id", protect, getSellerById);
+
+
+// ADMIN  MANAGEMENT
 // ---------------------------
 router.get("/seller-requests", protect, admin, getSellerRequests);
 router.put("/approve-seller/:id", protect, admin, approveSeller);
 router.put("/reject-seller/:id", protect, admin, rejectSeller);
-
-// ---------------------------
-// ADMIN USER MANAGEMENT
 // ---------------------------
 router.get("/", protect, admin, getUsers);
 
+
+// ---------------------------
+// 6. GENERIC ID ROUTES (Must be LAST)
+// ---------------------------
 // VERY LAST ROUTE — MUST STAY LAST 
 // Admin: get user by ID
-router.get("/:id", protect, admin, getUserById);
-
-// Public or protected seller info by ID
-router.get("/seller/:id", protect, getSellerById);
+router.get("/:id", protect, getUserById);
 // Update & delete (admin only)
 router.put("/:id", protect, admin, updateUser);
 router.delete("/:id", protect, admin, deleteUser); 

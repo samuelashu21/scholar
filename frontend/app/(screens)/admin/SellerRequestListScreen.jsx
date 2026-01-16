@@ -97,7 +97,7 @@ const SellerRequestListScreen = () => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.push("../../profile")} style={styles.backButton}>
+          <TouchableOpacity onPress={() => router.push("../../account")} style={styles.backButton}>
             <Ionicons name="chevron-back" size={28} color="#333" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Seller Requests</Text>

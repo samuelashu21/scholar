@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
-  SafeAreaView,
+  SafeAreaView, 
 } from "react-native";
 import React from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -156,7 +156,7 @@ const ProductListScreen = () => {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.push("../../profile")}
+            onPress={() => router.push("../../account")}
             style={styles.backButton}
           >
             <Ionicons name="chevron-back" size={28} color={Colors.primary} />

@@ -14,6 +14,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useGetOrdersQuery } from "../../../slices/ordersApiSlice";
 import Message from "../../../components/Message";
 import { Colors } from "../../../constants/Utils";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 const OrderListScreen = () => {
   const { data: orders, isLoading, error } = useGetOrdersQuery();
@@ -43,8 +44,14 @@ const OrderListScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
+         <TouchableOpacity
+                    onPress={() => router.push("../../account")}
+                    style={styles.backButton}
+                  >
+                    <Ionicons name="chevron-back" size={28} color={Colors.primary} />
+                  </TouchableOpacity>
         <Text style={styles.title}>Orders</Text>
-
+ 
         <View style={styles.tableHeader}>
           <Text style={[styles.headerCell, { flex: 0.5 }]}>#</Text>
           <Text style={[styles.headerCell, { flex: 1.5 }]}>User</Text>

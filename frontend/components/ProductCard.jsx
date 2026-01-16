@@ -15,7 +15,10 @@ const ProductCard = ({ product, isWishlistItem = false, onRemove }) => {
   };
 
   return ( 
+    
     <View style={styles.cardWrapper}>
+      
+  
       {/* ❌ Remove button only in wishlist */}
       {isWishlistItem && (
         <TouchableOpacity style={styles.removeBtn} onPress={() => onRemove(product._id)}>
@@ -39,9 +42,9 @@ const ProductCard = ({ product, isWishlistItem = false, onRemove }) => {
 
         <Text style={styles.price}>${product.price}</Text>
 
-        <Text style={styles.sold}>Sold: {product.numReviews + 20}</Text>
+        {/* <Text style={styles.sold}>Sold: {product.numReviews}</Text> */}
       </TouchableOpacity>
-    </View>
+    </View> 
   );
 };
 

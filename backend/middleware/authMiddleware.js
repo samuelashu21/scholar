@@ -5,9 +5,7 @@ import User from "../models/userModel.js";
 const protect = asyncHandler(async (req, res, next) => {
   let token;
   token = req.cookies.jwt;
-
-  //console.log("Protect middleware executed. Token:", token); // <-- add this
-
+  
   if (token) {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -27,7 +25,7 @@ const protect = asyncHandler(async (req, res, next) => {
 
 const protectOptional = asyncHandler(async (req, res, next) => {
   let token;
-  token = req.cookies.jwt;
+  token = req.cookies.jwt; 
 
   if (token) {
     try {
