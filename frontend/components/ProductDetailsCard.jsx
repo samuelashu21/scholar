@@ -14,7 +14,7 @@ const ProductDetailsCard = ({
   setQty,
   handleAddToCart,
   disableAddToCart,
-}) => {
+}) => { 
   const router = useRouter();
   
   // 1. Get the logged-in user from Redux
@@ -44,8 +44,12 @@ const ProductDetailsCard = ({
       pathname: "/ChatScreen",
       params: {
         receiverId: seller._id,
-        receiverName: `${seller.FirstName} ${seller.LastName}`,
+        receiverName: `${seller.FirstName || ""} ${seller.LastName || ""}`.trim(), 
         productId: product._id,
+        // --- ADDED THESE MISSING FIELDS ---
+        productName: product.name,
+        productImage: product.image || (product.images && product.images[0]), // Handle single or array
+        productPrice: product.price.toString(), // Params should be strings
       },
     });
   };

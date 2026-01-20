@@ -50,6 +50,7 @@ const userSchema = mongoose.Schema(
       type: String,
       default: "/images/default-profile.png",
     },
+    pushToken: { type: String, default: "" },
     loginCount: {
       type: Number,
       default: 0,
@@ -83,7 +84,7 @@ const userSchema = mongoose.Schema(
       default: false,
     },
     otp: String,
-    otpExpires: Date,  
+    otpExpires: Date,
     emailVerificationToken: String,
     emailVerificationExpire: Date,
     accountStatus: {
@@ -91,9 +92,11 @@ const userSchema = mongoose.Schema(
       enum: ["active", "suspended", "inactive"],
       default: "active",
     },
-    lastLogin: Date,  
+    lastLogin: Date,
+    isOnline: { type: Boolean, default: false },
+    lastSeen: { type: Date, default: Date.now },
     otpresetpassword: String,
-    resetPasswordOTP: { type: String }, 
+    resetPasswordOTP: { type: String },
     resetPasswordOTPExpires: { type: Date },
     wishlist: [
       {
@@ -105,7 +108,7 @@ const userSchema = mongoose.Schema(
       kebele: String,
       city: String,
       state: String,
-      postalCode: String, 
+      postalCode: String,
       country: String,
     },
   },
@@ -113,7 +116,7 @@ const userSchema = mongoose.Schema(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 // Virtual for full name

@@ -5,13 +5,13 @@ import generateToken from "../utils/generateToken.js";
 import validator from "validator";
 import { generateOTP } from '../utils/otp_generator.js'; 
 import { sendOTPEmail,sendResetPasswordEmail,sendSellerRequestEmail,sendSellerApprovalEmail } from '../utils/smtp_function.js'; 
-  
+   
    
 const authUser = asyncHandler(async (req, res) => {
   const { email, phone, password } = req.body;
   // Determine which identifier is provided
   const loginIdentifier = email || phone;
-  if (!loginIdentifier || !password) {
+  if (!loginIdentifier || !password) { 
     res.status(400);
     throw new Error("All fields are required");
   }
@@ -613,9 +613,8 @@ const getUserById = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id).select("-password");
   if (!user) { 
     res.status(404);
-    throw new Error("User not found");
-  } 
- 
+    throw new Error("User not found"); 
+  }  
   // Get products by this user
   const products = await Product.find({ user: user._id });
 
@@ -623,6 +622,32 @@ const getUserById = asyncHandler(async (req, res) => {
 });
 
 
+// @desc    Search sellers by name or store name
+// @route   GET /api/users/search
+// @access  Public
+const searchSellers = asyncHandler(async (req, res) => {
+  const query = req.query.q;
+ 
+  if (!query) {
+    return res.json([]);
+  } 
+  const searchCriteria = {
+    isSeller: true,
+    $or: [
+      { FirstName: { $regex: query, $options: "i" } },
+      { LastName: { $regex: query, $options: "i" } },
+      { "sellerProfile.storeName": { $regex: query, $options: "i" } },
+    ],
+  };
+  const sellers = await User.find(searchCriteria)
+    .select("FirstName LastName profileImage sellerProfile sellerRequest isSeller")
+    .limit(20);
+ 
+  res.json(sellers);
+});
+// Add searchSellers to your export list at the bottom
+
+ 
 
 const updateUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
@@ -687,7 +712,28 @@ const updateUser = asyncHandler(async (req, res) => {
 });
 
 
+// @desc    Update user push token
+// @route   PUT /api/users/push-token
+// @access  Private
+const updatePushToken = asyncHandler(async (req, res) => {
+  const { token } = req.body;
 
+  if (!token) {
+    res.status(400); 
+    throw new Error("Token is required");
+  }
+
+  const user = await User.findById(req.user._id);
+
+  if (user) {
+    user.pushToken = token;
+    await user.save();
+    res.json({ message: "Push token updated successfully" });
+  } else {
+    res.status(404);
+    throw new Error("User not found");
+  }
+}); 
 
 const requestSeller = asyncHandler(async (req, res) => {
   try { 
@@ -876,12 +922,14 @@ const rejectSeller = asyncHandler(async (req, res) => {
 export {
   authUser,
   registerUser,
+  updatePushToken, 
   resendOTP,
   verifyOTP, 
   logoutUser,
   resetPassword,
   requestResetPassword,  
   getUserProfile,
+  searchSellers,
   updateUserProfile,
   uploadProfileImage,
   getUsers,

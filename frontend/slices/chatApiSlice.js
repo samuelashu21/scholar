@@ -9,7 +9,7 @@ export const chatApiSlice = apiSlice.injectEndpoints({
       query: () => ({
         url: CHATS_URL,
       }),
-      providesTags: ["Chats"], 
+      providesTags: ["Chats"],
     }),
 
     // Get a specific conversation
@@ -19,7 +19,7 @@ export const chatApiSlice = apiSlice.injectEndpoints({
       }),
       providesTags: ["ChatDetails"],
     }),
- 
+
     // Send a message
     sendMessage: builder.mutation({
       query: (data) => ({
@@ -29,11 +29,31 @@ export const chatApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["Chats"],
     }),
-  }),
+    // --- NEW: Edit Message ---
+    editMessage: builder.mutation({
+      query: ({ chatId, messageId, newText }) => ({
+        url: `${CHATS_URL}/${chatId}/message/${messageId}`,
+        method: "PUT",
+        body: { newText },
+      }),
+      invalidatesTags: ["ChatDetails", "Chats"],
+    }),
+  
+    unsendMessage: builder.mutation({
+      query: ({ chatId, messageId, type }) => ({
+        url: `${CHATS_URL}/${chatId}/message/${messageId}`,
+        method: "DELETE",
+        params: { deleteType: type }, // If type is 'everyone', this sends ?deleteType=everyone
+      }),
+      invalidatesTags: ["ChatDetails", "Chats"],
+    }),
+  }), 
 });
 
 export const {
   useGetMyChatsQuery,
   useGetChatDetailsQuery,
   useSendMessageMutation,
-} = chatApiSlice; 
+  useEditMessageMutation,
+  useUnsendMessageMutation,
+} = chatApiSlice;

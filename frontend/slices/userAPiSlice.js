@@ -89,6 +89,15 @@ export const userApiSlice = apiSlice.injectEndpoints({
       providesTags: ["User"],
     }),
 
+    savePushToken: builder.mutation({ 
+      query: (data) => ({
+        url: `${USERS_URL}/push-token`,
+        method: "PUT",
+        body: data, // Expects { token: "ExponentPushToken[xxx]" }
+      }),
+      invalidatesTags: ["User"],
+    }), 
+
     updateUserProfile: builder.mutation({
       query: (data) => ({
         url: `${USERS_URL}/profile`,
@@ -119,6 +128,14 @@ export const userApiSlice = apiSlice.injectEndpoints({
       query: (userId) => `/api/users/${userId}`, // your backend route
       keepUnusedDataFor: 5,
       providesTags: ["User"],
+    }), 
+    
+    searchSellers: builder.query({
+      query: (searchQuery) => ({
+        url: `${USERS_URL}/search`,
+        params: { q: searchQuery },
+      }),
+      keepUnusedDataFor: 5,
     }), 
 
     getUserDetails: builder.query({
@@ -202,9 +219,11 @@ export const {
   useResetPasswordMutation,
 
   // Profile
-  useGetProfileQuery, 
-  useGetSellerByIdQuery,
-  useUpdateUserProfileMutation,
+  useGetProfileQuery,
+  useSavePushTokenMutation, 
+  useGetSellerByIdQuery, 
+  useSearchSellersQuery, 
+  useUpdateUserProfileMutation, 
   useUploadProfileImageMutation,
 
   // Admin user management

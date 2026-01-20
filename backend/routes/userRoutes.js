@@ -7,6 +7,7 @@ import fs from "fs";
 import {
   authUser,
   registerUser,
+  updatePushToken, 
   logoutUser,
   resendOTP,
   verifyOTP,
@@ -14,7 +15,8 @@ import {
   resetPassword,
   resendResetPasswordOTP,
   getUserProfile,
-  updateUserProfile,
+  searchSellers,
+  updateUserProfile, 
   uploadProfileImage, 
   getUsers,
   getUserById,
@@ -38,6 +40,7 @@ router.post("/", registerUser);
 router.post("/auth", authUser);
 router.post("/verify-otp", verifyOTP);
 router.post("/resend-otp", resendOTP);
+router.route('/push-token').put(protect, updatePushToken); 
 router.post("/request-reset-password", requestResetPassword);
 router.post("/reset-password", resetPassword);
 router.post("/resend-reset-password-otp", resendResetPasswordOTP);
@@ -103,6 +106,8 @@ router.post("/uploadprofile", protect, upload.single("image"), uploadProfileImag
 // --------------------------- 
 router.post("/request-seller", protect, requestSeller);
 
+router.get("/search", searchSellers);  
+
 // Public or protected seller info by ID
 router.get("/seller/:id", protect, getSellerById);
 
@@ -121,8 +126,8 @@ router.get("/", protect, admin, getUsers);
 // ---------------------------
 // VERY LAST ROUTE — MUST STAY LAST 
 // Admin: get user by ID
-router.get("/:id", protect, getUserById);
+router.get("/:id", protect, getUserById); 
 // Update & delete (admin only)
 router.put("/:id", protect, admin, updateUser);
 router.delete("/:id", protect, admin, deleteUser); 
-export default router;
+export default router; 
