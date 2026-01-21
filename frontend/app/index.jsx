@@ -7,80 +7,103 @@ import {
   SafeAreaView,
   StatusBar,
   Animated,
+  Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Colors } from "../constants/Utils";
 
+const { width } = Dimensions.get("window");
+
 export default function WelcomeScreen() {
   const router = useRouter();
   
-  // 🎭 Animation Values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideUp = useRef(new Animated.Value(20)).current;
+  // 🎭 Professional Animation Setup
+  const logoScale = useRef(new Animated.Value(0.8)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const contentTranslateY = useRef(new Animated.Value(40)).current;
+  const contentOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Parallel animations for a smooth entrance
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideUp, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
+    // Staggered entrance: Logo first, then text content
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(logoScale, {
+          toValue: 1,
+          tension: 20,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoOpacity, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(contentTranslateY, {
+          toValue: 0,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentOpacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
     ]).start();
 
     const timer = setTimeout(() => {
       router.replace("/(tabs)");
-    }, 3000); // Slightly longer to let the user breathe
+    }, 3200);
 
     return () => clearTimeout(timer);
   }, []);
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
+      <StatusBar barStyle="dark-content" />
 
+      {/* 🔵 Logo Section - Centered with a subtle glow effect background */}
+      <View style={styles.heroSection}>
+        <Animated.View style={{ 
+          opacity: logoOpacity, 
+          transform: [{ scale: logoScale }] 
+        }}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require("../assets/images/logo.png")}
+              style={styles.logo}
+            />
+          </View>
+        </Animated.View>
+      </View>
+
+      {/* 📝 Brand Identity Section */}
       <Animated.View 
         style={[
-          styles.content, 
-          { opacity: fadeAnim, transform: [{ translateY: slideUp }] }
+          styles.footerSection, 
+          { opacity: contentOpacity, transform: [{ translateY: contentTranslateY }] }
         ]}
       >
-        {/* 🔵 Logo Section */}
-        <View style={styles.logoWrapper}>
-          <Image
-            source={require("../assets/images/logo.png")}
-            style={styles.logo}
-          />
-        </View>
+        <Text style={styles.tagline}>TRADING WITH TRUST</Text>
+        <Text style={styles.headline}>
+          Ethiopia’s Premier{"\n"}
+          <Text style={{ color: Colors.primary }}>Marketplace</Text>
+        </Text>
+        
+        <Text style={styles.description}>
+          Join thousands of buyers and sellers in the most reliable local e-commerce community.
+        </Text>
 
-        {/* 📝 Text Content Section */}
-        <View style={styles.textWrapper}>
-          <Text style={styles.brandTag}>WELCOME TO</Text>
-          <Text style={styles.title}>
-            Ethiopia’s Realest{"\n"}E-Commerce App
-          </Text>
-
-          <Text style={styles.subtitle}>
-            Buy from trusted sellers or start your own journey. Sell with ease, grow with trust.
-          </Text>
-          
-          <View style={styles.badgeContainer}>
-             <Text style={styles.highlight}>🚀 Verified Sellers</Text>
-             <View style={styles.dot} />
-             <Text style={styles.highlight}>Fast Growth</Text>
-             <View style={styles.dot} />
-             <Text style={styles.highlight}>Local Trust</Text>
-          </View>
+        <View style={styles.stepIndicator}>
+          <View style={[styles.stepDot, styles.activeDot]} />
+          <View style={styles.stepDot} />
+          <View style={styles.stepDot} />
         </View>
       </Animated.View>
-      
-      {/* Optional: Add a subtle version number or footer */}
-      <Text style={styles.footerText}>v1.0.0</Text>
+
+      <Text style={styles.version}>VERSION 1.0.2</Text>
     </SafeAreaView>
   );
 }
@@ -88,74 +111,80 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFFFFF',
   },
-  content: {
-    flex: 1,
-    justifyContent: "space-between", // Pushes content apart nicely
-    paddingVertical: 60,
-  },
-  logoWrapper: {
-    flex: 1,
+  heroSection: {
+    flex: 3,
     justifyContent: "center",
     alignItems: "center",
   },
+  logoContainer: {
+    width: 180,
+    height: 180,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 90,
+    justifyContent: 'center',
+    alignItems: 'center',
+    // Subtle shadow for a "Premium" feel
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 5,
+  },
   logo: {
-    width: 160,
-    height: 160,
+    width: 120,
+    height: 120,
     resizeMode: "contain",
   },
-  textWrapper: {
-    paddingHorizontal: 30,
-    alignItems: "center",
+  footerSection: {
+    flex: 2,
+    paddingHorizontal: 40,
+    alignItems: 'center',
   },
-  brandTag: {
+  tagline: {
     fontSize: 12,
-    fontWeight: "bold",
+    fontWeight: "800",
     color: Colors.primary,
-    letterSpacing: 2,
-    marginBottom: 8,
+    letterSpacing: 4,
+    marginBottom: 10,
   },
-  title: {
-    fontSize: 28,
+  headline: {
+    fontSize: 32,
     fontWeight: "900",
-    color: "#1A1A1A", // Darker for better contrast
+    color: "#1A1A1A",
     textAlign: "center",
-    marginBottom: 16,
-    lineHeight: 34,
+    lineHeight: 40,
   },
-  subtitle: {
-    fontSize: 16,
-    color: "#666", // Softer secondary color
+  description: {
+    fontSize: 15,
+    color: "#777",
     textAlign: "center",
+    marginTop: 15,
     lineHeight: 24,
-    marginBottom: 30,
   },
-  badgeContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F5F5F5",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+  stepIndicator: {
+    flexDirection: 'row',
+    marginTop: 40,
   },
-  highlight: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.primary,
+  stepDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#E0E0E0',
+    marginHorizontal: 4,
   },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#CCC",
-    marginHorizontal: 8,
+  activeDot: {
+    width: 20,
+    backgroundColor: Colors.primary,
   },
-  footerText: {
+  version: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 30,
     alignSelf: 'center',
-    fontSize: 12,
-    color: '#AAA',
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#D1D1D1',
+    letterSpacing: 1,
   }
 });

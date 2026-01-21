@@ -12,7 +12,7 @@ import {
   resendOTP,
   verifyOTP,
   requestResetPassword,
-  resetPassword,
+  resetPassword, 
   resendResetPasswordOTP,
   getUserProfile,
   searchSellers,

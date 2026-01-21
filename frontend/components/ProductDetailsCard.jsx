@@ -1,14 +1,14 @@
-import { StyleSheet, Text, View, TouchableOpacity, Alert } from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Share } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Rating from "./Rating";
-import { Colors } from "../constants/Utils";
+import { Colors } from "../constants/Utils"; 
 import React from "react";
 import { Link, useRouter } from "expo-router";
 import { timeAgo } from "../utils/timeAgo";
-import { useSelector } from "react-redux";
+import { useSelector } from "react-redux"; 
 
-const ProductDetailsCard = ({
+const ProductDetailsCard = ({ 
   product,
   qty,
   setQty,
@@ -27,6 +27,26 @@ const ProductDetailsCard = ({
   // 2. Logic: Check if the viewer is the owner
   const isMyProduct = userInfo?._id === seller?._id;
 
+
+  // --- SHARE HANDLER ---
+const handleShare = async () => {
+    try {
+      // For local testing, use your scheme. 
+      // Example: frontend://product/64f123abc
+      const shareUrl = `frontend://product/${product._id}`; 
+      
+      await Share.share({
+        message: `Check out ${product.name} on our app!\n\nOpen link: ${shareUrl}`,
+        // Note: url field is primarily for iOS native sharing
+        url: shareUrl,  
+        title: `Share ${product.name}`,
+      });
+    } catch (error) {
+      Alert.alert("Error", error.message);
+    }
+  };
+
+   
   // 3. Handle Chat Navigation
   const handleChatPress = () => {
     if (!userInfo) {
@@ -53,11 +73,17 @@ const ProductDetailsCard = ({
       },
     });
   };
-
+ 
   return (
     <View style={styles.card}>
-      {/* Product Name */}
-      <Text style={styles.productName}>{product.name}</Text>
+      {/* Product Name + Share Button */}
+      <View style={styles.headerRow}>
+        <Text style={styles.productName}>{product.name}</Text>
+        <TouchableOpacity onPress={handleShare} style={styles.shareBtn}>
+          <Ionicons name="share-social-outline" size={18} color={Colors.primary} />
+          <Text style={styles.shareText}>Share</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Price + Rating */}
       <View style={styles.priceRatingRow}>
@@ -143,7 +169,7 @@ const ProductDetailsCard = ({
       </View>
 
       {/* Add To Cart / Manage Button */}
-      <TouchableOpacity
+      <TouchableOpacity 
         style={[
           styles.mainButton,
           (disableAddToCart || isMyProduct) && styles.disabledButton,
@@ -174,7 +200,37 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     elevation: 3,
   },
-  productName: { fontSize: 26, fontWeight: "700", textAlign: "center", marginBottom: 12 },
+  // Updated headerRow to align Share button
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  }, 
+  productName: { 
+    fontSize: 24, 
+    fontWeight: "700", 
+    flex: 1, 
+    textAlign: "left",
+    color: Colors.darkGray 
+  },
+  shareBtn: {
+    flexDirection: "row", // Align icon and text horizontally
+    alignItems: "center",
+    backgroundColor: Colors.offWhite,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.lightGray,
+    gap: 5, // Space between icon and text
+    marginLeft: 10,
+  },
+  shareText: { 
+    color: Colors.primary,
+    fontWeight: "600",
+    fontSize: 14,
+  },
   priceRatingRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
   price: { fontSize: 20, fontWeight: "700", color: Colors.primary },
   divider: { height: 1, backgroundColor: Colors.lightGray, marginVertical: 16 },

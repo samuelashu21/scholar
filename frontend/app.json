@@ -7,16 +7,18 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": true, 
     "splash": {
       "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "resizeMode": "contain", 
+      "backgroundColor": "#ffffff" 
     },
     "ios": {
-      "supportsTablet": true 
+      "supportsTablet": true ,
+      "bundleIdentifier": "com.shola.frontend"
     },
     "android": {
+      "package": "com.shola.frontend",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -27,7 +29,10 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "expo-router", 
       "expo-secure-store"
     ]
   }
 }
+
+

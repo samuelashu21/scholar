@@ -222,7 +222,7 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  Image,
+  Image, 
   TouchableOpacity,
   StatusBar,
   Platform,

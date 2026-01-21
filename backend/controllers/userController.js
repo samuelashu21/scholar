@@ -6,7 +6,7 @@ import validator from "validator";
 import { generateOTP } from '../utils/otp_generator.js'; 
 import { sendOTPEmail,sendResetPasswordEmail,sendSellerRequestEmail,sendSellerApprovalEmail } from '../utils/smtp_function.js'; 
    
-   
+    
 const authUser = asyncHandler(async (req, res) => {
   const { email, phone, password } = req.body;
   // Determine which identifier is provided

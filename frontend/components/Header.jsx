@@ -126,12 +126,12 @@ const Header = () => {
 
       {/* 4. USER GREETING & PROMO */}
       <View style={styles.promoSection}>
-        <View style={styles.welcomeInfo}>
+        {/* <View style={styles.welcomeInfo}>
           <Text style={styles.welcomeText}>
             {userInfo ? `Hi, ${userInfo.FirstName || userInfo.name || "User"} 👋` : "Welcome 👋"}
           </Text>
           <Text style={styles.subWelcome}>Find your style today</Text>
-        </View>
+        </View> */}
 
         <View style={styles.specialCard}>
           <View style={{ flex: 1 }}>

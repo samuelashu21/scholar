@@ -81,12 +81,19 @@ export const getProducts = asyncHandler(async (req, res) => {
 // @route   GET /api/products/:id 
 
 const getProductById = asyncHandler(async (req, res) => {
+
+  // Add this safety check at the very top
+  // if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+  //   res.status(400);
+  //   throw new Error("Invalid product ID format");
+  // }
+
   const product = await Product.findById(req.params.id)
     .populate("user", "FirstName LastName email")
     .populate("category", "categoryname")
     .populate("subcategory", "subcategoryName") // Added populate 
     .populate({
-      path: "reviews.user",
+      path: "reviews.user", 
       select: "FirstName LastName",
     });
 

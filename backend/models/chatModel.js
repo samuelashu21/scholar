@@ -32,7 +32,7 @@ const chatSchema = mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-      },
+      }, 
     ],
     // Optional: link to the product they are discussing 
     product: {
