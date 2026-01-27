@@ -8,50 +8,120 @@ import {
   Platform,
   Alert,
   SafeAreaView,
+  StatusBar,
+  TextInput,
 } from "react-native";
-import React from "react";
-import { useRouter } from "expo-router";
+import React, { useState, useMemo } from "react";
+import { useRouter, Stack } from "expo-router";
 import Toast from "react-native-toast-message";
 import Message from "../../../components/Message";
 import { useDeleteUserMutation, useGetSellerRequestsQuery } from "../../../slices/userAPiSlice";
 import { Colors } from "../../../constants/Utils";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Ionicons } from "@expo/vector-icons";
 
 const SellerRequestListScreen = () => {
   const { data: users, refetch, isLoading, error } = useGetSellerRequestsQuery();
   const [deleteUser] = useDeleteUserMutation();
   const router = useRouter();
 
-  const deleteHandler = (id) => {
-    Alert.alert(
-      "Delete Seller",
-      "Are you sure you want to delete this seller?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteUser(id);
-              refetch();
-              Toast.show({
-                type: "success",
-                text1: "Success",
-                text2: "Seller deleted successfully",
-              });
-            } catch (err) {
-              Toast.show({
-                type: "error",
-                text1: "Error",
-                text2: err?.data?.message || err.error,
-              });
-            }
-          },
-        },
-      ]
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState("All"); 
+  const [sortBy, setSortBy] = useState("name");
+
+  // Map backend enums to readable labels for the Filter Bar
+  const filterOptions = [
+    { label: "All", value: "All" },
+    { label: "Free", value: "free" },
+    { label: "1 Month", value: "paid_1_month" },
+    { label: "6 Months", value: "paid_6_month" },
+  ];
+
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+
+    let result = users.filter((user) => {
+      const fullName = `${user.FirstName} ${user.LastName}`.toLowerCase();
+      const matchesSearch = fullName.includes(searchQuery.toLowerCase()) || 
+                            user.email?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const userSub = user.sellerRequest?.subscriptionType;
+      const matchesTab = activeFilter === "All" || userSub === activeFilter;
+
+      return matchesSearch && matchesTab;
+    });
+
+    return result.sort((a, b) => {
+      if (sortBy === "name") return a.FirstName.localeCompare(b.FirstName);
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+  }, [users, searchQuery, activeFilter, sortBy]);
+
+  const getSubscriptionStyle = (type) => {
+    switch (type) {
+      case "paid_6_month": return { bg: "#E3F2FD", text: "#1976D2", label: "6 MONTHS" };
+      case "paid_1_month": return { bg: "#F3E5F5", text: "#7B1FA2", label: "1 MONTH" };
+      case "free": return { bg: "#E8F5E9", text: "#2E7D32", label: "FREE" };
+      default: return { bg: "#F5F5F5", text: "#616161", label: "N/A" };
+    }
+  };
+
+  const renderUser = ({ item: user }) => {
+    const subStyle = getSubscriptionStyle(user.sellerRequest?.subscriptionType);
+    return (
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.userInfo}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{user.FirstName?.charAt(0)}</Text>
+            </View>
+            <View>
+              <Text style={styles.userName}>{user.FirstName} {user.LastName}</Text>
+              <Text style={styles.userEmail}>{user.email}</Text>
+            </View>
+          </View>
+          <View style={[styles.badge, { backgroundColor: subStyle.bg }]}>
+            <Text style={[styles.badgeText, { color: subStyle.text }]}>
+              {subStyle.label}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.cardActions}>
+          <TouchableOpacity 
+            style={[styles.btn, styles.editBtn]}
+            onPress={() => router.push({ pathname: "/admin/ManageSellerRequestScreen", params: { id: user._id } })}
+          >
+            <Ionicons name="eye-outline" size={18} color={Colors.primary} />
+            <Text style={styles.editBtnText}>Review Request</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.deleteBtn} 
+            onPress={() => deleteHandler(user._id)}
+          >
+            <Ionicons name="trash-outline" size={20} color="#FF4D4D" />
+          </TouchableOpacity>
+        </View>
+      </View>
     );
+  };
+
+  const deleteHandler = (id) => {
+    Alert.alert("Remove Request", "Are you sure you want to delete this request?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteUser(id).unwrap();
+            refetch();
+            Toast.show({ type: "success", text1: "Deleted successfully" });
+          } catch (err) {
+            Toast.show({ type: "error", text1: "Error", text2: err?.data?.message });
+          }
+        },
+      },
+    ]);
   };
 
   if (isLoading) {
@@ -62,60 +132,76 @@ const SellerRequestListScreen = () => {
     );
   }
 
-  if (error) {
-    return (
-      <View style={styles.container}>
-        <Message variant="error">{error?.data?.message || error.error}</Message>
-      </View>
-    );
-  } 
-
-  const renderUser = ({ item: user }) => (
-    <View style={styles.tableRow}>
-      <Text style={[styles.cell, { flex: 2 }]}>{user.FirstName}</Text>
-      <Text style={[styles.cell, { flex: 1 }]}>{user.sellerRequest?.subscriptionType}</Text>
-      <View style={[styles.cell, { flex: 2, flexDirection: "row", justifyContent: "center" }]}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() =>
-            router.push({
-              pathname: "/admin/ManageSellerRequestScreen",
-              params: { id: user._id },
-            })
-          }
-        >
-          <FontAwesome name="edit" size={20} color={Colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={() => deleteHandler(user._id)}>
-          <FontAwesome name="trash" size={20} color={Colors.textRed} />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.push("../../account")} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={28} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Seller Requests</Text>
-          <View style={{ width: 28 }} />
-        </View>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF" translucent={false} />
+      <Stack.Screen options={{ headerShown: false }} />
 
-        <View style={styles.tableHeader}>
-          <Text style={[styles.headerCell, { flex: 2 }]}>First Name</Text>
-          <Text style={[styles.headerCell, { flex: 1 }]}>Subscription</Text>
-          <Text style={[styles.headerCell, { flex: 2 }]}>Actions</Text>
-        </View>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
+          <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Seller Requests</Text>
+        <TouchableOpacity 
+           onPress={() => setSortBy(sortBy === "name" ? "newest" : "name")} 
+           style={styles.iconButton}
+        >
+          <Ionicons 
+            name={sortBy === "name" ? "text-outline" : "time-outline"} 
+            size={22} 
+            color={Colors.primary} 
+          />
+        </TouchableOpacity>
+      </View>
 
+      <View style={styles.searchSection}>
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={18} color="#ADB5BD" style={{ marginRight: 8 }} />
+          <TextInput
+            placeholder="Search by name or email..."
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+      </View>
+
+      <View style={styles.filterBar}>
         <FlatList
-          data={users}
-          keyExtractor={(item) => item._id}
-          contentContainerStyle={{ paddingBottom: 20 }}
-          renderItem={renderUser}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={filterOptions}
+          keyExtractor={(item) => item.value}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[styles.chip, activeFilter === item.value && styles.activeChip]}
+              onPress={() => setActiveFilter(item.value)}
+            >
+              <Text style={[styles.chipText, activeFilter === item.value && styles.activeChipText]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          )}
         />
+      </View>
+
+      <View style={styles.container}>
+        {error ? (
+          <Message variant="error">{error?.data?.message || "Error loading requests"}</Message>
+        ) : (
+          <FlatList
+            data={filteredUsers}
+            keyExtractor={(item) => item._id}
+            contentContainerStyle={styles.listContent}
+            renderItem={renderUser}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="document-text-outline" size={60} color="#CCC" />
+                <Text style={styles.emptyText}>No requests matching criteria</Text>
+              </View>
+            }
+          />
+        )}
       </View>
     </SafeAreaView>
   );
@@ -126,83 +212,93 @@ export default SellerRequestListScreen;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.offWhite,
-    paddingTop: Platform.OS === "android" ? 20 : 0,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-    backgroundColor: Colors.offWhite,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: "#F8F9FA",
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
   header: {
-    height: 60,
+    height: 64,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 5,
-    marginBottom: 10,
+    paddingHorizontal: 16,
+    backgroundColor: "#FFF",
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: Colors.primary,
-    textAlign: "center",
-  },
-  tableHeader: {
+  headerTitle: { fontSize: 18, fontWeight: "700", color: "#1A1A1A" },
+  iconButton: { width: 40, height: 40, justifyContent: "center", alignItems: "center" },
+  searchSection: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: "#FFF" },
+  searchBar: {
     flexDirection: "row",
-    backgroundColor: Colors.lightGray,
+    alignItems: "center",
+    backgroundColor: "#F1F3F5",
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    height: 44,
+  },
+  searchInput: { flex: 1, fontSize: 14, color: "#212529" },
+  filterBar: {
     paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-    marginBottom: 6,
+    backgroundColor: "#FFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEE",
+    paddingLeft: 16,
   },
-  headerCell: {
-    fontWeight: "bold",
-    fontSize: 14,
-    textAlign: "center",
-    color: Colors.secondaryTextColor,
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#F1F3F5",
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: "#E9ECEF",
   },
-  tableRow: {
-    flexDirection: "row",
-    backgroundColor: Colors.white,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    marginVertical: 4,
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
+  activeChip: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  chipText: { fontSize: 13, color: "#6C757D", fontWeight: "600" },
+  activeChipText: { color: "#FFF" },
+  container: { flex: 1 },
+  listContent: { padding: 16 },
+  card: {
+    backgroundColor: "#FFF",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
     elevation: 2,
-    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#EAEAEA",
   },
-  cell: {
-    fontSize: 14,
-    textAlign: "center",
-    color: Colors.textColor,
-    justifyContent: "center",
-    alignItems: "center",
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16 },
+  userInfo: { flexDirection: "row", alignItems: "center", flex: 1 },
+  avatar: { 
+    width: 44, 
+    height: 44, 
+    borderRadius: 22, 
+    backgroundColor: "#F1F3F5", 
+    justifyContent: "center", 
+    alignItems: "center", 
+    marginRight: 12 
   },
-  actionButton: {
-    marginHorizontal: 8,
-    padding: 6,
-    borderRadius: 6,
-    backgroundColor: Colors.offWhite,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 2,
-    elevation: 1,
+  avatarText: { fontSize: 18, fontWeight: "bold", color: Colors.primary },
+  userName: { fontSize: 16, fontWeight: "600", color: "#212529" },
+  userEmail: { fontSize: 13, color: "#6C757D" },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  badgeText: { fontSize: 10, fontWeight: "700" },
+  cardActions: { 
+    flexDirection: "row", 
+    borderTopWidth: 1, 
+    borderTopColor: "#F1F3F5", 
+    paddingTop: 12 
   },
+  btn: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    justifyContent: "center", 
+    paddingVertical: 8, 
+    borderRadius: 8, 
+    flex: 1 
+  },
+  editBtn: { backgroundColor: "#F0F7FF", marginRight: 12 },
+  editBtnText: { marginLeft: 8, color: Colors.primary, fontWeight: "600" },
+  deleteBtn: { padding: 8, backgroundColor: "#FFF0F0", borderRadius: 8 },
+  loaderContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  emptyContainer: { alignItems: "center", marginTop: 60 },
+  emptyText: { marginTop: 12, color: "#ADB5BD", fontSize: 16 },
 });

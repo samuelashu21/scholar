@@ -1,3 +1,4 @@
+
 import {
   StyleSheet,
   Text,
@@ -7,32 +8,64 @@ import {
   ActivityIndicator,
   ScrollView,
   Platform,
-  SafeAreaView, 
+  SafeAreaView,
   KeyboardAvoidingView,
   Switch,
+  StatusBar,
 } from "react-native";
-import React, { useState, useEffect, use } from "react";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import React, { useState, useEffect } from "react";
+import { useRouter, useLocalSearchParams, Stack } from "expo-router";
 import Message from "../../../components/Message";
 import { Colors } from "../../../constants/Utils";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import {
   useGetUserDetailsQuery,
   useUpdateUserMutation,
 } from "../../../slices/userAPiSlice";
 
-const UserEditScreen = () => {
-   const [firstName, setFirstName] = useState("");
-    const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState(""); 
-   const [accountStatus, setAccountStatus] = useState("active"); // default active
-  const [isAdmin, setIsAdmin] = useState(false);
 
+  const FormInput = ({
+    label,
+    value,
+    onChangeText,
+    placeholder,
+    icon,
+    keyboardType = "default",
+  }) => (
+    <View style={styles.inputWrapper}>
+      <Text style={styles.inputLabel}>{label}</Text>
+      <View style={styles.inputContainer}>
+        <Ionicons
+          name={icon}
+          size={20}
+          color="#6C757D"
+          style={styles.inputIcon}
+        />
+        <TextInput
+          style={styles.textInput}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor="#ADB5BD"
+          keyboardType={keyboardType}
+        />
+      </View>
+    </View>
+  );
+
+
+const UserEditScreen = () => {
   const router = useRouter();
-  const params = useLocalSearchParams();
-  const userId = params.id;
+  const { id: userId } = useLocalSearchParams();
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [accountStatus, setAccountStatus] = useState("active");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isSeller, setIsSeller] = useState(false);
 
   const {
     data: user,
@@ -40,179 +73,201 @@ const UserEditScreen = () => {
     error,
     refetch,
   } = useGetUserDetailsQuery(userId);
-
   const [updateUser, { isLoading: loadingUpdate }] = useUpdateUserMutation();
 
-  // Toggle account status through enum values
-  const toggleAccountStatus = () => {
-    switch (accountStatus) {
-      case "active":
-        setAccountStatus("suspended");
-        break;
-      case "suspended":
-        setAccountStatus("inactive");
-        break;
-      case "inactive":
-      default:
-        setAccountStatus("active");
-        break;
-    }
-  }; 
-
-const submitHandler = async () => {
-  try {
-    await updateUser({
-      userId,
-      FirstName: firstName,
-      LastName: lastName,
-      email,
-      phone,
-      accountStatus,
-      isAdmin,
-    });
-
-    Toast.show({ 
-      type: "success",
-      text1: "Success",
-      text2: "User updated successfully",
-    });
-
-    refetch();
-    router.replace("/admin/UserListScreen");
-  } catch (error) {
-    Toast.show({
-      type: "error",
-      text1: "Error",
-      text2: error?.data?.message || error.error,
-    });
-  }
-};
-
- 
-  useEffect(() => { 
+  useEffect(() => {
     if (user) {
       setFirstName(user.FirstName || "");
       setLastName(user.LastName || "");
-      setEmail(user.email); 
+      setEmail(user.email || "");
       setPhone(user.phone || "");
       setAccountStatus(user.accountStatus || "active");
-      setIsAdmin(user.isAdmin);
+      setIsAdmin(user.isAdmin || false);
+      setIsSeller(user.isSeller || false);
     }
   }, [user]);
 
+  const submitHandler = async () => {
+    try {
+      await updateUser({
+        userId,
+        FirstName: firstName,
+        LastName: lastName,
+        email,
+        phone,
+        accountStatus,
+        isAdmin,
+        isSeller,
+      }).unwrap();
+
+      Toast.show({
+        type: "success",
+        text1: "User Updated",
+        text2: `${firstName}'s profile has been saved.`,
+      });
+
+      refetch();
+      router.back();
+    } catch (err) {
+      Toast.show({
+        type: "error",
+        text1: "Update Failed",
+        text2: err?.data?.message || err.error,
+      });
+    }
+  };
+
+
+
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+      <Stack.Screen options={{ headerShown: false }} />
+
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
+        style={{ flex: 1 }}
       >
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.closeButton}
+          >
+            <Ionicons name="close" size={24} color="#1A1A1A" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit User Profile</Text>
+          <TouchableOpacity onPress={submitHandler} disabled={loadingUpdate}>
+            {loadingUpdate ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : (
+              <Text style={styles.saveText}>Save</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
         <ScrollView
-          style={styles.container}
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={() => router.push("/admin/UserListScreen")}
-              style={styles.backButton}
-            >
-              <Ionicons
-                name="chevron-back-circle"
-                size={35}
-                color={Colors.primary}
-              />
-            </TouchableOpacity>
-            <Text style={styles.title}>Edit User</Text>
-          </View>
+          {isLoading ? (
+            <ActivityIndicator
+              size="large"
+              color={Colors.primary}
+              style={{ marginTop: 50 }}
+            />
+          ) : error ? (
+            <Message variant="error">
+              {error?.data?.message || "Failed to load user"}
+            </Message>
+          ) : (
+            <>
+              {/* SECTION: BASIC INFO */}
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Basic Information</Text>
+              </View>
 
-          <View style={styles.actualFormContainer}>
-            {loadingUpdate && (
-              <ActivityIndicator size="large" color={Colors.primary} />
-            )}
-            {isLoading ? (
-              <ActivityIndicator size="large" color={Colors.primary} />
-            ) : error ? (
-              <Message variant="error">
-                {error?.data?.message || error.error}
-              </Message>
-            ) : (
-              <View style={styles.form}>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>firstName</Text> 
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter firstName"
-                    value={firstName} 
-                    onChangeText={setFirstName}
-                  />
-                </View>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>lastName</Text> 
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter lastName"
-                    value={lastName}
-                    onChangeText={setLastName}
-                  />
-                </View>
+              <View style={styles.card}>
+                <FormInput
+                  label="First Name"
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  placeholder="John"
+                  icon="person-outline"
+                />
+                <FormInput
+                  label="Last Name"
+                  value={lastName}
+                  onChangeText={setLastName}
+                  placeholder="Doe"
+                  icon="person-outline"
+                />
+                <FormInput
+                  label="Email Address"
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="john@example.com"
+                  icon="mail-outline"
+                  keyboardType="email-address"
+                />
+                <FormInput
+                  label="Phone Number"
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="+1 234..."
+                  icon="call-outline"
+                  keyboardType="phone-pad"
+                />
+              </View>
 
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Email</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter email"
-                    value={email}
-                    onChangeText={setEmail}
-                  />
-                </View>
+              {/* SECTION: PERMISSIONS & STATUS */}
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Permissions & Status</Text>
+              </View>
 
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>phone</Text> 
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter phone"
-                    value={phone}
-                    onChangeText={setPhone}
-                  /> 
-                </View>
-
-                  <View style={styles.switchContainer}>
-                  <Text style={styles.label}>Account Status</Text>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Switch
-                      value={accountStatus === "active"}
-                      onValueChange={toggleAccountStatus}
-                      trackColor={{
-                        false: Colors.lightGray,
-                        true: Colors.primary,
-                      }}
-                      thumbColor={Colors.white}
-                    />
-                    <Text style={{ marginLeft: 10, fontWeight: "500" }}>
-                      {accountStatus.charAt(0).toUpperCase() + accountStatus.slice(1)}
+              <View style={styles.card}>
+                <View style={styles.switchRow}>
+                  <View style={styles.switchInfo}>
+                    <Text style={styles.switchLabel}>Administrator Access</Text>
+                    <Text style={styles.switchSubLabel}>
+                      Allows full access to management tools
                     </Text>
                   </View>
-                </View>
-
-                <View style={styles.switchContainer}>
-                  <Text style={styles.label}>Is Admin</Text>
                   <Switch
                     value={isAdmin}
                     onValueChange={setIsAdmin}
-                    trackColor={{
-                      false: Colors.lightGray,
-                      true: Colors.primary,
-                    }}
-                    thumbColor={Colors.white}
+                    trackColor={{ false: "#DEE2E6", true: Colors.primary }}
+                    thumbColor="#FFF"
                   />
                 </View>
 
-                <TouchableOpacity style={styles.button} onPress={submitHandler}>
-                  <Text style={styles.buttonText}>Update</Text>
-                </TouchableOpacity>
+                <View style={[styles.switchRow, styles.borderTop]}>
+                  <View style={styles.switchInfo}>
+                    <Text style={styles.switchLabel}>Seller Account</Text>
+                    <Text style={styles.switchSubLabel}>
+                      Allows user to list products
+                    </Text>
+                  </View>
+                  <Switch
+                    value={isSeller}
+                    onValueChange={setIsSeller}
+                    trackColor={{ false: "#DEE2E6", true: "#FD7E14" }}
+                    thumbColor="#FFF"
+                  />
+                </View>
+
+                <View style={[styles.switchRow, styles.borderTop]}>
+                  <View style={styles.switchInfo}>
+                    <Text style={styles.switchLabel}>Account Status</Text>
+                    <Text
+                      style={[
+                        styles.statusText,
+                        {
+                          color:
+                            accountStatus === "active" ? "#2FB344" : "#D63939",
+                        },
+                      ]}
+                    >
+                      Currently: {accountStatus.toUpperCase()}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.statusToggle}
+                    onPress={() =>
+                      setAccountStatus((prev) =>
+                        prev === "active" ? "suspended" : "active",
+                      )
+                    }
+                  >
+                    <Text style={styles.statusToggleText}>Change</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            )}
-          </View> 
+
+              <TouchableOpacity style={styles.deleteUserBtn}>
+                <Text style={styles.deleteUserText}>Flag User for Review</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -224,77 +279,82 @@ export default UserEditScreen;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.offWhite,
-    paddingTop: Platform.OS === "android" ? 20 : 0,
-  },
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    flex: 1,
+    backgroundColor: "#FFF",
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 20,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    height: 60, 
+  backgroundColor: "#FFF",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F3F5",
   },
-  backButton: {
-    marginRight: 10,
+  headerTitle: { fontSize: 17, fontWeight: "700", color: "#1A1A1A" },
+  closeButton: { width: 40, height: 40, justifyContent: "center" },
+  saveText: { color: Colors.primary, fontWeight: "700", fontSize: 16 },
+
+  scrollContent: { padding: 16, paddingBottom: 40, backgroundColor: "#F8F9FA" },
+  sectionHeader: { marginTop: 20, marginBottom: 8, paddingHorizontal: 4 },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6C757D",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: Colors.primary,
-  },
-  actualFormContainer: {
-    backgroundColor: Colors.white,
-    margin: 16,
+
+  card: {
+    backgroundColor: "#FFF",
+    borderRadius: 16,
     padding: 16,
-    borderRadius: 12,
-    shadowColor: Colors.darkGray,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#E9ECEF",
   },
-  form: {
-    width: "100%",
+
+  inputWrapper: { marginBottom: 16 },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#495057",
+    marginBottom: 6,
   },
   inputContainer: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: Colors.textColor,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: Colors.white,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8F9FA",
     borderWidth: 1,
-    borderColor: Colors.lightGray,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: Colors.textColor,
+    borderColor: "#DEE2E6",
+    borderRadius: 10,
+    paddingHorizontal: 12,
   },
-  switchContainer: {
+  inputIcon: { marginRight: 10 },
+  textInput: { flex: 1, height: 48, fontSize: 15, color: "#212529" },
+
+  switchRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
-    paddingRight: 10,
+    paddingVertical: 12,
   },
-  button: {
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 8,
-    backgroundColor: Colors.primary,
+  borderTop: { borderTopWidth: 1, borderTopColor: "#F1F3F5", marginTop: 4 },
+  switchInfo: { flex: 1, marginRight: 10 },
+  switchLabel: { fontSize: 15, fontWeight: "600", color: "#212529" },
+  switchSubLabel: { fontSize: 12, color: "#6C757D", marginTop: 2 },
+
+  statusText: { fontSize: 12, fontWeight: "700", marginTop: 4 },
+  statusToggle: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#F1F3F5",
+    borderRadius: 6,
   },
-  buttonText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  statusToggleText: { fontSize: 12, fontWeight: "600", color: "#495057" },
+
+  deleteUserBtn: { marginTop: 30, alignItems: "center", padding: 15 },
+  deleteUserText: { color: "#D63939", fontWeight: "600", fontSize: 14 },
 });

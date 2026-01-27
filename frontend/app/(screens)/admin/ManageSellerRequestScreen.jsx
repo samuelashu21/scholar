@@ -10,13 +10,14 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Switch,
+  StatusBar,
 } from "react-native";
 import React, { useState, useEffect } from "react";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, Stack } from "expo-router";
 import { Picker } from "@react-native-picker/picker";
 import Message from "../../../components/Message";
 import { Colors } from "../../../constants/Utils";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { useGetSellerRequestsQuery, useApproveSellerMutation } from "../../../slices/userAPiSlice";
 
@@ -35,25 +36,14 @@ const ManageSellerRequestScreen = () => {
   const [sellerStatus, setSellerStatus] = useState("pending");
 
   const router = useRouter();
-  const params = useLocalSearchParams(); 
+  const params = useLocalSearchParams();
   const userId = params.id;
- 
+
   const { data: user, isLoading, error, refetch } = useGetSellerRequestsQuery(userId);
   const [approveSeller, { isLoading: loadingUpdate }] = useApproveSellerMutation();
 
   const toggleAccountStatus = () => {
-    switch (accountStatus) {
-      case "active":
-        setAccountStatus("suspended");
-        break;
-      case "suspended":
-        setAccountStatus("inactive");
-        break;
-      case "inactive":
-      default:
-        setAccountStatus("active");
-        break;
-    }
+    setAccountStatus((prev) => (prev === "active" ? "suspended" : "active"));
   };
 
   const submitHandler = async () => {
@@ -66,30 +56,15 @@ const ManageSellerRequestScreen = () => {
         phone,
         accountStatus,
         isAdmin,
-        sellerProfile: {
-          storeName,
-          storeDescription,
-        },
-        sellerRequest: {
-          subscriptionType,
-          status: sellerStatus,
-        },
-      });
+        sellerProfile: { storeName, storeDescription },
+        sellerRequest: { subscriptionType, status: sellerStatus },
+      }).unwrap();
 
-      Toast.show({
-        type: "success",
-        text1: "Success",
-        text2: "User updated successfully",
-      });
-
+      Toast.show({ type: "success", text1: "Success", text2: "User updated successfully" });
       refetch();
-      router.replace("/admin/SellerRequestListScreen");
+      router.back();
     } catch (error) {
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: error?.data?.message || error.error,
-      });
+      Toast.show({ type: "error", text1: "Error", text2: error?.data?.message || "Failed to update" });
     }
   };
 
@@ -101,8 +76,6 @@ const ManageSellerRequestScreen = () => {
       setPhone(user.phone || "");
       setAccountStatus(user.accountStatus || "active");
       setIsAdmin(user.isAdmin);
-
-      // Seller info
       setStoreName(user.sellerProfile?.storeName || "");
       setStoreDescription(user.sellerProfile?.storeDescription || "");
       setSubscriptionType(user.sellerRequest?.subscriptionType || "free");
@@ -110,160 +83,124 @@ const ManageSellerRequestScreen = () => {
     }
   }, [user]);
 
+  const SectionHeader = ({ icon, title }) => (
+    <View style={styles.sectionHeader}>
+      <Ionicons name={icon} size={20} color={Colors.primary} />
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF" translucent={false} />
+      <Stack.Screen options={{ headerShown: false }} />
       <KeyboardAvoidingView
-        style={{ flex: 1 }} 
+        style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
       >
-        <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={() => router.push("/admin/SellerRequestListScreen")}
-              style={styles.backButton}
-            >
-              <Ionicons name="chevron-back-circle" size={35} color={Colors.primary} />
-            </TouchableOpacity>
-            <Text style={styles.title}>Manage Seller Requests</Text>
-          </View>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Review Request</Text>
+          <View style={{ width: 40 }} />
+        </View>
 
-          <View style={styles.actualFormContainer}>
-            {loadingUpdate && <ActivityIndicator size="large" color={Colors.primary} />}
-            {isLoading ? (
-              <ActivityIndicator size="large" color={Colors.primary} />
-            ) : error ? (
-              <Message variant="error">{error?.data?.message || error.error}</Message>
-            ) : (
-              <View style={styles.form}>
-                {/* Basic info */}
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>First Name</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter first name"
-                    value={firstName}
-                    onChangeText={setFirstName}
-                  />
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Last Name</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter last name"
-                    value={lastName}
-                    onChangeText={setLastName}
-                  />
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Email</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter email"
-                    value={email}
-                    onChangeText={setEmail}
-                  />
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Phone</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter phone"
-                    value={phone}
-                    onChangeText={setPhone}
-                  />
-                </View>
-
-                {/* Account status */}
-                <View style={styles.switchContainer}>
-                  <Text style={styles.label}>Account Status</Text>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Switch
-                      value={accountStatus === "active"}
-                      onValueChange={toggleAccountStatus}
-                      trackColor={{ false: Colors.lightGray, true: Colors.primary }}
-                      thumbColor={Colors.white}
-                    />
-                    <Text style={{ marginLeft: 10, fontWeight: "500" }}>
-                      {accountStatus.charAt(0).toUpperCase() + accountStatus.slice(1)}
-                    </Text>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          {isLoading ? (
+            <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 50 }} />
+          ) : error ? (
+            <Message variant="error">{error?.data?.message || "Error fetching data"}</Message>
+          ) : (
+            <>
+              {/* User Identity Section */}
+              <View style={styles.card}>
+                <SectionHeader icon="person-outline" title="Applicant Identity" />
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Full Name</Text>
+                  <View style={styles.row}>
+                    <TextInput style={[styles.input, { flex: 1, marginRight: 8 }]} value={firstName} onChangeText={setFirstName} placeholder="First" />
+                    <TextInput style={[styles.input, { flex: 1 }]} value={lastName} onChangeText={setLastName} placeholder="Last" />
                   </View>
                 </View>
 
-                <View style={styles.switchContainer}>
-                  <Text style={styles.label}>Is Admin</Text>
-                  <Switch
-                    value={isAdmin}
-                    onValueChange={setIsAdmin}
-                    trackColor={{ false: Colors.lightGray, true: Colors.primary }}
-                    thumbColor={Colors.white}
-                  />
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Contact Details</Text>
+                  <TextInput style={styles.input} value={email} onChangeText={setEmail} keyboardType="email-address" placeholder="Email Address" />
+                  <TextInput style={[styles.input, { marginTop: 10 }]} value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="Phone Number" />
                 </View>
 
-                {/* Seller fields */}
-                <View style={styles.inputContainer}>
+                <View style={styles.switchRow}>
+                  <View>
+                    <Text style={styles.label}>Account Permission</Text>
+                    <Text style={styles.subLabel}>Grant admin privileges</Text>
+                  </View>
+                  <Switch value={isAdmin} onValueChange={setIsAdmin} trackColor={{ true: Colors.primary }} />
+                </View>
+              </View>
+
+              {/* Seller Profile Section */}
+              <View style={styles.card}>
+                <SectionHeader icon="storefront-outline" title="Store Information" />
+                <View style={styles.inputGroup}>
                   <Text style={styles.label}>Store Name</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter store name"
-                    value={storeName}
-                    onChangeText={setStoreName}
-                  />
+                  <TextInput style={styles.input} value={storeName} onChangeText={setStoreName} />
                 </View>
 
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Store Description</Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>About the Store</Text>
                   <TextInput
-                    style={[styles.input, { height: 80 }]}
-                    placeholder="Enter store description"
+                    style={[styles.input, { height: 80, textAlignVertical: "top" }]}
                     value={storeDescription}
                     onChangeText={setStoreDescription}
                     multiline
                   />
                 </View>
-
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Subscription Type</Text>
-                  <View style={styles.pickerContainer}>
-                    <Picker
-                      selectedValue={subscriptionType}
-                      onValueChange={(itemValue) => setSubscriptionType(itemValue)}
-                      mode="dropdown"
-                    >
-                      <Picker.Item label="Free" value="free" />
-                      <Picker.Item label="Paid 1 Month" value="paid_1_month" />
-                      <Picker.Item label="Paid 6 Months" value="paid_6_month" />
-                    </Picker>
-                  </View>
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Request Status</Text>
-                  <View style={styles.pickerContainer}>
-                    <Picker
-                      selectedValue={sellerStatus}
-                      onValueChange={(itemValue) => setSellerStatus(itemValue)}
-                      mode="dropdown"
-                    >
-                      <Picker.Item label="Pending" value="pending" />
-                      <Picker.Item label="Approved" value="approved" />
-                      <Picker.Item label="Rejected" value="rejected" />
-                    </Picker>
-                  </View>
-                </View>
-
-                <TouchableOpacity style={styles.button} onPress={submitHandler}>
-                  <Text style={styles.buttonText}>Update</Text>
-                </TouchableOpacity>
               </View>
-            )}
-          </View>
+
+              {/* Approval Section */}
+              <View style={styles.card}>
+                <SectionHeader icon="checkmark-circle-outline" title="Approval Decision" />
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Plan Selection</Text>
+                  <View style={styles.pickerWrapper}>
+                    <Picker selectedValue={subscriptionType} onValueChange={setSubscriptionType}>
+                      <Picker.Item label="Free Plan" value="free" />
+                      <Picker.Item label="Paid (1 Month)" value="paid_1_month" />
+                      <Picker.Item label="Paid (6 Months)" value="paid_6_month" />
+                    </Picker>
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Action</Text>
+                  <View style={styles.pickerWrapper}>
+                    <Picker selectedValue={sellerStatus} onValueChange={setSellerStatus}>
+                      <Picker.Item label="Pending" value="pending" />
+                      <Picker.Item label="Approve" value="approved" color="#2E7D32" />
+                      <Picker.Item label="Reject" value="rejected" color="#D32F2F" />
+                    </Picker>
+                  </View>
+                </View>
+              </View>
+
+              <TouchableOpacity 
+                style={[styles.submitBtn, loadingUpdate && { opacity: 0.7 }]} 
+                onPress={submitHandler}
+                disabled={loadingUpdate}
+              >
+                {loadingUpdate ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.submitBtnText}>Confirm Updates</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView> 
+    </SafeAreaView>
   );
 };
 
@@ -272,83 +209,75 @@ export default ManageSellerRequestScreen;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.offWhite,
-    paddingTop: Platform.OS === "android" ? 20 : 0,
-  },
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
+    backgroundColor: "#F8F9FA",
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 20,
-  },
-  backButton: {
-    marginRight: 10,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: Colors.primary,
-  },
-  actualFormContainer: {
-    backgroundColor: Colors.white,
-    margin: 16,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: Colors.darkGray,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  form: {
-    width: "100%",
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: Colors.textColor,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.lightGray,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: Colors.textColor,
-  },
-  switchContainer: {
+    height: 60,
+    backgroundColor: "#FFF",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
-    paddingRight: 10,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEE",
   },
-  button: {
+  headerTitle: { fontSize: 18, fontWeight: "700", color: "#1A1A1A" },
+  backButton: { padding: 4 },
+  scrollContent: { padding: 16, paddingBottom: 40 },
+  card: {
+    backgroundColor: "#FFF",
+    borderRadius: 16,
     padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 8,
-    backgroundColor: Colors.primary,
-  },
-  buttonText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  pickerContainer: {
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: Colors.lightGray,
-    borderRadius: 8,
+    borderColor: "#EAEAEA",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 3,
   },
+  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
+  sectionTitle: { fontSize: 16, fontWeight: "700", marginLeft: 10, color: "#444" },
+  inputGroup: { marginBottom: 18 },
+  label: { fontSize: 13, fontWeight: "600", color: "#666", marginBottom: 8 },
+  subLabel: { fontSize: 11, color: "#999" },
+  row: { flexDirection: "row" },
+  input: {
+    backgroundColor: "#FAFAFA",
+    borderWidth: 1,
+    borderColor: "#DDD",
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 15,
+    color: "#333",
+  },
+  switchRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#F0F0F0",
+  },
+  pickerWrapper: {
+    backgroundColor: "#FAFAFA",
+    borderWidth: 1,
+    borderColor: "#DDD",
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  submitBtn: {
+    backgroundColor: Colors.primary,
+    height: 55,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 10,
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  submitBtnText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
 });
- 

@@ -14,30 +14,21 @@ const ProductDetailsCard = ({
   setQty,
   handleAddToCart,
   disableAddToCart,
+  hideButton, // <--- 1. NOW RECEIVING THE PROP
 }) => { 
   const router = useRouter();
-  
-  // 1. Get the logged-in user from Redux
   const { userInfo } = useSelector((state) => state.auth);
 
   if (!product) return null;
 
   const seller = product?.user;
-
-  // 2. Logic: Check if the viewer is the owner
   const isMyProduct = userInfo?._id === seller?._id;
 
-
-  // --- SHARE HANDLER ---
-const handleShare = async () => {
+  const handleShare = async () => {
     try {
-      // For local testing, use your scheme. 
-      // Example: frontend://product/64f123abc
       const shareUrl = `frontend://product/${product._id}`; 
-      
       await Share.share({
         message: `Check out ${product.name} on our app!\n\nOpen link: ${shareUrl}`,
-        // Note: url field is primarily for iOS native sharing
         url: shareUrl,  
         title: `Share ${product.name}`,
       });
@@ -46,37 +37,30 @@ const handleShare = async () => {
     }
   };
 
-   
-  // 3. Handle Chat Navigation
   const handleChatPress = () => {
     if (!userInfo) {
       router.push("/LoginScreen");
       return;
     }
-
-    // Double check logic: Don't allow chat if it's your own product
     if (isMyProduct) {
       Alert.alert("Notice", "You cannot chat with yourself about your own product.");
       return;
     }
-
     router.push({
       pathname: "/ChatScreen",
       params: {
         receiverId: seller._id,
         receiverName: `${seller.FirstName || ""} ${seller.LastName || ""}`.trim(), 
         productId: product._id,
-        // --- ADDED THESE MISSING FIELDS ---
         productName: product.name,
-        productImage: product.image || (product.images && product.images[0]), // Handle single or array
-        productPrice: product.price.toString(), // Params should be strings
+        productImage: product.image || (product.images && product.images[0]),
+        productPrice: product.price.toString(),
       },
     });
   };
  
   return (
     <View style={styles.card}>
-      {/* Product Name + Share Button */}
       <View style={styles.headerRow}>
         <Text style={styles.productName}>{product.name}</Text>
         <TouchableOpacity onPress={handleShare} style={styles.shareBtn}>
@@ -85,7 +69,6 @@ const handleShare = async () => {
         </TouchableOpacity>
       </View>
 
-      {/* Price + Rating */}
       <View style={styles.priceRatingRow}>
         <Text style={styles.price}>${product.price}</Text>
         <Rating value={product.rating} text={`${product.numReviews}`} />
@@ -93,10 +76,8 @@ const handleShare = async () => {
 
       <View style={styles.divider} />
 
-      {/* Description */}
       <Text style={styles.description}>{product.description}</Text>
 
-      {/* Status + Quantity Section */}
       <View style={styles.section}>
         <View style={styles.rowBetween}>
           <Text style={styles.label}>Status</Text>
@@ -133,10 +114,8 @@ const handleShare = async () => {
         )}
       </View>
 
-      {/* Seller Info Card */}
       <View style={styles.sellerCard}>
         <Ionicons name="person-circle-outline" size={42} color={Colors.primary} />
-
         <View style={{ flex: 1 }}>
           <Text style={styles.sellerLabel}>Seller</Text>
           <View style={styles.sellerActionRow}>
@@ -156,7 +135,6 @@ const handleShare = async () => {
               </TouchableOpacity>
             </Link>
 
-            {/* 💬 CHAT BUTTON: Hidden if product belongs to user */}
             {!isMyProduct && seller && (
               <TouchableOpacity onPress={handleChatPress} style={styles.chatIconBtn}>
                 <Ionicons name="chatbubble-ellipses" size={24} color={Colors.primary} />
@@ -168,24 +146,26 @@ const handleShare = async () => {
         </View>
       </View>
 
-      {/* Add To Cart / Manage Button */}
-      <TouchableOpacity 
-        style={[
-          styles.mainButton,
-          (disableAddToCart || isMyProduct) && styles.disabledButton,
-        ]}
-        onPress={isMyProduct ? () => router.push("/account") : handleAddToCart}
-        disabled={disableAddToCart && !isMyProduct}
-      >
-        <Ionicons 
-          name={isMyProduct ? "settings-outline" : "cart-outline"} 
-          size={22} 
-          color={Colors.white} 
-        />
-        <Text style={styles.cartText}>
-          {isMyProduct ? "Manage Listing" : "Add To Cart"}
-        </Text>
-      </TouchableOpacity>
+      {/* 2. LOGIC: ONLY RENDER IF HIDEBUTTON IS FALSE */}
+      {!hideButton && (
+        <TouchableOpacity 
+          style={[
+            styles.mainButton,
+            (disableAddToCart || isMyProduct) && styles.disabledButton,
+          ]}
+          onPress={isMyProduct ? () => router.push("/account") : handleAddToCart}
+          disabled={disableAddToCart && !isMyProduct}
+        >
+          <Ionicons 
+            name={isMyProduct ? "settings-outline" : "cart-outline"} 
+            size={22} 
+            color={Colors.white} 
+          />
+          <Text style={styles.cartText}>
+            {isMyProduct ? "Manage Listing" : "Add To Cart"}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };

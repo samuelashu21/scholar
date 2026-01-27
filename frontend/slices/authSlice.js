@@ -18,7 +18,8 @@ const authSlice = createSlice({
       AsyncStorage.setItem("userInfo", JSON.stringify(action.payload));
     },
     logout: (state) => {
-      (state.userInfo = null), AsyncStorage.clear();
+      state.userInfo = null;
+      AsyncStorage.removeItem("userInfo");
     },
   },
 });

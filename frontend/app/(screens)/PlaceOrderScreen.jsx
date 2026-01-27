@@ -6,37 +6,30 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
-  SafeAreaView, 
+  SafeAreaView,
   Image,
+  StatusBar,
 } from "react-native";
 import React, { useEffect } from "react";
-// import { useNavigation } from "@react-navigation/native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
-
 import Toast from "react-native-toast-message";
-
 import { useCreateOrderMutation } from "../../slices/ordersApiSlice";
 import { clearCartItems } from "../../slices/cartSlice";
-import Message from "../../components/Message";
-
 import { Colors } from "../../constants/Utils";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 const PlaceOrderScreen = () => {
   const router = useRouter();
-
-  const { orderId } = useLocalSearchParams();
   const cart = useSelector((state) => state.cart);
-
-  const [createOrder, { isLoading, error }] = useCreateOrderMutation();
-
   const dispatch = useDispatch();
+  const [createOrder, { isLoading, error }] = useCreateOrderMutation();
 
   useEffect(() => {
     if (!cart.shippingAddress.address) {
-      router.push("/Shipping");
+      router.replace("(screens)/ShippingScreen");
     } else if (!cart.paymentMethod) {
-      router.push("/Payment");
+      router.replace("(screens)/PaymentScreen");
     }
   }, [cart.paymentMethod, cart.shippingAddress.address]);
 
@@ -51,126 +44,121 @@ const PlaceOrderScreen = () => {
         totalPrice: cart.totalPrice,
         itemsPrice: cart.itemsPrice,
       }).unwrap();
- 
+
       dispatch(clearCartItems());
- 
       router.push({
         pathname: "/(screens)/OrderScreen",
         params: { orderId: res._id },
-      });  
-    } catch (error) {
+      });
+    } catch (err) {
       Toast.show({
         type: "error",
-        text1: "Error", 
-        text2: error?.data?.message || error.error,
-        position: "top",
-        visibilityTime: 7000,
+        text1: "Order Failed",
+        text2: err?.data?.message || err.error,
       });
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView>
-        <Text style={styles.title}>Place Order</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
 
-        <View style={styles.gridContainer}>
-          <View style={styles.leftColumn}>
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Shipping Details</Text>
-              <Text style={styles.text}>
-                <Text style={styles.strongText}>Address:</Text>
-                {cart.shippingAddress.address}, {cart.shippingAddress.city},{" "}
-                {cart.shippingAddress.postalCode},{cart.shippingAddress.country}
-              </Text>
-            </View>
+      {/* CONSISTENT HEADER */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color={Colors.darkGray} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Review Order</Text>
+        <View style={{ width: 40 }} />
+      </View>
 
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Payment Method</Text>
-              <Text style={styles.text}>
-                <Text style={styles.strongText}>Method:</Text>
-                {cart.paymentMethod}
-              </Text>
-            </View>
-
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Your Order</Text>
-              {cart.cartItems.length === 0 ? (
-                <Message variant="info">Your cart is empty</Message>
-              ) : (
-                <View style={styles.orderItemsContainer}>
-                  {cart.cartItems.map((item, index) => (
-                    <View key={index} style={styles.orderItem}>
-                      <View style={styles.imageContainer}>
-                        <Image
-                          source={{ uri: item.image }}
-                          style={styles.productImage}
-                        />
-                      </View>
-
-                      <View style={styles.productDetails}>
-                        <Text style={styles.productName}>{item.name}</Text>
-                        <Text style={styles.text}>
-                          {item.qty} x ${item.price} =
-                        </Text>
-                        <Text style={styles.strongText}>
-                          ${(item.qty * item.price).toFixed(2)}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        
+        {/* PROGRESS STEPS - ALL COMPLETED */}
+        <View style={styles.stepContainer}>
+          <View style={[styles.stepCircle, styles.completedStep]}>
+            <Ionicons name="checkmark" size={18} color="#FFF" />
           </View>
-          <View style={styles.rightColumn}>
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Order Summary</Text>
-              <View style={styles.summaryRow}>
-                <Text style={styles.text}>Items</Text>
-                <Text style={styles.textPrice}>${cart.itemsPrice}</Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.text}>Shipping</Text>
-                <Text style={styles.textPrice}>${cart.shippingPrice}</Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.text}>Tax</Text>
-                <Text style={styles.textPrice}>${cart.taxPrice}</Text>
-              </View>
-
-              <View style={[styles.summaryRow, styles.totalRow]}>
-                <Text style={styles.totalText}>Total</Text>
-                <Text style={styles.totalText}>${cart.totalPrice}</Text>
-              </View>
-
-              {error && (
-                <View style={styles.errorContainer}>
-                  <Message variant="danger">
-                    {error?.data?.message || error.error}
-                  </Message>
-                </View>
-              )}
-
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  cart.cartItems.length === 0 && styles.buttonDisabled,
-                ]}
-                onPress={placeOrderHandler}
-                disabled={cart.cartItems.length === 0 || isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color={Colors.white} />
-                ) : (
-                  <Text style={styles.buttonText}>Place Order</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+          <View style={[styles.stepLine, styles.completedLine]} />
+          <View style={[styles.stepCircle, styles.completedStep]}>
+            <Ionicons name="checkmark" size={18} color="#FFF" />
+          </View>
+          <View style={[styles.stepLine, styles.completedLine]} />
+          <View style={[styles.stepCircle, styles.activeStep]}>
+            <Ionicons name="flag" size={18} color="#FFF" />
           </View>
         </View>
+
+        <Text style={styles.title}>Final Review</Text>
+        <Text style={styles.subtitle}>Check your details before placing the order</Text>
+
+        {/* SHIPPING & PAYMENT INFO CARDS */}
+        <View style={styles.infoRow}>
+          <View style={styles.infoCard}>
+            <Ionicons name="location" size={20} color={Colors.primary} />
+            <Text style={styles.infoTitle}>Shipping To</Text>
+            <Text style={styles.infoText} numberOfLines={2}>
+              {cart.shippingAddress.address}, {cart.shippingAddress.city}
+            </Text>
+          </View>
+          <View style={styles.infoCard}>
+            <Ionicons name="card" size={20} color={Colors.primary} />
+            <Text style={styles.infoTitle}>Payment</Text>
+            <Text style={styles.infoText}>{cart.paymentMethod}</Text>
+          </View>
+        </View>
+
+        {/* ORDER ITEMS */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Items</Text>
+          {cart.cartItems.map((item, index) => (
+            <View key={index} style={styles.orderItem}>
+              <Image source={{ uri: item.image }} style={styles.productImage} />
+              <View style={styles.productDetails}>
+                <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.productPrice}>
+                  {item.qty} x ${item.price} = <Text style={styles.itemTotal}>${(item.qty * item.price).toFixed(2)}</Text>
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* ORDER SUMMARY */}
+        <View style={styles.summaryCard}>
+          <Text style={styles.sectionTitle}>Order Summary</Text>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Items</Text>
+            <Text style={styles.summaryValue}>${cart.itemsPrice}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Shipping</Text>
+            <Text style={styles.summaryValue}>${cart.shippingPrice}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Tax</Text>
+            <Text style={styles.summaryValue}>${cart.taxPrice}</Text>
+          </View>
+          <View style={[styles.summaryRow, styles.totalRow]}>
+            <Text style={styles.totalLabel}>Total</Text>
+            <Text style={styles.totalValue}>${cart.totalPrice}</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.placeOrderBtn, (cart.cartItems.length === 0 || isLoading) && styles.disabledBtn]}
+          onPress={placeOrderHandler}
+          disabled={cart.cartItems.length === 0 || isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <>
+              <Text style={styles.placeOrderText}>Confirm & Place Order</Text>
+              <Ionicons name="shield-checkmark" size={20} color="#FFF" />
+            </>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -179,123 +167,99 @@ const PlaceOrderScreen = () => {
 export default PlaceOrderScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: Colors.offWhite,
-    paddingTop: Platform.OS === "android" ? 20 : 0,
+  safeArea: { 
+    flex: 1, 
+    backgroundColor: "#F8F9FA",
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0 
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: Colors.primary,
-    marginBottom: 24,
-    textAlign: "start",
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#FFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+    elevation: 3,
   },
-  gridContainer: {
-    flexDirection: "column",
+  headerTitle: { fontSize: 18, fontWeight: "700", color: Colors.darkGray },
+  backBtn: { padding: 8, borderRadius: 12, backgroundColor: "#F1F3F5" },
+  scrollContent: { padding: 20 },
+  stepContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
   },
-  card: {
-    backgroundColor: Colors.white,
-    padding: 24,
-    borderRadius: 12,
-    shadowColor: Colors.darkGray,
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+  stepCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#E9ECEF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  activeStep: { backgroundColor: Colors.primary },
+  completedStep: { backgroundColor: "#28a745" },
+  stepLine: { width: 40, height: 2, backgroundColor: "#E9ECEF", marginHorizontal: 8 },
+  completedLine: { backgroundColor: "#28a745" },
+  title: { fontSize: 26, fontWeight: "800", color: "#1A1A1A" },
+  subtitle: { fontSize: 14, color: "#6C757D", marginBottom: 20 },
+  infoRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 15 },
+  infoCard: {
+    backgroundColor: "#FFF",
+    width: "48%",
+    padding: 15,
+    borderRadius: 15,
     elevation: 2,
-    marginBottom: 16,
   },
-  cardTitle: {
-    fontSize: 22,
-    fontWeight: "600",
-    color: Colors.textColor,
-    marginBottom: 16,
+  infoTitle: { fontSize: 14, fontWeight: "700", marginTop: 8, color: "#333" },
+  infoText: { fontSize: 12, color: "#666", marginTop: 4 },
+  sectionCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 15,
+    elevation: 2,
   },
-  text: {
-    fontSize: 16,
-    color: Colors.secondaryTextColor,
-    lineHeight: 24,
-  },
-  strongText: {
-    fontWeight: "bold",
-    color: Colors.primary,
-    fontSize: 16,
-  },
-  orderItemsContainer: {
-    marginTop: 8,
-  },
+  sectionTitle: { fontSize: 18, fontWeight: "700", marginBottom: 15, color: "#1A1A1A" },
   orderItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    marginBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.lightGray,
+    borderBottomColor: "#F1F3F5",
+    paddingBottom: 10,
   },
-  imageContainer: {
-    width: 64,
-    height: 64,
-    marginRight: 16,
-    borderRadius: 8,
-    overflow: "hidden",
+  productImage: { width: 50, height: 50, borderRadius: 8, marginRight: 15 },
+  productDetails: { flex: 1 },
+  productName: { fontSize: 14, fontWeight: "600", color: "#333" },
+  productPrice: { fontSize: 13, color: "#666", marginTop: 2 },
+  itemTotal: { fontWeight: "700", color: Colors.primary },
+  summaryCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 30,
+    elevation: 2,
   },
-  productImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "contain",
-  },
-  productDetails: {
-    flex: 1,
-  },
-  productName: {
-    fontSize: 18,
-    fontWeight: "500",
-    color: Colors.primary,
-    marginBottom: 4,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  textPrice: {
-    fontSize: 16,
-    color: Colors.textColor,
-  },
-  totalRow: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.lightGray,
-    paddingTop: 16,
-    marginTop: 8,
-  },
-  totalText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: Colors.textColor,
-  },
-  errorContainer: {
-    marginTop: 20,
-  },
-  button: {
+  summaryRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 },
+  summaryLabel: { color: "#666", fontSize: 14 },
+  summaryValue: { fontWeight: "600", color: "#333" },
+  totalRow: { borderTopWidth: 1, borderTopColor: "#F1F3F5", paddingTop: 15, marginTop: 5 },
+  totalLabel: { fontSize: 18, fontWeight: "800", color: "#1A1A1A" },
+  totalValue: { fontSize: 18, fontWeight: "800", color: Colors.primary },
+  placeOrderBtn: {
     backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
+    flexDirection: "row",
+    height: 60,
+    borderRadius: 16,
+    justifyContent: "center",
     alignItems: "center",
-    marginTop: 32,
+    gap: 10,
+    marginBottom: 20,
   },
-  buttonDisabled: {
-    backgroundColor: Colors.lightGray,
-  },
-  buttonText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  leftColumn: {
-    marginBottom: 24,
-  },
-});
- 
+  placeOrderText: { color: "#FFF", fontSize: 18, fontWeight: "700" },
+  disabledBtn: { backgroundColor: Colors.lightGray },
+}); 

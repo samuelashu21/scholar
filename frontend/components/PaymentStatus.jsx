@@ -10,7 +10,7 @@ const PaymentStatus = ({ order }) => {
       <Text style={styles.text}>
         <Text style={styles.strongText}>Method:</Text> {order.paymentMethod}
       </Text> 
-
+ 
       {!order.isPaid && (
         <Message variant="error" style={styles.message}>
           Please proceed with your payment to complete your order.

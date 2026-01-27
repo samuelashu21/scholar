@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Platform,
   SafeAreaView,
+  StatusBar,
 } from "react-native";
 import React, { useState, useEffect, useRef } from "react";
 import Toast from "react-native-toast-message";
@@ -34,7 +35,7 @@ const ProductScreen = () => {
   const { productId } = useLocalSearchParams();
   const { userInfo } = useSelector((state) => state.auth);
 
-  const [qty, setQty] = useState(1); 
+  const [qty, setQty] = useState(1);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
@@ -50,25 +51,28 @@ const ProductScreen = () => {
     isLoading,
     refetch,
     error,
-  } = useGetProductDetailsQuery(productId);
+  } = useGetProductDetailsQuery(productId, {
+    skip: !productId || productId === "undefined",
+  });
 
   /* ---------------- ADD VIEW (ONCE) ---------------- */
   useEffect(() => {
-    if (!product || viewAddedRef.current) return;
+    if (!product?._id || product._id === "undefined" || viewAddedRef.current) return;
 
     const incrementView = async () => {
       try {
-        if (product._id) {
-          await addView(product._id).unwrap();
-          viewAddedRef.current = true;
-        }
+        await addView({
+          productId: product._id,
+          deviceId: "mobile_user",
+        }).unwrap();
+        viewAddedRef.current = true;
       } catch (err) {
-        console.log("View error:", err);
+        console.log("View error detail:", err);
       }
     };
 
     incrementView();
-  }, [product]);
+  }, [product, addView]);
 
   /* ---------------- GUARDS ---------------- */
   if (isLoading) {
@@ -79,25 +83,15 @@ const ProductScreen = () => {
     );
   }
 
-  if (error) {
-    const errorMessage = error?.data?.message || error.error;
+  if (error || !product) {
     return (
       <View style={styles.center}>
-        <Message variant="error">{errorMessage}</Message>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backBtn}
-        >
+        <Message variant={error ? "error" : "info"}>
+          {error?.data?.message || "Product not found"}
+        </Message>
+        <TouchableOpacity onPress={() => router.back()} style={styles.errorBackBtn}>
           <Text style={styles.backText}>Go Back</Text>
         </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (!product) {
-    return (
-      <View style={styles.center}>
-        <Message variant="info">No product data available</Message>
       </View>
     );
   }
@@ -105,50 +99,32 @@ const ProductScreen = () => {
   /* ---------------- HANDLERS ---------------- */
   const handleAddToCart = () => {
     dispatch(addToCart({ ...product, qty }));
+    Toast.show({
+      type: "success",
+      text1: "Added to cart",
+      text2: `${product.name} has been added.`,
+    });
     router.push("(screens)/Cart");
   };
 
   const submitReviewHandler = async () => {
     try {
-      if (!rating) {
-        Toast.show({
-          type: "error",
-          text1: "Error",
-          text2: "Please select a rating",
-        });
+      if (!rating || !comment.trim()) {
+        Toast.show({ type: "error", text1: "Error", text2: "Fill all fields" });
         return;
       }
 
-      if (!comment.trim()) {
-        Toast.show({
-          type: "error",
-          text1: "Error",
-          text2: "Please write a comment",
-        });
-        return;
-      }
-
-      await createReview({
-        productId,
-        rating,
-        comment,
-      }).unwrap();
-
+      await createReview({ productId, rating, comment }).unwrap();
       refetch();
       setRating(0);
       setComment("");
       setIsReviewModalOpen(false);
-
-      Toast.show({
-        type: "success",
-        text1: "Success",
-        text2: "Review added",
-      });
+      Toast.show({ type: "success", text1: "Review added" });
     } catch (err) {
       Toast.show({
         type: "error",
         text1: "Error",
-        text2: err?.data?.message || err.error || "Something went wrong",
+        text2: err?.data?.message || "Something went wrong",
       });
     }
   };
@@ -156,39 +132,69 @@ const ProductScreen = () => {
   /* ---------------- UI ---------------- */
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons
-            name="arrow-back-circle"
-            size={40}
-            color={Colors.primary}
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
+        
+        {/* NON-STICKY TOP NAVIGATION (Moves with scroll) */}
+        <View style={styles.topNavigation}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.roundBtn}>
+            <Ionicons name="chevron-back" size={26} color="#333" />
+          </TouchableOpacity>
+          {/* Add a placeholder or other icons here if needed */}
+          <View style={{ width: 45 }} /> 
+        </View>
+
+        {/* IMAGE SECTION */}
+        <View style={styles.imageWrapper}>
+          <ProductImageCard imageUrl={product.image || ""} />
+        </View>
+
+        {/* CONTENT SECTION */}
+        <View style={styles.detailsWrapper}>
+          <ProductDetailsCard
+            product={product}
+            qty={qty}
+            setQty={setQty}
+            handleAddToCart={handleAddToCart}
+            disableAddToCart={product.countInStock === 0}
+            hideButton={true} 
           />
-        </TouchableOpacity>
 
-        {/* IMAGE CARD */}
-        <ProductImageCard imageUrl={product.image || ""} />
+          <View style={styles.divider} />
 
-        {/* DETAILS CARD */}
-        <ProductDetailsCard
-          product={product}
-          qty={qty}
-          setQty={setQty}
-          handleAddToCart={handleAddToCart}
-          disableAddToCart={product.countInStock === 0}
-        />
-
-        {/* REVIEW SECTION */}
-        <ProductReviewSection
-          reviews={product.reviews || []} // <-- safe default
-          userInfo={userInfo}
-          onAddReviewPress={() => setIsReviewModalOpen(true)}
-        />
+          <ProductReviewSection
+            reviews={product.reviews || []}
+            userInfo={userInfo}
+            onAddReviewPress={() => setIsReviewModalOpen(true)}
+          />
+        </View>
       </ScrollView>
 
-      {/* ADD REVIEW MODAL */}
+      {/* STICKY BOTTOM ACTION BAR (Stays fixed) */}
+      <View style={styles.bottomBar}>
+        <View style={styles.priceSection}>
+          <Text style={styles.priceLabel}>Total Price</Text>
+          <Text style={styles.totalPrice}>
+            ${(product.price * qty).toFixed(2)}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[
+            styles.mainBtn,
+            product.countInStock === 0 && styles.disabledBtn,
+          ]}
+          onPress={handleAddToCart}
+          disabled={product.countInStock === 0}
+        >
+          <Ionicons name="bag-add-outline" size={22} color="#FFF" />
+          <Text style={styles.mainBtnText}>
+            {product.countInStock === 0 ? "Out of Stock" : "Add to Cart"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* REVIEW MODAL */}
       <AddReviewModal
         isVisible={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}
@@ -209,33 +215,117 @@ export default ProductScreen;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.offWhite,
-    paddingTop: Platform.OS === "android" ? 25 : 0,
+    backgroundColor: "#FFF",
   },
-  container: {
-    padding: 18,
-    paddingBottom: 30,
+  topNavigation: {
+    // Note: No absolute positioning here so it scrolls away
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? 45 : 10,
+    paddingBottom: 10,
+    backgroundColor: "#F9F9F9", // Match image background
+  },
+  roundBtn: {
+    width: 45,
+    height: 45,
+    borderRadius: 25,
+    backgroundColor: "#FFF",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  scrollContainer: {
+    paddingBottom: 120, // Space for bottom bar
+  },
+  imageWrapper: {
+    backgroundColor: "#F9F9F9",
+    height: 350,
+    justifyContent: 'center',
+    marginTop: -10, // Slight overlap for design
+  },
+  detailsWrapper: {
+    paddingHorizontal: 20,
+    marginTop: -35,
+    backgroundColor: "#FFF",
+    borderTopLeftRadius: 35,
+    borderTopRightRadius: 35,
+    paddingTop: 30,
+    minHeight: 400,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#F5F5F5",
+    marginVertical: 25,
+  },
+  bottomBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    backgroundColor: "#FFF",
+    padding: 20,
+    paddingBottom: Platform.OS === "ios" ? 35 : 20,
+    borderTopWidth: 1,
+    borderTopColor: "#F0F0F0",
+    alignItems: "center",
+    elevation: 25,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+  },
+  priceSection: {
+    flex: 1,
+  },
+  priceLabel: {
+    fontSize: 12,
+    color: "#999",
+    fontWeight: "600",
+    textTransform: 'uppercase',
+  },
+  totalPrice: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: Colors.primary,
+  },
+  mainBtn: {
+    flex: 1.8,
+    backgroundColor: Colors.primary,
+    height: 58,
+    borderRadius: 18,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+  },
+  mainBtnText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  disabledBtn: {
+    backgroundColor: "#E0E0E0",
   },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: Colors.offWhite,
-    padding: 20,
+    backgroundColor: "#FFF",
   },
-  backButton: {
-    marginVertical: 10,
-    alignSelf: "flex-start",
-  },
-  backBtn: {
+  errorBackBtn: {
     backgroundColor: Colors.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    marginTop: 15,
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 20,
   },
   backText: {
-    color: Colors.white,
+    color: "#FFF",
     fontWeight: "600",
   },
 });

@@ -82,6 +82,7 @@ const authUser = asyncHandler(async (req, res) => {
     name: `${user.FirstName} ${user.LastName}`,
     email: user.email,
     phone: user.phone,
+    profileImage: user.profileImage,   
     isSeller: user.isSeller,
     isAdmin: user.isAdmin,
     accountStatus: user.accountStatus,
@@ -93,8 +94,7 @@ const authUser = asyncHandler(async (req, res) => {
 
  
 const registerUser = asyncHandler(async (req, res) => {
-  console.log("📥 Incoming Register Request Body:", req.body);
-
+   
   try {
     const {
       FirstName,
@@ -119,7 +119,6 @@ const registerUser = asyncHandler(async (req, res) => {
 
     // ---- Validate required fields ----
     if (!FirstName || !LastName || !email || !phone || !password) {
-      console.log("❌ Validation Error: Missing required fields");
       res.status(400);
       throw new Error(
         "All fields (first name, last name, email, phone, password) are required"
@@ -128,14 +127,14 @@ const registerUser = asyncHandler(async (req, res) => {
 
     // ---- Validate email format ----
     if (!validator.isEmail(email)) {
-      console.log("❌ Validation Error: Invalid Email Format:", email);
+      //console.log("❌ Validation Error: Invalid Email Format:", email);
       res.status(400);
       throw new Error("Invalid email format");
     }
 
     // ---- Validate phone format ----
     if (!/^\+251\d{9}$/.test(phone)) {
-      console.log("❌ Validation Error: Invalid Phone Format:", phone);
+      //console.log("❌ Validation Error: Invalid Phone Format:", phone);
       res.status(400);
       throw new Error("Phone must start with +251 and be followed by 9 digits");
     }
@@ -150,7 +149,7 @@ const registerUser = asyncHandler(async (req, res) => {
     });
 
     if (!isStrong) {
-      console.log("❌ Weak Password:", password);
+      //console.log("❌ Weak Password:", password);
       res.status(400);
       throw new Error(
         "Password must be 8+ characters and include uppercase, lowercase, number, and symbol"
@@ -454,11 +453,12 @@ const getUserProfile = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("User not found");
   } 
-
-  res.json({
+ 
+  res.json({ 
     _id: user._id,
     name: `${user.FirstName} ${user.LastName}`,
     email: user.email,
+    profileImage: user.profileImage,   
     isAdmin: user.isAdmin,
     isSeller: user.isSeller,
     isVerified: user.isVerified,
