@@ -3,7 +3,7 @@ import {
   Text,
   View,
   ScrollView,
-  TouchableOpacity,
+  TouchableOpacity, 
   ActivityIndicator,
   Platform,
   SafeAreaView,

@@ -216,11 +216,11 @@ export const {
   useLogoutMutation, 
   useRequestPasswordResetMutation,
    useResendResetPasswordOTPMutation,
-  useResetPasswordMutation,
+  useResetPasswordMutation, 
 
   // Profile
   useGetProfileQuery,
-  useSavePushTokenMutation, 
+  useSavePushTokenMutation,  
   useGetSellerByIdQuery, 
   useSearchSellersQuery, 
   useUpdateUserProfileMutation, 

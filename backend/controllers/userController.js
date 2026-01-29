@@ -806,35 +806,26 @@ const getSellerRequests = asyncHandler(async (req, res) => {
 
 
 const approveSeller = asyncHandler(async (req, res) => {
-  console.log("===== APPROVE SELLER REQUEST RECEIVED =====");
-  console.log("Incoming Params (ID):", req.params.id);
-  console.log("Incoming Body:", req.body);
-
+ 
   try {
     // Accept subscriptionType from multiple possible locations
     const subscriptionType =
       req.body.subscriptionType ||
       req.body?.sellerRequest?.subscriptionType ||
       null;
-
-    console.log("Parsed subscriptionType:", subscriptionType);
-
+ 
     // Validate subscription type
     const validSubscriptions = ["free", "paid_1_month", "paid_6_month"];
     if (!validSubscriptions.includes(subscriptionType)) {
       console.error("❌ Invalid subscription type:", subscriptionType);
       return res.status(400).json({ message: "Invalid subscription type" });
     }
-
-    console.log("🔍 Finding user by ID...");
     const user = await User.findById(req.params.id);
 
     if (!user) {
       console.error("❌ User not found:", req.params.id);
       return res.status(404).json({ message: "User not found" });
     }
-
-    console.log("✅ User found:", user._id);
 
     // Extract simple fields safely
     const { FirstName, LastName, email, phone, storeName, storeDescription } =
@@ -866,7 +857,7 @@ const approveSeller = asyncHandler(async (req, res) => {
     user.sellerRequest.status = "approved";
     user.sellerRequest.subscriptionType = subscriptionType;
 
-    // ==== SUBSCRIPTION DATE HANDLING ====
+    // ==== SUBSCRIPTION DATE HANDLING ==== 
     if (subscriptionType === "free") {
       console.log("📌 Free Plan selected");
       user.sellerRequest.subscriptionStart = null;

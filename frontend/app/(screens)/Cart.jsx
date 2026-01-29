@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   totalLabel: { fontSize: 16, color: "#777", fontWeight: "500" },
   totalAmount: { fontSize: 20, fontWeight: "900", color: Colors.primary },
   checkoutBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primary, 
     flexDirection: "row",
     height: 60,
     borderRadius: 15,

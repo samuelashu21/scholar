@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import Message from "./Message";
 import { Colors } from "../constants/Utils";
 
-const PaymentStatus = ({ order }) => {
+const PaymentStatus = ({ order }) => { 
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>Payment Method</Text>

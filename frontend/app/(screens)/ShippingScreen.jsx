@@ -6,7 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
-  Platform, // Added Platform
+  Platform, // Added Platform 
   Keyboard,
   ScrollView,
   SafeAreaView,

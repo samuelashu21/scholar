@@ -9,7 +9,7 @@ import Like from "../models/likeModel.js";
 // @route   GET /api/products
 // @access  Public
 export const getProducts = asyncHandler(async (req, res) => {
-  const pageSize = 8;
+  const pageSize = 8; 
   const page = Number(req.query.pageNumber) || 1;
   const { keyword, category, subcategory, sort } = req.query;
 
@@ -131,48 +131,42 @@ const getProductById = asyncHandler(async (req, res) => {
     isLiked: !!isLiked, 
   });
 });
-
+ 
  
 const createProduct = asyncHandler(async (req, res) => {
-  const { categoryId, subcategoryId } = req.body;
+  // Extract full data from the request body
+  const {  
+    name, 
+    price, 
+    description, 
+    image, 
+    categoryId, 
+    subcategoryId, 
+    countInStock 
+  } = req.body;
 
-  // Use provided IDs or try to find defaults
-  let finalCategory = categoryId;
-  let finalSubcategory = subcategoryId;
-
-  if (!finalCategory) {
-    const firstCat = await Category.findOne();
-    finalCategory = firstCat?._id;
-  }
-
-  if (!finalSubcategory) {
-    // Note: We use 'parentCategory' because that is how it's named in your Subcategory model
-    const firstSub = await Subcategory.findOne({ parentCategory: finalCategory });
-    finalSubcategory = firstSub?._id;
-  }
-
-  // Final check: If there are NO subcategories in your DB, Mongoose will throw the error you saw
-  if (!finalSubcategory) {
+  // Validation: Ensure required fields are present
+  if (!name || !price || !categoryId || !subcategoryId) {
     res.status(400);
-    throw new Error("Cannot create product: Please create at least one subcategory first.");
+    throw new Error("Please provide name, price, category, and subcategory");
   }
-
   const product = new Product({
-    name: "Sample name",
-    price: 0,
-    user: req.user._id,
-    image: "/uploads/sample.jpg",
-    category: finalCategory,
-    subcategory: finalSubcategory, // Correctly linked
-    countInStock: 0,
+    user: req.user._id, // The seller/admin creating it
+    name,
+    price,
+    description: description || "No description provided",
+    image: image || "/uploads/sample.jpg",
+    category: categoryId,
+    subcategory: subcategoryId,
+    countInStock: countInStock || 0,
     numReviews: 0,
-    description: "Sample description",
   });
 
   const createdProduct = await product.save();
   res.status(201).json(createdProduct);
-});
- 
+}); 
+
+
 const updateProduct = asyncHandler(async (req, res) => {
   const { name, price, description, image, categoryId,subcategoryId, countInStock } =
     req.body;
