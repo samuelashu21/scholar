@@ -1,3 +1,4 @@
+import React, { useState, useCallback } from "react";
 import {
   StyleSheet,
   Text,
@@ -10,18 +11,16 @@ import {
   ActivityIndicator,
   StatusBar,
   Platform,
+  KeyboardAvoidingView,
 } from "react-native";
-
-import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
+import Toast from "react-native-toast-message";
 
 import { Colors } from "../../constants/Utils";
 import { BASE_URL } from "../../constants/Urls";
-import Toast from "react-native-toast-message";
-
 import {
   useRequestSellerMutation,
   useUploadProfileImageMutation,
@@ -41,29 +40,31 @@ export default function RequestToBeSeller() {
   const [uploadImage, { isLoading: loadingUpload }] = useUploadProfileImageMutation();
   const [requestSeller, { isLoading: loadingSubmit }] = useRequestSellerMutation();
 
-  useEffect(() => {
-    if (!userInfo) return;
+  // Redirect if already a seller or request is pending
+  useFocusEffect(
+    useCallback(() => {
+      if (userInfo?.sellerRequest?.isRequested) {
+        router.replace("/sellerDashboard");
+      }
+      
+      // Pre-fill fields if user is returning to a half-finished form
+      if (userInfo?.sellerProfile) {
+        setStoreName(userInfo.sellerProfile.storeName || "");
+        setStoreDescription(userInfo.sellerProfile.storeDescription || "");
+        setStoreLogo(userInfo.sellerProfile.storeLogo || "");
+      }
+    }, [userInfo])
+  );
 
-    // 1. REDIRECT LOGIC: If already requested, go straight to dashboard
-    if (userInfo.sellerRequest?.isRequested) {
-      router.replace("/sellerDashboard");
-      return;
-    } 
-
-    // 2. PRE-FILL LOGIC: Fill existing profile info if it exists
-    setStoreName(userInfo.sellerProfile?.storeName || "");
-    setStoreDescription(userInfo.sellerProfile?.storeDescription || "");
-    setStoreLogo(userInfo.sellerProfile?.storeLogo || "");
-    const subType = userInfo.sellerRequest?.subscriptionType ?? "free";
-    setSubscription(subType); 
-  }, [userInfo]);
-
-  const getImageUrl = (path) => (path?.startsWith("http") ? path : `${BASE_URL}${path}`);
+  const getImageUrl = (path) => {
+    if (!path) return "https://cdn-icons-png.flaticon.com/512/3597/3597075.png";
+    return path.startsWith("http") ? path : `${BASE_URL}${path}`;
+  };
 
   const uploadLogoHandler = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Toast.show({ type: "error", text1: "Permission denied" });
+      Toast.show({ type: "error", text1: "Permission denied", text2: "We need gallery access to upload a logo." });
       return;
     }
 
@@ -71,69 +72,70 @@ export default function RequestToBeSeller() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.7,
+      quality: 0.6, // Compressed for faster upload
     });
 
     if (!result.canceled) {
-      const selectedImage = result.assets[0];
+      const asset = result.assets[0];
       const formData = new FormData();
       
-      const uri = Platform.OS === "android" ? selectedImage.uri : selectedImage.uri.replace("file://", "");
+      // Better file naming logic
+      const uri = Platform.OS === "android" ? asset.uri : asset.uri.replace("file://", "");
+      const fileName = asset.uri.split("/").pop();
+      const fileType = fileName.split(".").pop();
 
       formData.append("image", {
-        uri: uri,
-        type: "image/jpeg",
-        name: "store-logo.jpg",
+        uri,
+        name: fileName || "upload.jpg",
+        type: `image/${fileType || "jpeg"}`,
       });
 
       try {
         const res = await uploadImage(formData).unwrap();
         setStoreLogo(res.image);
-        Toast.show({ type: "success", text1: "Logo uploaded successfully" });
+        Toast.show({ type: "success", text1: "Logo updated" });
       } catch (err) {
         Toast.show({ 
-          type: "error", 
-          text1: "Upload failed", 
-          text2: err?.data?.message || "Check your internet connection" 
+            type: "error", 
+            text1: "Upload failed", 
+            text2: err?.data?.message || "Internal server error" 
         });
       }
     }
   };
 
+  const isFormValid = storeName.trim().length > 2 && storeDescription.trim().length > 10;
+
   const submitRequest = async () => {
-    if (!storeName || !storeDescription) {
-      Toast.show({ type: "error", text1: "Missing Fields", text2: "Store name and description are required." });
+    if (!isFormValid) {
+      Toast.show({ 
+        type: "error", 
+        text1: "Invalid Form", 
+        text2: "Please provide a valid store name and detailed description." 
+      });
       return;
     }
 
-    const payload = { 
-      storeName, 
-      storeDescription, 
-      storeLogo, 
-      subscriptionType: subscriptionType ?? "free" 
-    };
-
     try {
+      const payload = { storeName, storeDescription, storeLogo, subscriptionType };
       await requestSeller(payload).unwrap();
       
-      // Update local Redux state
+      // Update local state to reflect the new "pending" status
       dispatch(setCredentials({
         ...userInfo,
         sellerProfile: { storeName, storeDescription, storeLogo },
-        sellerRequest: { isRequested: true, status: "pending", subscriptionType: subscriptionType ?? "free" },
+        sellerRequest: { isRequested: true, status: "pending", subscriptionType },
       }));
 
-      Toast.show({ type: "success", text1: "Request Sent" });
+      Toast.show({ type: "success", text1: "Application Submitted!" });
       router.replace("/sellerDashboard"); 
       
     } catch (err) {
-      const errorMessage = err?.data?.message || err.message;
-      
-      // 3. ERROR HANDLING: If server says already requested, redirect user
+      const errorMessage = err?.data?.message || "Something went wrong";
       if (errorMessage.toLowerCase().includes("already requested")) {
         router.replace("/sellerDashboard");
       } else {
-        Toast.show({ type: "error", text1: "Request Failed", text2: errorMessage });
+        Toast.show({ type: "error", text1: "Submission Failed", text2: errorMessage });
       }
     }
   };
@@ -142,100 +144,119 @@ export default function RequestToBeSeller() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" />
       
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+          <Ionicons name="arrow-back" size={22} color="#1A1A1A" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Seller Registration</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
-        
-        <View style={styles.logoWrapper}>
-          <View style={styles.logoShadow}>
-            <Image
-              source={{
-                uri: storeLogo
-                  ? getImageUrl(storeLogo)
-                  : "https://cdn-icons-png.flaticon.com/512/3597/3597075.png",
-              }}
-              style={styles.storeLogo}
-            />
-            <TouchableOpacity 
-              style={styles.editLogoBtn} 
-              onPress={uploadLogoHandler} 
-              disabled={loadingUpload}
-            >
-              {loadingUpload ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"} 
+        style={{ flex: 1 }}
+      >
+        <ScrollView 
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={styles.scrollContainer}
+        >
+          {/* Logo Upload Section */}
+          <View style={styles.logoWrapper}>
+            <View style={styles.logoShadow}>
+              <Image source={{ uri: getImageUrl(storeLogo) }} style={styles.storeLogo} />
+              
+              {loadingUpload && (
+                <View style={styles.imageOverlay}>
+                   <ActivityIndicator color="white" />
+                </View>
+              )}
+
+              <TouchableOpacity 
+                style={styles.editLogoBtn} 
+                onPress={uploadLogoHandler} 
+                disabled={loadingUpload}
+              >
                 <Ionicons name="camera" size={20} color="white" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.logoText}>Store Branding</Text>
+          </View>
+
+          {/* Form Fields */}
+          <View style={styles.formCard}>
+            <View style={styles.inputSection}>
+              <Text style={styles.label}>Official Store Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Apex Global"
+                placeholderTextColor="#ADB5BD"
+                value={storeName}
+                onChangeText={setStoreName}
+              />
+            </View>
+
+            <View style={styles.inputSection}>
+                <View style={styles.labelRow}>
+                    <Text style={styles.label}>Store Description</Text>
+                    <Text style={styles.charCount}>{storeDescription.length}/500</Text>
+                </View>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                multiline
+                maxLength={500}
+                placeholder="What are you selling? Describe your brand's mission..."
+                placeholderTextColor="#ADB5BD"
+                value={storeDescription}
+                onChangeText={setStoreDescription}
+              />
+            </View>
+
+            <View style={styles.inputSection}>
+              <Text style={styles.label}>Choose a Plan</Text>
+              <View style={styles.subscriptionRow}>
+                {[
+                  { id: "free", label: "FREE", price: "$0" },
+                  { id: "paid_1_month", label: "1 MO", price: "$9" },
+                  { id: "paid_6_month", label: "6 MO", price: "$49" }
+                ].map((plan) => (
+                  <TouchableOpacity 
+                    key={plan.id}
+                    style={[styles.subCard, subscriptionType === plan.id && styles.subActive]}
+                    onPress={() => setSubscription(plan.id)}
+                  >
+                    <Text style={[styles.subText, subscriptionType === plan.id && styles.subTextActive]}>
+                      {plan.label}
+                    </Text>
+                    <Text style={[styles.subPrice, subscriptionType === plan.id && styles.subTextActive]}>
+                      {plan.price}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.submitBtn, 
+                (!isFormValid || loadingSubmit) && { backgroundColor: "#DEE2E6" }
+              ]}
+              onPress={submitRequest}
+              disabled={loadingSubmit || !isFormValid}
+            >
+              {loadingSubmit ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.submitText}>Submit Application</Text>
               )}
             </TouchableOpacity>
+            
+            <Text style={styles.footerNote}>
+                By submitting, you agree to our Seller Terms & Conditions.
+            </Text>
           </View>
-          <Text style={styles.logoText}>Store Logo</Text>
-        </View>
-
-        <View style={styles.formCard}>
-          <View style={styles.inputSection}>
-            <Text style={styles.label}>Official Store Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Apex Global"
-              placeholderTextColor="#ADB5BD"
-              value={storeName}
-              onChangeText={setStoreName}
-            />
-          </View>
-
-          <View style={styles.inputSection}>
-            <Text style={styles.label}>Store Description</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              multiline
-              numberOfLines={4}
-              placeholder="Tell us about your products..."
-              placeholderTextColor="#ADB5BD"
-              value={storeDescription}
-              onChangeText={setStoreDescription}
-            />
-          </View>
-
-          <View style={styles.inputSection}>
-            <Text style={styles.label}>Subscription Plan</Text>
-            <View style={styles.subscriptionRow}>
-              {[
-                { id: "free", label: "FREE" },
-                { id: "paid_1_month", label: "1 MONTH" },
-                { id: "paid_6_month", label: "6 MONTHS" }
-              ].map((plan) => (
-                <TouchableOpacity
-                  key={plan.id}
-                  style={[styles.subCard, subscriptionType === plan.id && styles.subActive]}
-                  onPress={() => setSubscription(plan.id)}
-                >
-                  <Text style={[styles.subText, subscriptionType === plan.id && styles.subTextActive]}>
-                    {plan.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.submitBtn, loadingSubmit && { opacity: 0.7 }]}
-            onPress={submitRequest}
-            disabled={loadingSubmit}
-          >
-            {loadingSubmit ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={styles.submitText}>Submit Application</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -252,20 +273,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: "white",
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F3F5",
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: "#F8F9FA",
     justifyContent: "center",
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "800",
     color: "#1A1A1A",
   },
@@ -274,103 +295,139 @@ const styles = StyleSheet.create({
   },
   logoWrapper: {
     alignItems: "center",
-    marginVertical: 30,
+    marginVertical: 25,
   },
   logoShadow: {
+    position: 'relative',
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
-    shadowRadius: 15,
-    elevation: 10,
+    shadowRadius: 10,
+    elevation: 8,
   },
   storeLogo: {
-    width: 110,
-    height: 110,
-    borderRadius: 30,
-    backgroundColor: "white",
-    borderWidth: 4,
+    width: 100,
+    height: 100,
+    borderRadius: 28,
+    backgroundColor: "#E9ECEF",
+    borderWidth: 3,
     borderColor: "white",
+  },
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   editLogoBtn: {
     position: "absolute",
-    bottom: -5,
-    right: -5,
-    backgroundColor: Colors.primary,
-    padding: 10,
-    borderRadius: 18,
+    bottom: -4,
+    right: -4,
+    backgroundColor: Colors.primary || "#007AFF",
+    padding: 8,
+    borderRadius: 15,
     borderWidth: 3,
     borderColor: "white",
   },
   logoText: {
     marginTop: 12,
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "700",
     color: "#ADB5BD",
+    letterSpacing: 0.5,
   },
   formCard: {
     backgroundColor: "white",
     marginHorizontal: 16,
-    padding: 24,
+    padding: 20,
     borderRadius: 24,
-    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   inputSection: {
-    marginBottom: 20,
+    marginBottom: 18,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
-    marginBottom: 8,
-    color: "#343A40",
+    color: "#495057",
+  },
+  charCount: {
+    fontSize: 11,
+    color: '#ADB5BD'
   },
   input: {
     backgroundColor: "#F8F9FA",
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: 12,
+    padding: 14,
     fontSize: 15,
     color: "#1A1A1A",
     borderWidth: 1,
-    borderColor: "#EDF2F7",
+    borderColor: "#F1F3F5",
   },
   textArea: {
-    height: 120,
+    height: 100,
     textAlignVertical: "top",
   },
   subscriptionRow: {
     flexDirection: "row",
     gap: 8,
+    marginTop: 4,
   },
   subCard: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
     backgroundColor: "#F8F9FA",
     borderWidth: 1,
-    borderColor: "#EDF2F7",
+    borderColor: "#F1F3F5",
     alignItems: "center",
   },
   subActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.primary || "#007AFF",
+    borderColor: Colors.primary || "#007AFF",
   },
   subText: {
     fontSize: 10,
     fontWeight: "800",
     color: "#6C757D",
   },
+  subPrice: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#212529",
+    marginTop: 2,
+  },
   subTextActive: {
     color: "white",
   },
   submitBtn: {
-    backgroundColor: Colors.primary,
-    padding: 18, 
-    borderRadius: 16,
+    backgroundColor: Colors.primary || "#007AFF",
+    padding: 16, 
+    borderRadius: 14,
     marginTop: 10,
     alignItems: "center",
   },
   submitText: {
     color: "white",
     fontSize: 16,
-    fontWeight: "800",
+    fontWeight: "700",
   },
+  footerNote: {
+      textAlign: 'center',
+      fontSize: 11,
+      color: '#ADB5BD',
+      marginTop: 16,
+      lineHeight: 16,
+  }
 });

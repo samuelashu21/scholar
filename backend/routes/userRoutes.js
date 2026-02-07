@@ -7,7 +7,7 @@ import fs from "fs";
 import {
   authUser,
   registerUser,
-  updatePushToken, 
+  updatePushToken,  
   logoutUser,
   resendOTP,
   verifyOTP,
@@ -112,13 +112,13 @@ router.get("/search", searchSellers);
 router.get("/seller/:id", protect, getSellerById);
 
 
-// ADMIN  MANAGEMENT
+// ADMIN  MANAGEMENT 
 // ---------------------------
 router.get("/seller-requests", protect, admin, getSellerRequests);
 router.put("/approve-seller/:id", protect, admin, approveSeller);
 router.put("/reject-seller/:id", protect, admin, rejectSeller);
 // ---------------------------
-router.get("/", protect, admin, getUsers);
+router.get("/", protect, getUsers);
 
 
 // ---------------------------

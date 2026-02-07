@@ -122,7 +122,7 @@ const registerUser = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error(
         "All fields (first name, last name, email, phone, password) are required"
-      );
+      ); 
     }
 
     // ---- Validate email format ----
@@ -198,8 +198,7 @@ const registerUser = asyncHandler(async (req, res) => {
       };
     }
 
-    console.log("🛠 Creating User in DB:", newUserData);
-
+   
     const user = await User.create(newUserData);
 
     await sendOTPEmail(email, otp);
@@ -466,7 +465,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
     sellerRequest: user.sellerRequest || null,
     lastLogin: user.lastLogin,
     createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
+    updatedAt: user.updatedAt, 
   });
 });
 
@@ -814,7 +813,7 @@ const approveSeller = asyncHandler(async (req, res) => {
       req.body?.sellerRequest?.subscriptionType ||
       null;
  
-    // Validate subscription type
+    // Validate subscription type 
     const validSubscriptions = ["free", "paid_1_month", "paid_6_month"];
     if (!validSubscriptions.includes(subscriptionType)) {
       console.error("❌ Invalid subscription type:", subscriptionType);

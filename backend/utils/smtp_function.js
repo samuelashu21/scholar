@@ -1,136 +1,154 @@
-// sendOTPEmail.js
+ 
+
 import nodemailer from 'nodemailer';
 
-export async function sendOTPEmail(userEmail, message) {
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.GMAIL_USER,
-            pass: process.env.GMAIL_PASS,
-        },
-    });
+// Create a reusable transporter
+const createTransporter = () => nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASS,
+    },
+});
 
+// Get the current year automatically
+const currentYear = new Date().getFullYear();
+
+// Common styling for emails
+const emailStyles = {
+    container: "font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;",
+    header: "background-color: #007bff; color: white; padding: 20px; text-align: center;",
+    body: "padding: 30px; color: #333; line-height: 1.6;",
+    otpBox: "background-color: #f4f7ff; border: 2px dashed #007bff; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;",
+    footer: `background-color: #f9f9f9; color: #777; padding: 15px; text-align: center; font-size: 12px; border-top: 1px solid #eee;`
+};
+
+// Reusable footer HTML
+const getFooter = (teamName = "Shola Marketplace") => `
+    <div style="${emailStyles.footer}">
+        &copy; ${currentYear} ${teamName}. All rights reserved.
+    </div>
+`;
+
+export async function sendOTPEmail(userEmail, otp) {
+    const transporter = createTransporter();
     const mailOptions = {
-        from: process.env.AUTH_EMAIL,
+        from: `"Shola Marketplace" <${process.env.AUTH_EMAIL}>`,
         to: userEmail,
-        subject: "Shola Verification Code",
+        subject: "Verify Your Shola Account",
         html: `
-            <h1>Shola Email Verification</h1>
-            <p>Your verification code is:</p>
-            <h2 style="color: blue;">${message}</h2>
-            <p>Please enter this code on the verification page to complete your registration process.</p>
-            <p>If you did not request this, please ignore this email.</p>
-            <p>Expires in 5 minutes</p>
+            <div style="${emailStyles.container}">
+                <div style="${emailStyles.header}"><h1>Shola</h1></div>
+                <div style="${emailStyles.body}">
+                    <h2>Verify Your Email</h2>
+                    <p>Welcome to Shola! Please use the following code to complete your registration:</p>
+                    <div style="${emailStyles.otpBox}">
+                        <h1 style="color: #007bff; letter-spacing: 5px; margin: 0;">${otp}</h1>
+                    </div>
+                    <p>This code <b>expires in 5 minutes</b>. If you didn't request this, please ignore this email.</p>
+                </div>
+                ${getFooter()}
+            </div>
         `,
     };
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log("Verification email sent");
+        console.log("OTP Email sent to:", userEmail);
     } catch (error) {
-        console.log("Email sending failed with an error: ", error);
+        console.error("Email error:", error);
     }
 }
  
- 
-
-export async function sendResetPasswordEmail(userEmail, message) {
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.GMAIL_USER,
-            pass: process.env.GMAIL_PASS,
-        },
-    });
-
+export async function sendResetPasswordEmail(userEmail, otp) {
+    const transporter = createTransporter();
     const mailOptions = {
-        from: process.env.AUTH_EMAIL,
+        from: `"Shola Support" <${process.env.AUTH_EMAIL}>`,
         to: userEmail,
-        subject: "Shola Reset Password Email Code",
+        subject: "Reset Your Shola Password",
         html: `
-            <h1>Reset Password Email</h1>
-            <p>Your verification code is:</p>
-            <h2 style="color: blue;">${message}</h2>
-            <p>Please enter this code on the verification page to complete your Password Reset process.</p>
-            <p>If you did not request this, please ignore this email.</p>
-            <p>Expires in 5 minutes</p> 
+            <div style="${emailStyles.container}">
+                <div style="background-color: #dc3545; color: white; padding: 20px; text-align: center;"><h1>Shola</h1></div>
+                <div style="${emailStyles.body}">
+                    <h2>Password Reset Request</h2>
+                    <p>We received a request to reset your password. Use the code below to proceed:</p>
+                    <div style="${emailStyles.otpBox}">
+                        <h1 style="color: #dc3545; letter-spacing: 5px; margin: 0;">${otp}</h1>
+                    </div>
+                    <p>For your security, do not share this code with anyone. It will expire shortly.</p>
+                </div>
+                ${getFooter("Shola Support Team")}
+            </div>
         `,
     };
- 
-    try { 
+
+    try {
         await transporter.sendMail(mailOptions);
-        console.log("Password Reset email sent");
-    } catch (error) { 
-        console.log("Email sending failed with an error: ", error);
+        console.log("Reset Email sent to:", userEmail);
+    } catch (error) {
+        console.error("Email error:", error);
     }
 }
 
- 
-
 export async function sendSellerRequestEmail(user, adminEmail) {
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_PASS,
-    },
-  });
-  const mailOptions = {
-    from: process.env.AUTH_EMAIL,
-    to: adminEmail,
-    subject: `New Seller Request from ${user.name || user.email}`,
-    html: `
-      <h1>New Seller Request</h1>
-      <p><strong>User:</strong> ${user.name || "N/A"} (${user.email})</p>
-      <p><strong>Subscription Type:</strong> ${user.sellerRequest.subscriptionType}</p>
-      <p><strong>Store Name:</strong> ${user.sellerProfile.storeName || "N/A"}</p>
-      <p><strong>Store Description:</strong> ${user.sellerProfile.storeDescription || "N/A"}</p>
-      <p><strong>Store Logo:</strong> ${user.sellerProfile.storeLogo || "N/A"}</p>
-      <p>Please review and approve or reject this seller request in the admin panel.</p>
-    `,
-  };
+    const transporter = createTransporter();
+    const mailOptions = {
+        from: `"Shola System" <${process.env.AUTH_EMAIL}>`,
+        to: adminEmail,
+        subject: `New Seller Request: ${user.sellerProfile?.storeName || user.email}`,
+        html: `
+            <div style="${emailStyles.container}">
+                <div style="background-color: #333; color: white; padding: 20px; text-align: center;"><h1>Admin Alert</h1></div>
+                <div style="${emailStyles.body}">
+                    <h3>New Application Received</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><b>User:</b></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${user.FirstName} ${user.LastName}</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><b>Email:</b></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${user.email}</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><b>Store:</b></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${user.sellerProfile?.storeName}</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><b>Plan:</b></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${user.sellerRequest?.subscriptionType}</td></tr>
+                    </table>
+                    <p>Please log in to the admin panel to review the full profile.</p>
+                </div>
+                ${getFooter("Shola Admin System")}
+            </div>
+        `,
+    };
 
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log("Seller request email sent to admin");
-  } catch (error) {
-    console.error("Failed to send seller request email:", error);
-  }
-}  
-
+    try {
+        await transporter.sendMail(mailOptions);
+    } catch (error) {
+        console.error("Admin Email Error:", error);
+    }
+}
 
 export async function sendSellerApprovalEmail(user) {
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_PASS,
-    },
-  });
+    const transporter = createTransporter();
+    const mailOptions = {
+        from: `"Shola Marketplace" <${process.env.AUTH_EMAIL}>`,
+        to: user.email,
+        subject: "Welcome to the Shola Seller Family!",
+        html: `
+            <div style="${emailStyles.container}">
+                <div style="background-color: #28a745; color: white; padding: 20px; text-align: center;"><h1>Store Approved!</h1></div>
+                <div style="${emailStyles.body}">
+                    <h2>Congratulations, ${user.FirstName}!</h2>
+                    <p>Your store <b>"${user.sellerProfile.storeName}"</b> has been officially approved.</p>
+                    <p><b>Subscription:</b> ${user.sellerRequest.subscriptionType}</p>
+                    ${user.sellerRequest.subscriptionEnd ? `<p><b>Ends on:</b> ${new Date(user.sellerRequest.subscriptionEnd).toDateString()}</p>` : ""}
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p>You can now start uploading your products.</p>
+                    <div style="text-align: center; margin-top: 20px;">
+                        <a href="${process.env.FRONTEND_URL}/seller-dashboard" style="background-color: #28a745; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
+                    </div>
+                </div>
+                ${getFooter()}
+            </div>
+        `,
+    };
 
-  const mailOptions = {
-    from: process.env.AUTH_EMAIL,
-    to: user.email,
-    subject: "Your Seller Request Has Been Approved!",
-    html: `
-      <h1>Congratulations, ${user.FirstName || "User"}!</h1>
-      <p>Your request to become a seller has been <strong>approved</strong>.</p>
-      <p><strong>Store Name:</strong> ${user.sellerProfile.storeName || "N/A"}</p>
-      <p><strong>Subscription Type:</strong> ${user.sellerRequest.subscriptionType}</p>
-      ${
-        user.sellerRequest.subscriptionEnd
-          ? `<p><strong>Subscription Valid Until:</strong> ${user.sellerRequest.subscriptionEnd.toDateString()}</p>`
-          : ""
-      }
-      <p>You can now access your seller dashboard and start listing products.</p>
-      <p>Thank you for joining our platform!</p>
-    `,
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log("Seller approval email sent to user:", user.email);
-  } catch (error) {
-    console.error("Failed to send seller approval email:", error);
-  }
-}
+    try {
+        await transporter.sendMail(mailOptions);
+    } catch (error) {
+        console.error("Approval Email Error:", error);
+    }
+} 

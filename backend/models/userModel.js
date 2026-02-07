@@ -70,7 +70,7 @@ const userSchema = mongoose.Schema(
         default: "pending",
       },
       // NEW — Subscription type enum
-      subscriptionType: {
+      subscriptionType: { 
         type: String,
         enum: ["free", "paid_1_month", "paid_6_month"],
         default: "free",

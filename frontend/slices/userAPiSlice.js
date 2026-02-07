@@ -161,7 +161,7 @@ export const userApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["User"],
     }),
-
+ 
     // ---------------------------
     //SELLER REQUEST SYSTEM
     //---------------------------
@@ -220,7 +220,7 @@ export const {
 
   // Profile
   useGetProfileQuery,
-  useSavePushTokenMutation,  
+  useSavePushTokenMutation,   
   useGetSellerByIdQuery, 
   useSearchSellersQuery, 
   useUpdateUserProfileMutation, 

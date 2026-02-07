@@ -3,115 +3,99 @@ import {
   Text,
   View,
   ScrollView,
-  TouchableOpacity, 
-  ActivityIndicator, 
+  TouchableOpacity,
+  ActivityIndicator,
   Platform,
   SafeAreaView,
   Image,
   StatusBar,
 } from "react-native";
-import React, { useEffect } from "react";
+import React from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useDispatch, useSelector } from "react-redux";
-import Toast from "react-native-toast-message";
-import { useCreateOrderMutation } from "../../slices/ordersApiSlice";
-import { clearCartItems } from "../../slices/cartSlice";
+import { useGetOrderDetailsQuery } from "../../slices/ordersApiSlice"; // Assuming this exists
 import { Colors } from "../../constants/Utils";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
-const PlaceOrderScreen = () => {
+const OrderScreen = () => {
   const router = useRouter();
-  const cart = useSelector((state) => state.cart);
-  const dispatch = useDispatch();
-  const [createOrder, { isLoading, error }] = useCreateOrderMutation();
+  const { orderId } = useLocalSearchParams();
 
-  useEffect(() => {
-    if (!cart.shippingAddress.address) {
-      router.replace("(screens)/ShippingScreen");
-    } else if (!cart.paymentMethod) {
-      router.replace("(screens)/PaymentScreen");
-    }
-  }, [cart.paymentMethod, cart.shippingAddress.address]);
+  // Fetching the specific order details
+  const { data: order, isLoading, error } = useGetOrderDetailsQuery(orderId);
 
-  const placeOrderHandler = async () => {
-    try {
-      const res = await createOrder({
-        orderItems: cart.cartItems,
-        shippingAddress: cart.shippingAddress,
-        paymentMethod: cart.paymentMethod,
-        shippingPrice: cart.shippingPrice,
-        taxPrice: cart.taxPrice,
-        totalPrice: cart.totalPrice,
-        itemsPrice: cart.itemsPrice,
-      }).unwrap();
+  if (isLoading) {
+    return (
+      <View style={styles.centerLoader}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.loadingText}>Fetching order details...</Text>
+      </View>
+    );
+  }
 
-      dispatch(clearCartItems());
-      router.push({
-        pathname: "/(screens)/OrderScreen",
-        params: { orderId: res._id },
-      });
-    } catch (err) {
-      Toast.show({
-        type: "error",
-        text1: "Order Failed",
-        text2: err?.data?.message || err.error,
-      });
-    }
-  };
+  if (error) {
+    return (
+      <View style={styles.centerLoader}>
+        <Ionicons name="alert-circle" size={50} color="red" />
+        <Text style={styles.errorText}>{error?.data?.message || "Something went wrong"}</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Text>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
 
-      {/* CONSISTENT HEADER */}
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={Colors.darkGray} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Review Order</Text>
+        <Text style={styles.headerTitle}>Order Details</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         
-        {/* PROGRESS STEPS - ALL COMPLETED */}
-        <View style={styles.stepContainer}>
-          <View style={[styles.stepCircle, styles.completedStep]}>
-            <Ionicons name="checkmark" size={18} color="#FFF" />
+        {/* STATUS INDICATOR */}
+        <View style={styles.statusBanner}>
+          <View style={[styles.statusBadge, { backgroundColor: order.isPaid ? "#E7F6EC" : "#FFEBEB" }]}>
+            <Text style={[styles.statusText, { color: order.isPaid ? "#28A745" : "#DC3545" }]}>
+              {order.isPaid ? "Paid" : "Payment Pending"}
+            </Text>
           </View>
-          <View style={[styles.stepLine, styles.completedLine]} />
-          <View style={[styles.stepCircle, styles.completedStep]}>
-            <Ionicons name="checkmark" size={18} color="#FFF" />
-          </View>
-          <View style={[styles.stepLine, styles.completedLine]} />
-          <View style={[styles.stepCircle, styles.activeStep]}>
-            <Ionicons name="flag" size={18} color="#FFF" />
+          <View style={[styles.statusBadge, { backgroundColor: order.isDelivered ? "#E7F6EC" : "#FFF4E5" }]}>
+            <Text style={[styles.statusText, { color: order.isDelivered ? "#28A745" : "#FD7E14" }]}>
+              {order.isDelivered ? "Delivered" : "Processing"}
+            </Text>
           </View>
         </View>
 
-        <Text style={styles.title}>Final Review</Text>
-        <Text style={styles.subtitle}>Check your details before placing the order</Text>
+        <Text style={styles.title}>Order #{order._id.slice(-6).toUpperCase()}</Text>
+        <Text style={styles.subtitle}>Placed on {new Date(order.createdAt).toLocaleDateString()}</Text>
 
-        {/* SHIPPING & PAYMENT INFO CARDS */}
+        {/* SHIPPING & PAYMENT INFO */}
         <View style={styles.infoRow}>
           <View style={styles.infoCard}>
             <Ionicons name="location" size={20} color={Colors.primary} />
-            <Text style={styles.infoTitle}>Shipping To</Text>
+            <Text style={styles.infoTitle}>Ship To</Text>
             <Text style={styles.infoText} numberOfLines={2}>
-              {cart.shippingAddress.address}, {cart.shippingAddress.city}
+              {order.shippingAddress.address}, {order.shippingAddress.city}
             </Text>
           </View>
           <View style={styles.infoCard}>
             <Ionicons name="card" size={20} color={Colors.primary} />
-            <Text style={styles.infoTitle}>Payment</Text>
-            <Text style={styles.infoText}>{cart.paymentMethod}</Text>
+            <Text style={styles.infoTitle}>Method</Text>
+            <Text style={styles.infoText}>{order.paymentMethod}</Text>
           </View>
         </View>
 
         {/* ORDER ITEMS */}
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Items</Text>
-          {cart.cartItems.map((item, index) => (
+          <Text style={styles.sectionTitle}>Ordered Items</Text>
+          {order.orderItems.map((item, index) => (
             <View key={index} style={styles.orderItem}>
               <Image source={{ uri: item.image }} style={styles.productImage} />
               <View style={styles.productDetails}>
@@ -124,47 +108,40 @@ const PlaceOrderScreen = () => {
           ))}
         </View>
 
-        {/* ORDER SUMMARY */}
+        {/* SUMMARY */}
         <View style={styles.summaryCard}>
-          <Text style={styles.sectionTitle}>Order Summary</Text>
+          <Text style={styles.sectionTitle}>Total Summary</Text>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Items</Text>
-            <Text style={styles.summaryValue}>${cart.itemsPrice}</Text>
+            <Text style={styles.summaryLabel}>Subtotal</Text>
+            <Text style={styles.summaryValue}>${order.itemsPrice}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Shipping</Text>
-            <Text style={styles.summaryValue}>${cart.shippingPrice}</Text>
+            <Text style={styles.summaryValue}>${order.shippingPrice}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Tax</Text>
-            <Text style={styles.summaryValue}>${cart.taxPrice}</Text>
+            <Text style={styles.summaryValue}>${order.taxPrice}</Text>
           </View>
           <View style={[styles.summaryRow, styles.totalRow]}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>${cart.totalPrice}</Text>
+            <Text style={styles.totalLabel}>Grand Total</Text>
+            <Text style={styles.totalValue}>${order.totalPrice}</Text>
           </View>
         </View>
 
-        <TouchableOpacity
-          style={[styles.placeOrderBtn, (cart.cartItems.length === 0 || isLoading) && styles.disabledBtn]}
-          onPress={placeOrderHandler}
-          disabled={cart.cartItems.length === 0 || isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <>
-              <Text style={styles.placeOrderText}>Confirm & Place Order</Text>
-              <Ionicons name="shield-checkmark" size={20} color="#FFF" />
-            </>
-          )}
-        </TouchableOpacity>
+        {/* ACTION BUTTONS (Optional) */}
+        {!order.isPaid && (
+           <TouchableOpacity style={styles.payNowBtn}>
+             <Text style={styles.payNowText}>Proceed to Payment</Text>
+           </TouchableOpacity>
+        )}
+
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-export default PlaceOrderScreen;
+export default OrderScreen;
 
 const styles = StyleSheet.create({
   safeArea: { 
@@ -186,25 +163,13 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: "700", color: Colors.darkGray },
   backBtn: { padding: 8, borderRadius: 12, backgroundColor: "#F1F3F5" },
   scrollContent: { padding: 20 },
-  stepContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-  },
-  stepCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#E9ECEF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  activeStep: { backgroundColor: Colors.primary },
-  completedStep: { backgroundColor: "#28a745" },
-  stepLine: { width: 40, height: 2, backgroundColor: "#E9ECEF", marginHorizontal: 8 },
-  completedLine: { backgroundColor: "#28a745" },
-  title: { fontSize: 26, fontWeight: "800", color: "#1A1A1A" },
+  centerLoader: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingText: { marginTop: 10, color: Colors.darkGray },
+  errorText: { marginVertical: 10, color: "#DC3545", textAlign: "center" },
+  statusBanner: { flexDirection: "row", gap: 10, marginBottom: 15 },
+  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  statusText: { fontSize: 12, fontWeight: "700" },
+  title: { fontSize: 24, fontWeight: "800", color: "#1A1A1A" },
   subtitle: { fontSize: 14, color: "#6C757D", marginBottom: 20 },
   infoRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 15 },
   infoCard: {
@@ -250,16 +215,13 @@ const styles = StyleSheet.create({
   totalRow: { borderTopWidth: 1, borderTopColor: "#F1F3F5", paddingTop: 15, marginTop: 5 },
   totalLabel: { fontSize: 18, fontWeight: "800", color: "#1A1A1A" },
   totalValue: { fontSize: 18, fontWeight: "800", color: Colors.primary },
-  placeOrderBtn: {
+  payNowBtn: {
     backgroundColor: Colors.primary,
-    flexDirection: "row",
-    height: 60,
+    height: 55,
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    gap: 10,
     marginBottom: 20,
   },
-  placeOrderText: { color: "#FFF", fontSize: 18, fontWeight: "700" },
-  disabledBtn: { backgroundColor: Colors.lightGray },
-}); 
+  payNowText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
+});

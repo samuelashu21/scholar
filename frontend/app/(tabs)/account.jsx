@@ -46,22 +46,42 @@ const Account = () => {
   if (!userInfo) {
     return ( 
       <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
         <View style={styles.centeredContainer}>
           <View style={styles.loginCard}>
-            <Ionicons name="person-circle-outline" size={80} color={Colors.lightGray} />
-            <Text style={styles.loginTitle}>Welcome Guest</Text>
-            <Text style={styles.loginSubtitle}>Login to manage your orders and profile</Text>
-            <TouchableOpacity 
+            {/* The Icon Container */}
+            <View style={styles.guestIconContainer}>
+              <Ionicons name="person-outline" size={50} color={Colors.primary} />
+            </View>
+            
+            <Text style={styles.loginTitle}>Your Profile</Text>
+            <Text style={styles.loginSubtitle}>
+              Log in to see your orders, manage your wishlist, and enjoy a personalized shopping experience.
+            </Text>
+            
+            {/* Redirects to the Entry Screen instead of just Login */}
+            <TouchableOpacity  
+              activeOpacity={0.8}
               style={styles.primaryBtn} 
-              onPress={() => router.push("/LoginScreen")}
+              onPress={() => router.push({
+                pathname: "/AuthEntryScreen",
+                params: { redirect: "/account" } // Ensures they come back here after login
+              })}
             >
-              <Text style={styles.primaryBtnText}>Login / Sign Up</Text>
+              <Text style={styles.primaryBtnText}>Register / Login</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.secondaryBtn}
+              onPress={() => router.push("/")}
+            >
+              <Text style={styles.secondaryBtnText}>Continue Shopping</Text>
             </TouchableOpacity>
           </View>
         </View>
       </SafeAreaView>
     );
-  }
+  } 
 
   const SectionHeader = ({ title }) => (
     <Text style={styles.sectionTitle}>{title}</Text>
