@@ -25,16 +25,17 @@ const SellerRequestListScreen = () => {
   const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState("All"); // Plan Filter
-  const [statusFilter, setStatusFilter] = useState("All"); // Status Filter
+  const [activeFilter, setActiveFilter] = useState("All"); 
+  const [statusFilter, setStatusFilter] = useState("All"); 
   const [sortBy, setSortBy] = useState("name");
 
-  // Filter Options
+  // Filter Options - Updated with 1 Year
   const planOptions = [
     { label: "All Plans", value: "All" },
     { label: "Free", value: "free" },
     { label: "1 Month", value: "paid_1_month" },
     { label: "6 Months", value: "paid_6_month" },
+    { label: "1 Year", value: "paid_1_year" },
   ];
 
   const statusOptions = [
@@ -44,7 +45,6 @@ const SellerRequestListScreen = () => {
     { label: "Rejected", value: "rejected" },
   ];
 
-  // Logic to filter by Search, Subscription Type, AND Status
   const filteredUsers = useMemo(() => {
     if (!users) return [];
 
@@ -68,9 +68,10 @@ const SellerRequestListScreen = () => {
     });
   }, [users, searchQuery, activeFilter, statusFilter, sortBy]);
 
-  // UI Helpers
+  // UI Helpers - Added Diamond styling for 1 Year
   const getSubscriptionStyle = (type) => {
     switch (type) {
+      case "paid_1_year": return { bg: "#FFF4E5", text: "#FF8C00", label: "1 YEAR" };
       case "paid_6_month": return { bg: "#E3F2FD", text: "#1976D2", label: "6 MONTHS" };
       case "paid_1_month": return { bg: "#F3E5F5", text: "#7B1FA2", label: "1 MONTH" };
       case "free": return { bg: "#E8F5E9", text: "#2E7D32", label: "FREE" };
@@ -104,7 +105,6 @@ const SellerRequestListScreen = () => {
             </View>
           </View>
           
-          {/* NEW: Status Badge */}
           <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
             <Ionicons name={statusStyle.icon} size={12} color={statusStyle.text} />
             <Text style={[styles.statusBadgeText, { color: statusStyle.text }]}>
@@ -122,7 +122,7 @@ const SellerRequestListScreen = () => {
           <Text style={styles.dateText}>
             Requested: {new Date(user.createdAt).toLocaleDateString()}
           </Text>
-        </View>
+        </View> 
 
         <View style={styles.cardActions}>
           <TouchableOpacity 
@@ -144,16 +144,16 @@ const SellerRequestListScreen = () => {
   };
 
   const deleteHandler = (id) => {
-    Alert.alert("Remove Request", "Are you sure you want to delete this request?", [
+    Alert.alert("Remove Request", "Warning: This will delete the user account entirely. To only reject the request, use 'Review Request' instead.", [
       { text: "Cancel", style: "cancel" },
       {
-        text: "Delete",
+        text: "Delete User",
         style: "destructive",
         onPress: async () => {
           try {
             await deleteUser(id).unwrap();
             refetch();
-            Toast.show({ type: "success", text1: "Deleted successfully" });
+            Toast.show({ type: "success", text1: "User deleted successfully" });
           } catch (err) {
             Toast.show({ type: "error", text1: "Error", text2: err?.data?.message });
           }
@@ -162,7 +162,7 @@ const SellerRequestListScreen = () => {
     ]);
   };
 
-  if (isLoading) {
+  if (isLoading && !users) {
     return (
       <View style={styles.loaderContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -192,7 +192,6 @@ const SellerRequestListScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* SEARCH */}
       <View style={styles.searchSection}>
         <View style={styles.searchBar}>
           <Ionicons name="search" size={18} color="#ADB5BD" style={{ marginRight: 8 }} />
@@ -205,7 +204,6 @@ const SellerRequestListScreen = () => {
         </View>
       </View>
 
-      {/* STATUS FILTER (Pending, Approved, etc) */}
       <View style={styles.filterSection}>
         <FlatList
           horizontal
@@ -226,7 +224,6 @@ const SellerRequestListScreen = () => {
         />
       </View>
 
-      {/* PLAN FILTER (Free, Paid, etc) */}
       <View style={[styles.filterSection, { borderBottomWidth: 1, borderBottomColor: "#EEE", paddingBottom: 12 }]}>
         <FlatList
           horizontal
@@ -249,17 +246,21 @@ const SellerRequestListScreen = () => {
 
       <View style={styles.container}>
         {error ? (
-          <Message variant="error">{error?.data?.message || "Error loading requests"}</Message>
+          <View style={{ padding: 20 }}>
+            <Message variant="error">{error?.data?.message || "Error loading requests"}</Message>
+          </View>
         ) : (
           <FlatList
             data={filteredUsers}
             keyExtractor={(item) => item._id}
             contentContainerStyle={styles.listContent}
             renderItem={renderUser}
+            onRefresh={refetch}
+            refreshing={isLoading}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Ionicons name="document-text-outline" size={60} color="#CCC" />
-                <Text style={styles.emptyText}>No requests found</Text>
+                <Text style={styles.emptyText}>No matching requests found</Text>
               </View>
             }
           />
@@ -270,7 +271,7 @@ const SellerRequestListScreen = () => {
 };
 
 export default SellerRequestListScreen;
-
+ 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#F8F9FA", paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0 },
   header: { height: 64, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, backgroundColor: "#FFF" },
@@ -280,44 +281,35 @@ const styles = StyleSheet.create({
   searchBar: { flexDirection: "row", alignItems: "center", backgroundColor: "#F1F3F5", paddingHorizontal: 12, borderRadius: 10, height: 44 },
   searchInput: { flex: 1, fontSize: 14, color: "#212529" },
   filterSection: { paddingVertical: 6, backgroundColor: "#FFF" },
-  
-  // Status Chips
   statusChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8, backgroundColor: "#F8F9FA", marginRight: 8, borderWidth: 1, borderColor: "#E9ECEF" },
   activeStatusChip: { backgroundColor: "#212529", borderColor: "#212529" },
   statusChipText: { fontSize: 12, color: "#6C757D", fontWeight: "600" },
   activeStatusChipText: { color: "#FFF" },
-
-  // Plan Chips
   chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: "#F1F3F5", marginRight: 8, borderWidth: 1, borderColor: "#E9ECEF" },
   activeChip: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   chipText: { fontSize: 12, color: "#6C757D", fontWeight: "600" },
   activeChipText: { color: "#FFF" },
-
   container: { flex: 1 },
-  listContent: { padding: 16 },
-  card: { backgroundColor: "#FFF", borderRadius: 16, padding: 16, marginBottom: 16, elevation: 2, borderWidth: 1, borderColor: "#EAEAEA" },
+  listContent: { padding: 16, paddingBottom: 40 },
+  card: { backgroundColor: "#FFF", borderRadius: 16, padding: 16, marginBottom: 16, ...Platform.select({ ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }), borderWidth: 1, borderColor: "#EAEAEA" },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
   userInfo: { flexDirection: "row", alignItems: "center", flex: 1 },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#F0F4FF", justifyContent: "center", alignItems: "center", marginRight: 12 },
   avatarText: { fontSize: 18, fontWeight: "bold", color: Colors.primary },
   userName: { fontSize: 16, fontWeight: "700", color: "#212529" },
-  userEmail: { fontSize: 13, color: "#6C757D" },
-  
+  userEmail: { fontSize: 13, color: "#6C757D" }, 
   statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, gap: 4 },
   statusBadgeText: { fontSize: 10, fontWeight: "800" },
-  
   cardDetails: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   badgeText: { fontSize: 10, fontWeight: "700" },
   dateText: { fontSize: 11, color: "#ADB5BD" },
-
   cardActions: { flexDirection: "row", borderTopWidth: 1, borderTopColor: "#F1F3F5", paddingTop: 12 },
   btn: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 10, borderRadius: 10, flex: 1 },
   editBtn: { backgroundColor: "#F0F7FF", marginRight: 12 },
   editBtnText: { marginLeft: 8, color: Colors.primary, fontWeight: "700" },
   deleteBtn: { width: 44, height: 44, justifyContent: "center", alignItems: "center", backgroundColor: "#FFF0F0", borderRadius: 10 },
-  
   loaderContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   emptyContainer: { alignItems: "center", marginTop: 60 },
   emptyText: { marginTop: 12, color: "#ADB5BD", fontSize: 16 }, 
-}); 
+});

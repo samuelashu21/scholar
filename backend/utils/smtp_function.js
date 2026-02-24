@@ -152,3 +152,35 @@ export async function sendSellerApprovalEmail(user) {
         console.error("Approval Email Error:", error);
     }
 } 
+
+
+export async function sendSellerRejectionEmail(user) {
+    const transporter = createTransporter();
+    const mailOptions = {
+        from: `"Shola Marketplace" <${process.env.AUTH_EMAIL}>`,
+        to: user.email,
+        subject: "Rejection Email!",
+        html: ` 
+            <div style="${emailStyles.container}">
+                <div style="background-color: #a72828ff; color: white; padding: 20px; text-align: center;"><h1>Store Rejected!</h1></div>
+                <div style="${emailStyles.body}">
+                    <h2>Dear, ${user.FirstName}!</h2>
+                    <p>Your store <b>"${user.sellerProfile.storeName}"</b> has been rejected.</p> 
+                    <p><b>Subscription:</b> ${user.sellerRequest.subscriptionType}</p>
+                    ${user.sellerRequest.subscriptionEnd ? `<p><b>Ends on:</b> ${new Date(user.sellerRequest.subscriptionEnd).toDateString()}</p>` : ""}
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;"> 
+                    <div style="text-align: center; margin-top: 20px;">
+                        <a href="${process.env.FRONTEND_URL}/seller-dashboard" style="background-color: #a72828ff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Go to Dashboard</a>
+                    </div>
+                </div>
+                ${getFooter()}
+            </div>
+        `,
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+    } catch (error) {
+        console.error("Approval Email Error:", error);
+    }
+}

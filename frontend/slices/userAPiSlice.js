@@ -170,12 +170,12 @@ export const userApiSlice = apiSlice.injectEndpoints({
         url: `${USERS_URL}/request-seller`,
         method: "POST",
         body: data,
-        headers: {
-          "Content-Type": "application/json",
-        },
+        // headers: {
+        //   "Content-Type": "application/json",
+        // },
       }),
       invalidatesTags: ["User", "Seller"],
-    }),
+    }), 
 
     getSellerRequests: builder.query({
       query: () => ({
@@ -190,9 +190,9 @@ export const userApiSlice = apiSlice.injectEndpoints({
         url: `${USERS_URL}/approve-seller/${userId}`,
         method: "PUT",
         body: data,
-        headers: {
-          "Content-Type": "application/json",
-        },
+        // headers: {
+        //   "Content-Type": "application/json",
+        // }, 
       }),
       invalidatesTags: ["Seller", "User"],
     }),

@@ -4,9 +4,9 @@ import Product from "../models/productModel.js";
 import generateToken from "../utils/generateToken.js";
 import validator from "validator";
 import { generateOTP } from '../utils/otp_generator.js'; 
-import { sendOTPEmail,sendResetPasswordEmail,sendSellerRequestEmail,sendSellerApprovalEmail } from '../utils/smtp_function.js'; 
-   
+import { sendOTPEmail,sendResetPasswordEmail,sendSellerRequestEmail,sendSellerApprovalEmail,sendSellerRejectionEmail } from '../utils/smtp_function.js'; 
     
+     
 const authUser = asyncHandler(async (req, res) => {
   const { email, phone, password } = req.body;
   // Determine which identifier is provided
@@ -104,18 +104,7 @@ const registerUser = asyncHandler(async (req, res) => {
       profileImage,
       password,
       requestSeller = false,
-    } = req.body;
-
-    // Log extracted values
-    console.log("🧩 Extracted Data:", {
-      FirstName,
-      LastName,
-      email,
-      phone,
-      profileImage,
-      passwordLength: password?.length,
-      requestSeller,
-    });
+    } = req.body; 
 
     // ---- Validate required fields ----
     if (!FirstName || !LastName || !email || !phone || !password) {
@@ -123,7 +112,7 @@ const registerUser = asyncHandler(async (req, res) => {
       throw new Error(
         "All fields (first name, last name, email, phone, password) are required"
       ); 
-    }
+    } 
 
     // ---- Validate email format ----
     if (!validator.isEmail(email)) {
@@ -157,7 +146,6 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
     // ---- Check existing users ----
-    console.log("🔍 Checking for existing user:", email, phone);
     const existingUser = await User.findOne({
       $or: [{ email }, { phone }],
     });
@@ -197,8 +185,7 @@ const registerUser = asyncHandler(async (req, res) => {
         boostActive: false,
       };
     }
-
-   
+    
     const user = await User.create(newUserData);
 
     await sendOTPEmail(email, otp);
@@ -350,7 +337,6 @@ const resetPassword = async (req, res) => {
       console.error("Reset Password Error: Missing fields", { email, otp, newPassword });
       return res.status(400).json({ message: "All fields are required" });
     }
-
     const user = await User.findOne({ email });
 
     if (
@@ -734,6 +720,9 @@ const updatePushToken = asyncHandler(async (req, res) => {
   }
 }); 
 
+
+
+
 const requestSeller = asyncHandler(async (req, res) => {
   try { 
     const {
@@ -743,7 +732,7 @@ const requestSeller = asyncHandler(async (req, res) => {
       storeLogo,
     } = req.body;
 
-    const validSubscriptions = ["free", "paid_1_month", "paid_6_month"];
+     const validSubscriptions = ["free", "paid_1_month", "paid_6_month", "paid_1_year"]; 
     if (!validSubscriptions.includes(subscriptionType)) {
       return res.status(400).json({ message: "Invalid subscription type" });
     }
@@ -759,15 +748,13 @@ const requestSeller = asyncHandler(async (req, res) => {
 
     // Ensure sellerRequest object exists
     if (!user.sellerRequest) user.sellerRequest = {};
-
-    // Update seller request
+ 
     user.sellerRequest = {
-      ...user.sellerRequest,
-      isRequested: true,
-      status: "pending",
-      subscriptionType,
-    };
-
+    isRequested: true,
+    status: "pending",
+    subscriptionType,
+    subscriptionLevel: 0, // Level stays 0 until Admin approves
+  }; 
     // Update seller profile
     user.sellerProfile = {
       ...user.sellerProfile,
@@ -802,100 +789,88 @@ const getSellerRequests = asyncHandler(async (req, res) => {
   res.json(requests);
 });
 
-
+ 
 
 const approveSeller = asyncHandler(async (req, res) => {
- 
   try {
-    // Accept subscriptionType from multiple possible locations
-    const subscriptionType =
-      req.body.subscriptionType ||
-      req.body?.sellerRequest?.subscriptionType ||
-      null;
- 
-    // Validate subscription type 
-    const validSubscriptions = ["free", "paid_1_month", "paid_6_month"];
-    if (!validSubscriptions.includes(subscriptionType)) {
-      console.error("❌ Invalid subscription type:", subscriptionType);
-      return res.status(400).json({ message: "Invalid subscription type" });
-    }
     const user = await User.findById(req.params.id);
-
     if (!user) {
-      console.error("❌ User not found:", req.params.id);
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Extract simple fields safely
-    const { FirstName, LastName, email, phone, storeName, storeDescription } =
-      req.body;
+    const { status, storeName, storeDescription, subscriptionType: subTypeBody } = req.body;
 
-    // ==== UPDATE BASIC USER FIELDS ====
-    user.FirstName = FirstName || user.FirstName;
-    user.LastName = LastName || user.LastName;
-    user.email = email || user.email;
-    user.phone = phone || user.phone;
+    // --- 1. HANDLE REJECTION ---
+    if (status === "rejected") {
+      user.isSeller = false;
+      user.sellerRequest.status = "rejected";
+      user.sellerRequest.isRequested = false; // Optional: lets them re-apply later
+      
+      await user.save();
+      await sendSellerRejectionEmail(user); // If you have this helper
+      
+      return res.json({ message: "Seller request rejected", user });
+    }
 
-    // ==== ENSURE sellerProfile EXISTS ====
-    user.sellerProfile = user.sellerProfile || {};
-    user.sellerProfile.storeName =
-      storeName ||
-      req.body?.sellerProfile?.storeName ||
-      user.sellerProfile.storeName;
-    user.sellerProfile.storeDescription =
-      storeDescription ||
-      req.body?.sellerProfile?.storeDescription ||
-      user.sellerProfile.storeDescription;
+    // --- 2. PROCEED WITH APPROVAL ---
+    // Determine Subscription Type
+    const subscriptionType = subTypeBody || user.sellerRequest?.subscriptionType || "free";
 
-    // ==== ENSURE sellerRequest EXISTS ====
-    user.sellerRequest = user.sellerRequest || {};
+    // Validate
+    const validSubscriptions = ["free", "paid_1_month", "paid_6_month", "paid_1_year"];
+    if (!validSubscriptions.includes(subscriptionType)) {
+      return res.status(400).json({ message: "Invalid subscription type" });
+    }
 
-    console.log("🔧 Setting seller approval and subscription details…");
-
+    // Update Profile Info
     user.isSeller = true;
+    user.sellerProfile.storeName = storeName || user.sellerProfile.storeName;
+    user.sellerProfile.storeDescription = storeDescription || user.sellerProfile.storeDescription;
+
+    // Handle Subscription Dates & Priority Levels
     user.sellerRequest.status = "approved";
     user.sellerRequest.subscriptionType = subscriptionType;
+    user.sellerRequest.subscriptionStart = new Date();
 
-    // ==== SUBSCRIPTION DATE HANDLING ==== 
+    const now = new Date();
+    
     if (subscriptionType === "free") {
-      console.log("📌 Free Plan selected");
-      user.sellerRequest.subscriptionStart = null;
+      user.sellerRequest.subscriptionLevel = 0; 
       user.sellerRequest.subscriptionEnd = null;
       user.sellerRequest.boostActive = false;
     } else {
-      const now = new Date();
-      const months = subscriptionType === "paid_1_month" ? 1 : 6;
-
-      console.log(`📌 Paid Plan selected → +${months} month(s)`);
-
-      user.sellerRequest.subscriptionStart = now;
-      user.sellerRequest.subscriptionEnd = new Date(
-        new Date().setMonth(now.getMonth() + months)
-      );
       user.sellerRequest.boostActive = true;
+      let monthsToAdd = 0;
+
+      if (subscriptionType === "paid_1_month") {
+        user.sellerRequest.subscriptionLevel = 1;
+        monthsToAdd = 1;
+      } else if (subscriptionType === "paid_6_month") {
+        user.sellerRequest.subscriptionLevel = 2;
+        monthsToAdd = 6;
+      } else if (subscriptionType === "paid_1_year") {
+        user.sellerRequest.subscriptionLevel = 3;
+        monthsToAdd = 12;
+      }
+
+      // Create a fresh date to avoid reference issues
+      const expiryDate = new Date();
+      expiryDate.setMonth(expiryDate.getMonth() + monthsToAdd);
+      user.sellerRequest.subscriptionEnd = expiryDate;
     }
 
-    // ==== SAVE USER ====
-    console.log("💾 Saving user...");
     await user.save();
-    // Send approval email to the user
-await sendSellerApprovalEmail(user);
+    await sendSellerApprovalEmail(user);
 
-    res.json({
-      message: "Seller request approved successfully",
-      user, 
+    res.json({ 
+      message: `Seller approved with level ${user.sellerRequest.subscriptionLevel}`, 
+      user 
     });
   } catch (err) {
-    console.error("🔥 SERVER ERROR IN APPROVE SELLER:", err);
-    return res.status(500).json({
-      message: "Server error while approving seller",
-      error: err.message,
-      stack: err.stack,
-    });
+    res.status(500).json({ message: err.message });
   } 
-});
-
-
+}); 
+ 
 
 // Admin: reject seller request
 const rejectSeller = asyncHandler(async (req, res) => {

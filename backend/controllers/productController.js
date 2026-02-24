@@ -8,7 +8,7 @@ import Like from "../models/likeModel.js";
 // @desc    Get all products with global search (Name, Category, Subcategory)
 // @route   GET /api/products
 // @access  Public
-export const getProducts = asyncHandler(async (req, res) => {
+/* export const getProducts = asyncHandler(async (req, res) => {
   const pageSize = 8;  
   const page = Number(req.query.pageNumber) || 1;
   const { keyword, category, subcategory, sort } = req.query;
@@ -76,7 +76,103 @@ export const getProducts = asyncHandler(async (req, res) => {
     pages: Math.ceil(count / pageSize),
     total: count,
   });
+}); */
+
+
+
+export const getProducts = asyncHandler(async (req, res) => {
+  const pageSize = 8;
+  const page = Number(req.query.pageNumber) || 1;
+  const { keyword, category, subcategory } = req.query;
+
+  let query = {};
+
+  // 1. Basic Filtering (Keyword/Category/Subcategory)
+  if (keyword) {
+    const [matchingCategories, matchingSubcategories] = await Promise.all([
+      Category.find({ categoryname: { $regex: keyword, $options: "i" } }).select("_id"),
+      Subcategory.find({ subcategoryName: { $regex: keyword, $options: "i" } }).select("_id")
+    ]);
+    query.$or = [
+      { name: { $regex: keyword, $options: "i" } },
+      { category: { $in: matchingCategories.map(c => c._id) } },
+      { subcategory: { $in: matchingSubcategories.map(s => s._id) } }
+    ];
+  }
+  if (category) query.category = new mongoose.Types.ObjectId(category);
+  if (subcategory) query.subcategory = new mongoose.Types.ObjectId(subcategory);
+
+  // 2. The Aggregation Pipeline (The "Magic" Sort)
+  const products = await Product.aggregate([
+    { $match: query }, // Filter products first
+    {
+      $lookup: {
+        from: "users", // Join with the User collection
+        localField: "user",
+        foreignField: "_id",
+        as: "seller"
+      }
+    },
+    { $unwind: "$seller" }, // Convert seller array to object
+    {
+      $addFields: {
+        // We create a priority score. 
+        // If subscription is expired, we force it to level 0 (Free)
+        effectivePriority: {
+          $cond: [
+            { $gt: ["$seller.sellerRequest.subscriptionEnd", new Date()] },
+            { $ifNull: ["$seller.sellerRequest.subscriptionLevel", 0] },
+            0
+          ]
+        }
+      }
+    },
+    {
+      // SORT HIERARCHY:
+      // 1. Subscription Level (3 > 2 > 1 > 0)
+      // 2. Creation Date (Newest first)
+      $sort: {
+        effectivePriority: -1, 
+        createdAt: -1
+      }
+    },
+    { $skip: pageSize * (page - 1) },
+    { $limit: pageSize }
+  ]);
+
+  // 3. Count total for pagination
+  const totalCount = await Product.countDocuments(query);
+  // 4. Populate Category/Subcategory (Manually since aggregate doesn't auto-populate)
+  const populatedProducts = await Product.populate(products, [
+    { path: "category", select: "categoryname image" },
+    { path: "subcategory", select: "subcategoryName image" }
+  ]);
+  // 5. Like Handling (Reuse your existing logic)
+  const userId = req.user?._id?.toString();
+  const productIds = populatedProducts.map((p) => p._id);
+  const likes = await Like.find({ product: { $in: productIds } });
+  
+  const likeCountMap = {};
+  likes.forEach((l) => {
+    const pid = l.product.toString();
+    likeCountMap[pid] = (likeCountMap[pid] || 0) + 1;
+  });
+
+  const userLikedSet = new Set(
+    userId ? likes.filter(l => l.user.toString() === userId).map(l => l.product.toString()) : []
+  );
+  res.json({
+    products: populatedProducts.map((p) => ({
+      ...p,
+      likesCount: likeCountMap[p._id.toString()] || 0,
+      isLiked: userLikedSet.has(p._id.toString()),
+    })),
+    page,
+    pages: Math.ceil(totalCount / pageSize),
+    total: totalCount,
+  });
 });
+    
 
 // @route   GET /api/products/:id 
 

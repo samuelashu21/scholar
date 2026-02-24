@@ -62,23 +62,29 @@ const userSchema = mongoose.Schema(
       rating: { type: Number, default: 0 },
       totalSales: { type: Number, default: 0 },
     },
-    sellerRequest: {
+sellerRequest: {
       isRequested: { type: Boolean, default: false },
       status: {
         type: String,
         enum: ["pending", "approved", "rejected"],
         default: "pending",
       },
-      // NEW — Subscription type enum
+      rejectionReason: { type: String, default: "" }, 
       subscriptionType: { 
         type: String,
-        enum: ["free", "paid_1_month", "paid_6_month"],
+        enum: ["free", "paid_1_month", "paid_6_month", "paid_1_year"], // Added 1 year
         default: "free",
+      },
+      // This helper field makes the Index Page sorting 100x faster
+      subscriptionLevel: {
+        type: Number, 
+        enum: [0, 1, 2, 3], // 0:Free, 1:1mo, 2:6mo, 3:1yr
+        default: 0
       },
       subscriptionStart: { type: Date },
       subscriptionEnd: { type: Date },
       boostActive: { type: Boolean, default: false },
-    },
+    }, 
     verified: {
       type: Boolean,
       default: false,
