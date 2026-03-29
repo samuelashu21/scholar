@@ -5,7 +5,7 @@ import {
   Text,
   View, 
   Image,
-  TouchableOpacity,
+  TouchableOpacity, 
   ScrollView,
   SafeAreaView,
   Platform,
@@ -175,13 +175,14 @@ const Account = () => {
             <SectionHeader title="Administrator Tools" />
             <View style={styles.menuCard}>
               <MenuItem icon="grid-outline" title="Manage Products" onPress={() => router.push("/admin/ProductListScreen")} />
+              <MenuItem icon="grid-outline" title="Manage Categories" onPress={() => router.push("/admin/CategoryScreen")} />
               <MenuItem icon="list-circle-outline" title="Order Management" onPress={() => router.push("/admin/OrderListScreen")} />
               <MenuItem icon="people-outline" title="User Management" onPress={() => router.push("/admin/UserListScreen")} />
               <MenuItem icon="mail-unread-outline" title="Seller Requests" onPress={() => router.push("/admin/SellerRequestListScreen")} isLast />
             </View>
           </>
         )}
-
+ 
         {/* LOGOUT */}
         <View style={[styles.menuCard, { marginTop: 20, marginBottom: 40 }]}>
           <MenuItem 

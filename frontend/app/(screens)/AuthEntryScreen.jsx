@@ -25,7 +25,7 @@ const AuthEntryScreen = () => {
       <View style={styles.content}>
         <Image source={require("../../assets/images/logo.png")} style={styles.logo} />
         
-        <Text style={styles.welcomeTitle}>Welcome to Shola</Text>
+        <Text style={styles.welcomeTitle}>Welcome to Sho</Text>
         <Text style={styles.subtitle}>Sign in to sync your wishlist, coupons, and orders across devices.</Text>
  
         {/* Social Options - AliExpress Style */}

@@ -4,13 +4,13 @@ import {
   View,
   TextInput,
   ScrollView,
-  ActivityIndicator,
+  ActivityIndicator, 
   Image,
   TouchableOpacity,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
-  StatusBar
+  StatusBar 
 } from "react-native";
 import React, { useState } from "react";
 import Toast from "react-native-toast-message";
