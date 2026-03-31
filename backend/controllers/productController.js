@@ -3,90 +3,16 @@ import Product from "../models/productModel.js";
 import Category from "../models/categoryModel.js";
 import Subcategory from "../models/subcategoryModel.js"; // Import Subcategory
 import Like from "../models/likeModel.js";
+import mongoose from 'mongoose';
+
  
-
-// @desc    Get all products with global search (Name, Category, Subcategory)
-// @route   GET /api/products
-// @access  Public
-/* export const getProducts = asyncHandler(async (req, res) => {
-  const pageSize = 8;  
-  const page = Number(req.query.pageNumber) || 1;
-  const { keyword, category, subcategory, sort } = req.query;
-
-  let query = {};
-
-  // --- 1. GLOBAL SEARCH LOGIC ---
-  if (keyword) {
-    // Find Category/Subcategory IDs that match the text
-    const [matchingCategories, matchingSubcategories] = await Promise.all([
-      Category.find({ categoryname: { $regex: keyword, $options: "i" } }).select("_id"),
-      Subcategory.find({ subcategoryName: { $regex: keyword, $options: "i" } }).select("_id")
-    ]);
-
-    const categoryIds = matchingCategories.map(c => c._id);
-    const subcategoryIds = matchingSubcategories.map(s => s._id);
-
-    // Search Product Name OR Category OR Subcategory
-    query.$or = [
-      { name: { $regex: keyword, $options: "i" } },
-      { category: { $in: categoryIds } },
-      { subcategory: { $in: subcategoryIds } }
-    ];
-  }
-
-  // --- 2. DIRECT FILTERS (Trending Clicks) ---
-  if (category) query.category = category;
-  if (subcategory) query.subcategory = subcategory;
-
-  // --- 3. DYNAMIC SORTING ---
-  const sortOrder = sort ? sort.split(',').join(' ') : "-createdAt";
-
-  // --- 4. EXECUTE ---
-  const count = await Product.countDocuments(query);
-  const products = await Product.find(query)
-    .limit(pageSize)
-    .skip(pageSize * (page - 1))
-    .populate("category", "categoryname image")
-    .populate("subcategory", "subcategoryName image")
-    .populate("user", "FirstName LastName")
-    .sort(sortOrder);
-
-  // --- 5. LIKE HANDLING ---
-  const userId = req.user?._id?.toString();
-  const productIds = products.map((p) => p._id);
-  const likes = await Like.find({ product: { $in: productIds } });
-
-  const likeCountMap = {};
-  likes.forEach((l) => {
-    const pid = l.product.toString();
-    likeCountMap[pid] = (likeCountMap[pid] || 0) + 1;
-  });
-
-  const userLikedSet = new Set(
-    userId ? likes.filter(l => l.user.toString() === userId).map(l => l.product.toString()) : []
-  );
-
-  res.json({
-    products: products.map((p) => ({
-      ...p.toObject(),
-      likesCount: likeCountMap[p._id.toString()] || 0,
-      isLiked: userLikedSet.has(p._id.toString()),
-    })),
-    page,
-    pages: Math.ceil(count / pageSize),
-    total: count,
-  });
-}); */
-
-
-
 export const getProducts = asyncHandler(async (req, res) => {
   const pageSize = 8;
   const page = Number(req.query.pageNumber) || 1;
-  const { keyword, category, subcategory } = req.query;
-
-  let query = {};
-
+  const { keyword, category, subcategory, mine } = req.query;
+   
+  let query = {}; 
+  
   // 1. Basic Filtering (Keyword/Category/Subcategory)
   if (keyword) {
     const [matchingCategories, matchingSubcategories] = await Promise.all([
@@ -127,10 +53,7 @@ export const getProducts = asyncHandler(async (req, res) => {
         }
       }
     },
-    {
-      // SORT HIERARCHY:
-      // 1. Subscription Level (3 > 2 > 1 > 0)
-      // 2. Creation Date (Newest first)
+    { 
       $sort: {
         effectivePriority: -1, 
         createdAt: -1
@@ -173,6 +96,56 @@ export const getProducts = asyncHandler(async (req, res) => {
   });
 });
     
+
+
+ 
+export const getMyProducts = asyncHandler(async (req, res) => {
+  const pageSize = 8;
+  const page = Number(req.query.pageNumber) || 1;
+  const { keyword, category, subcategory } = req.query;
+
+  console.log("getMyProducts -> req.user:", req.user?._id); // 👈 add
+
+  let query = { user: req.user._id };
+
+  if (keyword) {
+    const [matchingCategories, matchingSubcategories] = await Promise.all([
+      Category.find({ categoryname: { $regex: keyword, $options: "i" } }).select("_id"),
+      Subcategory.find({ subcategoryName: { $regex: keyword, $options: "i" } }).select("_id"),
+    ]);
+
+    query.$or = [
+      { name: { $regex: keyword, $options: "i" } },
+      { category: { $in: matchingCategories.map((c) => c._id) } },
+      { subcategory: { $in: matchingSubcategories.map((s) => s._id) } },
+    ];
+  }
+
+  if (category) query.category = new mongoose.Types.ObjectId(category);
+  if (subcategory) query.subcategory = new mongoose.Types.ObjectId(subcategory);
+
+  console.log("getMyProducts -> query:", query); // 👈 add
+
+  const products = await Product.find(query)
+    .populate("category", "categoryname image")
+    .populate("subcategory", "subcategoryName image")
+    .sort({ createdAt: -1 }) 
+    .skip(pageSize * (page - 1))
+    .limit(pageSize);
+
+  const totalCount = await Product.countDocuments(query);
+
+  console.log("getMyProducts -> totalCount:", totalCount); // 👈 add
+
+  res.json({
+    products,
+    page,
+    pages: Math.ceil(totalCount / pageSize),
+    total: totalCount,
+  });
+});
+
+
 
 // @route   GET /api/products/:id 
 
@@ -397,7 +370,7 @@ const createProductReview = asyncHandler(async (req, res) => {
 export {
   getProductById, 
   createProduct,
-  updateProduct,
+  updateProduct, 
   deleteProduct,
   createProductReview,
 };

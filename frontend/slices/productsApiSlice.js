@@ -8,17 +8,27 @@ export const productsApiSlice = apiSlice.injectEndpoints({
       query: ({ keyword, pageNumber, category, subcategory, sort }) => ({
         url: PRODUCT_URL,
         params: { keyword, pageNumber, category, subcategory, sort },
-      }), 
+      }),
       keepUnusedDataFor: 5,
-      providesTags: ["Product", "Auth"], 
+      providesTags: ["Product", "Auth"],
     }),
-    getProductDetails: builder.query({ 
+
+    getMyProducts: builder.query({
+      query: ({ keyword, pageNumber, category, subcategory, sort }) => ({
+        url: `${PRODUCT_URL}/my-products`,
+        params: { keyword, pageNumber, category, subcategory, sort },
+      }),
+      keepUnusedDataFor: 5,
+      providesTags: ["Product"], 
+    }),
+
+    getProductDetails: builder.query({
       query: (productId) => ({
         url: `${PRODUCT_URL}/${productId}`,
       }),
       keepUnusedDataFor: 5,
       providesTags: ["Product"],
-    }), 
+    }),
 
     createReview: builder.mutation({
       query: (data) => ({
@@ -39,7 +49,7 @@ export const productsApiSlice = apiSlice.injectEndpoints({
       query: (data) => ({
         url: `${PRODUCT_URL}/${data.productId}`,
         method: "PUT",
-        body: data, 
+        body: data,
       }),
       invalidatesTags: ["Product"],
     }),
@@ -48,13 +58,14 @@ export const productsApiSlice = apiSlice.injectEndpoints({
         url: "/api/upload",
         method: "POST",
         body: data,
-      }), 
+      }),
     }),
-   createProduct: builder.mutation({
-      query: (data) => ({        // 1. Add (data) here
+    createProduct: builder.mutation({
+      query: (data) => ({
+        // 1. Add (data) here
         url: PRODUCT_URL,
         method: "POST",
-        body: data,              // 2. Add body: data here
+        body: data, // 2. Add body: data here
       }),
       invalidatesTags: ["Product"],
     }),
@@ -64,22 +75,23 @@ export const productsApiSlice = apiSlice.injectEndpoints({
         url: `/api/products/${productId}/view`,
         method: "PUT",
         body: { deviceId },
-      }), 
+      }),
       invalidatesTags: ["Product"],
-    }),  
+    }),
 
     toggleLike: builder.mutation({
       query: (productId) => ({
         url: `/api/products/${productId}/like`,
         method: "PUT",
       }),
-      invalidatesTags: ["Product"], // This refreshes the product data in the UI 
+      invalidatesTags: ["Product"], // This refreshes the product data in the UI
     }),
   }),
 });
 
 export const {
   useGetProductsQuery,
+  useGetMyProductsQuery,  
   useGetProductDetailsQuery,
   useCreateReviewMutation,
   useDeleteProductMutation,

@@ -181,7 +181,7 @@ const Account = () => {
               <MenuItem icon="mail-unread-outline" title="Seller Requests" onPress={() => router.push("/admin/SellerRequestListScreen")} isLast />
             </View>
           </>
-        )}
+        )} 
  
         {/* LOGOUT */}
         <View style={[styles.menuCard, { marginTop: 20, marginBottom: 40 }]}>

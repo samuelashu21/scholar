@@ -18,7 +18,7 @@ import { useRouter, useLocalSearchParams, Stack } from "expo-router";
 import Toast from "react-native-toast-message";
 import { Ionicons } from "@expo/vector-icons";
 import {
-  useCreateProductMutation,  
+  useCreateProductMutation,   
   useGetProductDetailsQuery,
   useUpdateProductMutation,
   useUploadProductImageMutation,
@@ -48,7 +48,7 @@ const SellerProductEditScreen = () => {
   // Skip fetching product details if we are creating a new one
   const { data: product, isLoading } = useGetProductDetailsQuery(productId, {
     skip: isNewMode,
-  });
+  }); 
 
   const { data: categories } = useGetCategoriesQuery();
   const { data: subcategories } = useGetSubcategoriesQuery();
@@ -69,7 +69,7 @@ const SellerProductEditScreen = () => {
     if (product) {
       setName(product.name || "");
       setPrice(product.price?.toString() || "0");
-      setImage(product.image || "");
+      setImage(product.image || ""); 
       setCountInStock(product.countInStock?.toString() || "0");
       setDescription(product.description || "");
       setSelectedCategoryId(product.category?._id || product.category || "");

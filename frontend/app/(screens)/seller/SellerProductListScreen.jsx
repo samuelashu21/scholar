@@ -1,13 +1,11 @@
-
-
- import {
+import {
    StyleSheet,
    Text,
    View,
    ActivityIndicator,
    FlatList,
    TouchableOpacity,
-   Alert,
+   Alert,  
    Platform,
    SafeAreaView,
    StatusBar,
@@ -20,8 +18,8 @@
  import Message from "../../../components/Message";
  import { Picker } from "@react-native-picker/picker"; // Ensure this is installed
  
- import {
-   useGetProductsQuery,
+ import { 
+   useGetMyProductsQuery,
    useDeleteProductMutation,
  } from "../../../slices/productsApiSlice";
  import { Colors } from "../../../constants/Utils";
@@ -29,19 +27,19 @@
  const SellerProductListScreen = () => {
    const { pageNumber = "1" } = useLocalSearchParams();
    const router = useRouter();
- 
+  
    // --- Search & Sort States ---
    const [keyword, setKeyword] = useState("");
    const [sortOrder, setSortOrder] = useState("-createdAt");
  
    // Pass keyword and sort to the RTK Query hook
-   const { data, isLoading, error, refetch, isFetching } = useGetProductsQuery({
-     pageNumber: Number(pageNumber),
-     keyword,
-     sort: sortOrder,
-   });
- 
-   const [deleteProduct] = useDeleteProductMutation();
+   const { data, isLoading, error, refetch, isFetching } = useGetMyProductsQuery({ 
+  pageNumber: Number(pageNumber),
+  keyword,
+  sort: sortOrder,
+}); 
+  
+   const [deleteProduct] = useDeleteProductMutation(); 
  
    const deleteHandler = async (id) => {
      Alert.alert("Delete Product", "Are you sure?", [
@@ -62,7 +60,7 @@
    };
  
    const createProductHandler = () => {
-     router.push({ pathname: "/admin/ProductEditScreen", params: { id: "new" } });
+     router.push({ pathname: "/seller/SellerProductEditScreen", params: { id: "new" } });
    };
  
    const renderPaginationButtons = () => {
@@ -157,7 +155,7 @@
                <View style={styles.actionGroup}>
                  <TouchableOpacity 
                      style={styles.editBtn} 
-                     onPress={() => router.push({ pathname: "/admin/ProductEditScreen", params: { id: item._id } })}
+                     onPress={() => router.push({ pathname: "/seller/product/SellerProductEditScreen", params: { id: item._id } })}
                  >
                    <Ionicons name="create-outline" size={18} color={Colors.primary} />
                  </TouchableOpacity>
