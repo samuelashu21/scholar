@@ -16,7 +16,6 @@ import uploadProfileRoutes from "./routes/uploadProfileRoutes.js";
 import User from "./models/userModel.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
-import path from "path";
 
 dotenv.config();
 connectDB();
@@ -40,13 +39,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Serve product uploads
-const uploadsDir = path.join(process.cwd(), "uploads");
-app.use("/uploads", express.static(uploadsDir));
-
-// Serve profile uploads
-const profileUploadsDir = path.join(process.cwd(), "uploadsprofile");
-app.use("/uploadsprofile", express.static(profileUploadsDir));
 
 app.use("/api/products", productRoutes);
 app.use("/api/users", userRoutes);
