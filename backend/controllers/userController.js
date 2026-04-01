@@ -75,19 +75,21 @@ const authUser = asyncHandler(async (req, res) => {
   );
 
   // Generate token
-  generateToken(res, updatedUser._id);
+  const token = generateToken(res, updatedUser._id);
   // Send response
   res.json({
     _id: user._id,
     name: `${user.FirstName} ${user.LastName}`,
     email: user.email,
     phone: user.phone,
-    profileImage: user.profileImage,   
+    profileImage: user.profileImage,
+    role: user.role,
     isSeller: user.isSeller,
     isAdmin: user.isAdmin,
     accountStatus: user.accountStatus,
-    verified: user.verified, 
+    verified: user.verified,
     sellerRequest: sellerInfo,
+    token,
   }); 
 }); 
 
@@ -170,6 +172,7 @@ const registerUser = asyncHandler(async (req, res) => {
       isVerified: false,
       isAdmin: false,
       isSeller: false,
+      role: "user",
       accountStatus: "active",
       otp,
       otpExpires: Date.now() + 5 * 60 * 1000,
@@ -209,6 +212,7 @@ const registerUser = asyncHandler(async (req, res) => {
       email: user.email,
       phone: user.phone,
       profileImage: user.profileImage,
+      role: user.role,
       isSeller: user.isSeller,
       isAdmin: user.isAdmin,
       isVerified: user.isVerified,
@@ -443,7 +447,8 @@ const getUserProfile = asyncHandler(async (req, res) => {
     _id: user._id,
     name: `${user.FirstName} ${user.LastName}`,
     email: user.email,
-    profileImage: user.profileImage,   
+    profileImage: user.profileImage,
+    role: user.role,
     isAdmin: user.isAdmin,
     isSeller: user.isSeller,
     isVerified: user.isVerified,
@@ -509,6 +514,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   // Prevent role changes
   delete req.body.isAdmin;
   delete req.body.isSeller;
+  delete req.body.role;
   delete req.body.sellerRequest;
 
   const updatedUser = await user.save();
@@ -519,6 +525,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
     email: updatedUser.email,
     phone: updatedUser.phone,
     profileImage: updatedUser.profileImage,
+    role: updatedUser.role,
     isSeller: updatedUser.isSeller,
     isAdmin: updatedUser.isAdmin,
     isVerified: updatedUser.isVerified,
@@ -566,7 +573,7 @@ const deleteUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
 
   if (user) {
-    if (user.isAdmin) {
+    if (user.isAdmin || user.role === "admin") {
       res.status(400);
       throw new Error("cannot delete admin user");
     }
@@ -670,6 +677,15 @@ const updateUser = asyncHandler(async (req, res) => {
     user.isSeller = Boolean(req.body.isSeller);
   }
 
+  // --- Sync role field with boolean flags ---
+  if (user.isAdmin) {
+    user.role = "admin";
+  } else if (user.isSeller) {
+    user.role = "seller";
+  } else {
+    user.role = "user";
+  }
+
   // --- Update Account Status ---
   if (req.body.accountStatus) {
     if (!["active", "suspended", "inactive"].includes(req.body.accountStatus)) {
@@ -687,6 +703,7 @@ const updateUser = asyncHandler(async (req, res) => {
     LastName: updatedUser.LastName,
     email: updatedUser.email,
     phone: updatedUser.phone,
+    role: updatedUser.role,
     isSeller: updatedUser.isSeller,
     isAdmin: updatedUser.isAdmin,
     accountStatus: updatedUser.accountStatus,
@@ -803,6 +820,7 @@ const approveSeller = asyncHandler(async (req, res) => {
     // --- 1. HANDLE REJECTION ---
     if (status === "rejected") {
       user.isSeller = false;
+      user.role = "user";
       user.sellerRequest.status = "rejected";
       user.sellerRequest.isRequested = false; // Optional: lets them re-apply later
       
@@ -824,6 +842,7 @@ const approveSeller = asyncHandler(async (req, res) => {
 
     // Update Profile Info
     user.isSeller = true;
+    user.role = "seller";
     user.sellerProfile.storeName = storeName || user.sellerProfile.storeName;
     user.sellerProfile.storeDescription = storeDescription || user.sellerProfile.storeDescription;
 
@@ -878,6 +897,8 @@ const rejectSeller = asyncHandler(async (req, res) => {
   if (!user) return res.status(404).json({ message: "User not found" });
 
   user.sellerRequest.status = "rejected";
+  user.isSeller = false;
+  user.role = "user";
   await user.save();
   res.json({ message: "Seller request rejected", user });
 });

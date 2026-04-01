@@ -38,6 +38,11 @@ const userSchema = mongoose.Schema(
         message: "Phone must start with +251 and be followed by 9 digits",
       },
     },
+    role: {
+      type: String,
+      enum: ["user", "seller", "admin"],
+      default: "user",
+    },
     isSeller: {
       type: Boolean,
       default: false,
