@@ -10,29 +10,28 @@ import {
   SafeAreaView,
   StatusBar,
   RefreshControl,
-  TextInput, // Added
+  TextInput,
+  Image,
 } from "react-native";
-import React, { useState } from "react"; // Added useState
+import React, { useState } from "react";
 import { useRouter, useLocalSearchParams, Stack } from "expo-router";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
-import Message from "../../../components/Message";
-import { Picker } from "@react-native-picker/picker"; // Ensure this is installed
+import { Picker } from "@react-native-picker/picker";
 
 import {
   useGetProductsQuery,
   useDeleteProductMutation,
 } from "../../../slices/productsApiSlice";
 import { Colors } from "../../../constants/Utils";
+import { BASE_URL } from "../../../constants/Urls";
 
 const ProductListScreen = () => {
   const { pageNumber = "1" } = useLocalSearchParams();
   const router = useRouter();
 
-  // --- Search & Sort States ---
   const [keyword, setKeyword] = useState("");
   const [sortOrder, setSortOrder] = useState("-createdAt");
 
-  // Pass keyword and sort to the RTK Query hook
   const { data, isLoading, error, refetch, isFetching } = useGetProductsQuery({
     pageNumber: Number(pageNumber),
     keyword,
@@ -40,6 +39,11 @@ const ProductListScreen = () => {
   });
 
   const [deleteProduct] = useDeleteProductMutation();
+
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return "https://via.placeholder.com/100";
+    return imagePath.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
+  };
 
   const deleteHandler = async (id) => {
     Alert.alert("Delete Product", "Are you sure?", [
@@ -52,7 +56,7 @@ const ProductListScreen = () => {
             await deleteProduct(id).unwrap();
             refetch();
           } catch (err) {
-            Alert.alert("Error", err?.data?.message || err.error);
+            Alert.alert("Error", err?.data?.message || err?.error || "Delete failed");
           }
         },
       },
@@ -64,7 +68,7 @@ const ProductListScreen = () => {
   };
 
   const renderPaginationButtons = () => {
-    if (!data?.pages || data.pages <= 1) return <View style={{ height: 40 }} />;
+    if (!data?.pages || data.pages <= 1) return <View style={{ height: 20 }} />;
     return (
       <View style={styles.paginationContainer}>
         {Array.from({ length: data.pages }, (_, i) => i + 1).map((page) => (
@@ -73,7 +77,12 @@ const ProductListScreen = () => {
             style={[styles.pageButton, page === data.page && styles.activePageButton]}
             onPress={() => router.setParams({ pageNumber: page.toString() })}
           >
-            <Text style={[styles.pageButtonText, page === data.page && styles.activePageButtonText]}>
+            <Text
+              style={[
+                styles.pageButtonText,
+                page === data.page && styles.activePageButtonText,
+              ]}
+            >
               {page}
             </Text>
           </TouchableOpacity>
@@ -81,6 +90,16 @@ const ProductListScreen = () => {
       </View>
     );
   };
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <Text style={styles.errorText}>
+          {error?.data?.message || error?.error || "Failed to load products"}
+        </Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -98,7 +117,7 @@ const ProductListScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* SEARCH & SORT BAR */}
+      {/* SEARCH + SORT */}
       <View style={styles.filterContainer}>
         <View style={styles.searchSection}>
           <Ionicons name="search" size={18} color="#ADB5BD" style={styles.searchIcon} />
@@ -110,6 +129,7 @@ const ProductListScreen = () => {
             clearButtonMode="while-editing"
           />
         </View>
+
         <View style={styles.sortWrapper}>
           <Picker
             selectedValue={sortOrder}
@@ -130,43 +150,65 @@ const ProductListScreen = () => {
         </View>
       ) : (
         <FlatList
-          data={data?.products}
+          data={data?.products ?? []}
           keyExtractor={(item) => item._id}
-          refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} color={Colors.primary} />}
+          refreshControl={
+            <RefreshControl refreshing={isFetching} onRefresh={refetch} color={Colors.primary} />
+          }
           contentContainerStyle={styles.listContent}
-          ListHeaderComponent={() => (
-            <View style={styles.tableHeader}>
-              <Text style={[styles.hCell, { flex: 1 }]}>PRODUCT NAME</Text>
-              <Text style={[styles.hCell, { width: 80, textAlign: 'center' }]}>PRICE</Text>
-              <Text style={[styles.hCell, { width: 90, textAlign: 'right' }]}>ACTION</Text>
-            </View>
-          )}
           renderItem={({ item }) => (
-            <View style={styles.productRow}>
-              <View style={{ flex: 1, paddingRight: 10 }}>
-                <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+            <TouchableOpacity
+              activeOpacity={0.92}
+              style={styles.card}
+              onPress={() =>
+                router.push({
+                  pathname: "/(screens)/ProductScreen", // change if your product details route differs
+                  params: { productId: item._id },
+                })
+              }
+            >
+              <Image source={{ uri: getImageUrl(item.image) }} style={styles.productImage} />
+
+              <View style={styles.infoWrap}>
+                <Text style={styles.productName} numberOfLines={1}>
+                  {item.name}
+                </Text>
                 <Text style={styles.productCategory} numberOfLines={1}>
-                  {item.category?.categoryname || 'Uncategorized'}
+                  {item.category?.categoryname || "Uncategorized"}
+                </Text>
+                <Text style={styles.productPrice}>
+                  ${Number(item.price || 0).toFixed(2)}
                 </Text>
               </View>
-              <View style={{ width: 85, alignItems: 'center' }}>
-                <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
-              </View>
+
               <View style={styles.actionGroup}>
-                <TouchableOpacity 
-                    style={styles.editBtn} 
-                    onPress={() => router.push({ pathname: "/admin/ProductEditScreen", params: { id: item._id } })}
+                <TouchableOpacity
+                  style={styles.editBtn}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    router.push({
+                      pathname: "/admin/ProductEditScreen",
+                      params: { id: item._id },
+                    });
+                  }}
                 >
                   <Ionicons name="create-outline" size={18} color={Colors.primary} />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteHandler(item._id)}>
+
+                <TouchableOpacity
+                  style={styles.deleteBtn}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    deleteHandler(item._id);
+                  }}
+                >
                   <Ionicons name="trash-outline" size={18} color="#FF4D4D" />
                 </TouchableOpacity>
               </View>
-            </View>
+            </TouchableOpacity>
           )}
           ListFooterComponent={renderPaginationButtons}
-          ListEmptyComponent={() => !isLoading && <Text style={styles.emptyText}>No products found.</Text>}
+          ListEmptyComponent={() => <Text style={styles.emptyText}>No products found.</Text>}
         />
       )}
     </SafeAreaView>
@@ -176,7 +218,11 @@ const ProductListScreen = () => {
 export default ProductListScreen;
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#F8F9FA", paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#F8F9FA",
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -188,55 +234,108 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E9ECEF",
   },
   headerTitle: { fontSize: 18, fontWeight: "700", color: "#1A1A1A" },
-  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#F8F9FA", justifyContent: "center", alignItems: "center" },
-  addButton: { backgroundColor: Colors.primary, width: 38, height: 38, borderRadius: 12, justifyContent: "center", alignItems: "center" },
-  
-  // Filter Styles
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F8F9FA",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  addButton: {
+    backgroundColor: Colors.primary,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
   filterContainer: {
     padding: 16,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF'
+    borderBottomColor: "#E9ECEF",
   },
   searchSection: {
     flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F1F3F5',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F3F5",
     borderRadius: 10,
     paddingHorizontal: 10,
   },
   searchIcon: { marginRight: 5 },
-  searchInput: { flex: 1, height: 40, fontSize: 14, color: '#495057' },
-  sortWrapper: { flex: 1.2, backgroundColor: '#F1F3F5', borderRadius: 10, overflow: 'hidden', justifyContent: 'center' },
-  sortPicker: { height: 40, width: '100%' },
+  searchInput: { flex: 1, height: 40, fontSize: 14, color: "#495057" },
+  sortWrapper: {
+    flex: 1.2,
+    backgroundColor: "#F1F3F5",
+    borderRadius: 10,
+    overflow: "hidden",
+    justifyContent: "center",
+  },
+  sortPicker: { height: 40, width: "100%" },
 
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  tableHeader: { flexDirection: "row", paddingVertical: 12, alignItems: 'center' },
-  hCell: { fontSize: 10, fontWeight: "800", color: "#ADB5BD", letterSpacing: 0.8 },
-  listContent: { paddingHorizontal: 16, paddingBottom: 20 },
-  productRow: {
+  listContent: { paddingHorizontal: 16, paddingBottom: 20, paddingTop: 8 },
+
+  card: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFF",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
     borderRadius: 16,
-    marginVertical: 6,
+    padding: 12,
+    marginVertical: 7,
+    borderWidth: 1,
+    borderColor: "#EEF1F4",
     elevation: 2,
   },
-  productName: { fontSize: 14, fontWeight: "700", color: "#343A40" },
-  productCategory: { fontSize: 11, color: "#ADB5BD", marginTop: 2 },
-  productPrice: { fontSize: 14, fontWeight: "800", color: Colors.primary },
-  actionGroup: { flexDirection: "row", width: 85, justifyContent: "flex-end" },
-  editBtn: { padding: 6, backgroundColor: "#F0F4FF", borderRadius: 8, marginRight: 6 },
-  deleteBtn: { padding: 6, backgroundColor: "#FFF5F5", borderRadius: 8 },
-  emptyText: { textAlign: 'center', marginTop: 50, color: '#ADB5BD' },
-  
-  paginationContainer: { flexDirection: "row", justifyContent: "center", paddingVertical: 25, gap: 8 },
-  pageButton: { width: 38, height: 38, borderRadius: 12, backgroundColor: "#FFF", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#E9ECEF" },
+  productImage: {
+    width: 62,
+    height: 62,
+    borderRadius: 12,
+    backgroundColor: "#F1F3F5",
+    marginRight: 12,
+  },
+  infoWrap: { flex: 1, paddingRight: 8 },
+  productName: { fontSize: 15, fontWeight: "700", color: "#1F2937" },
+  productCategory: { fontSize: 12, color: "#9CA3AF", marginTop: 3 },
+  productPrice: { fontSize: 15, fontWeight: "800", color: Colors.primary, marginTop: 8 },
+
+  actionGroup: { flexDirection: "row", alignItems: "center" },
+  editBtn: {
+    padding: 8,
+    backgroundColor: "#EEF4FF",
+    borderRadius: 10,
+    marginRight: 8,
+  },
+  deleteBtn: {
+    padding: 8,
+    backgroundColor: "#FFF1F1",
+    borderRadius: 10,
+  },
+
+  emptyText: { textAlign: "center", marginTop: 60, color: "#ADB5BD" },
+  errorText: { color: "red", padding: 16 },
+
+  paginationContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    paddingVertical: 25,
+    gap: 8,
+  },
+  pageButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: "#FFF",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E9ECEF",
+  },
   activePageButton: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   pageButtonText: { color: "#495057", fontWeight: "700" },
   activePageButtonText: { color: "#FFF" },
