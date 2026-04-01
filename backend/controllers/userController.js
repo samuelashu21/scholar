@@ -894,7 +894,7 @@ export {
   resetPassword,
   requestResetPassword,  
   getUserProfile,
-  searchSellers,
+  searchSellers, 
   updateUserProfile,
   uploadProfileImage,
   getUsers,

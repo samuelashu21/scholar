@@ -1,5 +1,4 @@
 
-
  import express from "express";
  import multer from "multer";
  import path from "path";
@@ -9,7 +8,7 @@
  const router = express.Router();
  
  const storage = new CloudinaryStorage({ 
-   cloudinary,
+   cloudinary, 
    params: {
      folder: "scholar/profiles",
      allowed_formats: ["jpg", "jpeg", "png"],
@@ -37,7 +36,7 @@
  });
  
  router.post("/", upload.single("image"), (req, res) => {
-   if (!req.file) {
+   if (!req.file) { 
      return res.status(400).json({ message: "No file uploaded" });
    }
  
