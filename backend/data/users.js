@@ -2,26 +2,41 @@ import bcrypt from "bcryptjs";
 
 const users = [
   {
-    name: "Admin",
-    email: "admin@gmail.com", 
+    FirstName: "Admin",
+    LastName: "User",
+    email: "admin@gmail.com",
     password: bcrypt.hashSync("Abegaz$%", 10),
+    phone: "+251911000001",
     isAdmin: true,
     isSeller: false,
+    role: "admin",
+    verified: true,
+    accountStatus: "active",
   },
   {
-    name: "Seller", 
+    FirstName: "Seller",
+    LastName: "User",
     email: "seller@gmail.com",
     password: bcrypt.hashSync("Abegaz$%", 10),
+    phone: "+251911000002",
     isAdmin: false,
     isSeller: true,
+    role: "seller",
+    verified: true,
+    accountStatus: "active",
   },
-   {
-    name: "samuelcustomer", 
+  {
+    FirstName: "Samuel",
+    LastName: "Customer",
     email: "customer@gmail.com",
     password: bcrypt.hashSync("Abegaz$%", 10),
+    phone: "+251911000003",
     isAdmin: false,
     isSeller: false,
+    role: "user",
+    verified: true,
+    accountStatus: "active",
   },
-]; 
+];
 
 export default users;

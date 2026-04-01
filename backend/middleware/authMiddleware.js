@@ -40,7 +40,7 @@ const protectOptional = asyncHandler(async (req, res, next) => {
 
 
 const admin = (req, res, next) => {
-  if (req.user && req.user.isAdmin) {
+  if (req.user && (req.user.isAdmin || req.user.role === "admin")) {
     next();
   } else {
     res.status(401);
@@ -48,7 +48,7 @@ const admin = (req, res, next) => {
   }
 };
 const seller = (req, res, next) => { 
-  if (req.user && req.user.isSeller) {
+  if (req.user && (req.user.isSeller || req.user.role === "seller")) {
      next();
   } 
   else {
@@ -58,7 +58,7 @@ const seller = (req, res, next) => {
 };
   
 const sellerOrAdmin = (req, res, next) => {
-  if (req.user && (req.user.isSeller || req.user.isAdmin)) { 
+  if (req.user && (req.user.isSeller || req.user.isAdmin || req.user.role === "seller" || req.user.role === "admin")) { 
       next();
   }
   else {
