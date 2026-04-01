@@ -1,26 +1,17 @@
+ 
 import express from "express";
 import multer from "multer";
-import path from "path"; 
-import fs from "fs";
+import path from "path";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import cloudinary from "../config/cloudinary.js";
 
 const router = express.Router();
 
-//const uploadsDir = path.join(process.cwd(), "..", "uploads");
-const uploadsDir = path.join(process.cwd(), "uploads");
-
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
- 
-const storage = multer.diskStorage({
-  destination(req, file, cb) {
-    cb(null, uploadsDir); 
-  }, 
-  filename(req, file, cb) {
-    const filename = `${file.fieldname}-${Date.now()}${path.extname(
-      file.originalname
-    )}`;
-    cb(null, filename);
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "scholar/products",
+    allowed_formats: ["jpg", "jpeg", "png"],
   },
 });
 
@@ -49,18 +40,16 @@ router.post("/", upload.single("image"), (req, res) => {
     return res.status(400).json({ message: "No file uploaded" });
   }
 
-  const imagePath = `/uploads/${req.file.filename}`;
-
   res.send({
     message: "Image uploaded successfully",
-    image: imagePath,
+    image: req.file.path,
   });
 });
 
 
 
-router.use((err, req,res,next)=>{
-    res.status(500).json({message:err.message || "Error processing upload"})
-})
+router.use((err, req, res, next) => {
+  res.status(500).json({ message: err.message || "Error processing upload" });
+});
 
-export default router;
+export default router; 
