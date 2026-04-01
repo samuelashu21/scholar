@@ -75,7 +75,7 @@ const authUser = asyncHandler(async (req, res) => {
   );
 
   // Generate token
-  generateToken(res, updatedUser._id);
+  const token = generateToken(res, updatedUser._id);
   // Send response
   res.json({
     _id: user._id,
@@ -89,6 +89,7 @@ const authUser = asyncHandler(async (req, res) => {
     accountStatus: user.accountStatus,
     verified: user.verified,
     sellerRequest: sellerInfo,
+    token,
   }); 
 }); 
 

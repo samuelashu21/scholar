@@ -4,7 +4,12 @@ import User from "../models/userModel.js";
 
 const protect = asyncHandler(async (req, res, next) => {
   let token;
+
+  // Accept token from cookie (web) or Authorization header (React Native / mobile)
   token = req.cookies.jwt;
+  if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+    token = req.headers.authorization.split(" ")[1];
+  }
   
   if (token) {
     try {
@@ -25,7 +30,10 @@ const protect = asyncHandler(async (req, res, next) => {
 
 const protectOptional = asyncHandler(async (req, res, next) => {
   let token;
-  token = req.cookies.jwt; 
+  token = req.cookies.jwt;
+  if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+    token = req.headers.authorization.split(" ")[1];
+  }
 
   if (token) {
     try {

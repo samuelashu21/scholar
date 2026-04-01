@@ -10,6 +10,10 @@ const generateToken = (res, userId) => {
     sameSite: "strict",
     maxAge: 30 * 24 * 60 * 60 * 1000,
   });
+
+  // Return the token so callers can include it in the response body
+  // (needed for React Native clients that cannot rely on cookies)
+  return token;
 };
 
 export default generateToken; 
