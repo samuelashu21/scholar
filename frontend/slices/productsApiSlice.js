@@ -19,7 +19,7 @@ export const productsApiSlice = apiSlice.injectEndpoints({
         params: { keyword, pageNumber, category, subcategory, sort },
       }),
       keepUnusedDataFor: 5,
-      providesTags: ["Product"], 
+      providesTags: ["Product"],
     }),
 
     getProductDetails: builder.query({
@@ -86,12 +86,20 @@ export const productsApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["Product"], // This refreshes the product data in the UI
     }),
+
+    getBannerProducts: builder.query({
+      query: (limit = 6) => ({
+        url: `${PRODUCT_URL}/banner`,
+        params: { limit },
+      }), 
+      keepUnusedDataFor: 5,
+    }),
   }),
 });
 
 export const {
   useGetProductsQuery,
-  useGetMyProductsQuery,  
+  useGetMyProductsQuery,
   useGetProductDetailsQuery,
   useCreateReviewMutation,
   useDeleteProductMutation,
@@ -100,4 +108,5 @@ export const {
   useCreateProductMutation,
   useAddViewMutation,
   useToggleLikeMutation,
+  useGetBannerProductsQuery
 } = productsApiSlice;

@@ -9,6 +9,7 @@ import {
   deleteProduct,
   createProductReview,
   addView,
+  getBannerProducts,
 } from "../controllers/productController.js";
 
 import { toggleLike } from "../controllers/likeController.js";
@@ -18,6 +19,9 @@ const router = express.Router();
 
 // ✅ put static route first
 router.get("/my-products", protect, getMyProducts);
+ 
+// routes/productRoutes.js
+router.get("/banner", getBannerProducts);
  
 router
   .route("/")

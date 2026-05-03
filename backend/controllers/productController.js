@@ -367,10 +367,47 @@ const createProductReview = asyncHandler(async (req, res) => {
   res.status(201).json({ message: "Review added" });
 });
 
+
+
+// controllers/productController.js
+ const getBannerProducts = asyncHandler(async (req, res) => {
+  const limit = Number(req.query.limit) || 10;
+
+  const products = await Product.aggregate([
+    {
+      $lookup: {
+        from: "users",
+        localField: "user",
+        foreignField: "_id",
+        as: "seller",
+      },
+    },
+    { $unwind: "$seller" },
+    {
+      $match: {
+        "seller.sellerRequest.status": "approved",
+        "seller.sellerRequest.boostActive": true,
+      },
+    },
+    { $sort: { createdAt: -1 } }, // or random/sample
+    { $limit: limit },
+  ]);
+
+  const populated = await Product.populate(products, [
+    { path: "category", select: "categoryname image" },
+    { path: "subcategory", select: "subcategoryName image" },
+  ]);
+
+  res.json(populated);
+});
+
+
+
 export {
   getProductById, 
   createProduct,
   updateProduct, 
-  deleteProduct,
+  deleteProduct, 
   createProductReview,
+  getBannerProducts
 };
