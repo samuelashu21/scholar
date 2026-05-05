@@ -1,9 +1,17 @@
 import asyncHandler from "../middleware/asyncHandler.js";
 import Category from "../models/categoryModel.js";
- 
+import { cacheGet, cacheSet, cacheDel } from "../config/redis.js";
+
+const CATEGORIES_CACHE_KEY = "categories:all";
+const CATEGORY_TTL = 24 * 60 * 60; // 24 hours
+
 // @desc    Get all categories
 const getCategories = asyncHandler(async (req, res) => {
+  const cached = await cacheGet(CATEGORIES_CACHE_KEY);
+  if (cached) return res.json(cached);
+
   const categories = await Category.find({});
+  await cacheSet(CATEGORIES_CACHE_KEY, categories, CATEGORY_TTL);
   res.json(categories);
 }); 
  
@@ -25,6 +33,7 @@ const createCategory = asyncHandler(async (req, res) => {
     const category = new Category({ categoryname, image });
 
     const createdCategory = await category.save();
+    await cacheDel(CATEGORIES_CACHE_KEY);
     res.status(201).json(createdCategory);
   } catch (error) {
     res.status(500).json({
@@ -45,7 +54,6 @@ const updateCategory = asyncHandler(async (req, res) => {
     throw new Error("Category not found");
   }
 
-  // Check if the new categoryname already exists (to prevent duplicates)
   if (categoryname && categoryname !== category.categoryname) {
     const exists = await Category.findOne({ categoryname });
     if (exists) {
@@ -58,6 +66,7 @@ const updateCategory = asyncHandler(async (req, res) => {
   if (image) category.image = image;
 
   const updatedCategory = await category.save();
+  await cacheDel(CATEGORIES_CACHE_KEY);
   res.status(200).json(updatedCategory);
 });
 
@@ -72,6 +81,7 @@ const deleteCategory = asyncHandler(async (req, res) => {
   }
 
   await category.deleteOne();
+  await cacheDel(CATEGORIES_CACHE_KEY);
   res.json({ message: "Category successfully deleted" });
 });
 

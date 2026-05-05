@@ -1,5 +1,13 @@
 import mongoose from "mongoose";
 
+const statusHistorySchema = new mongoose.Schema(
+  {
+    status: { type: String, required: true },
+    note: { type: String, default: "" },
+  },
+  { timestamps: true }
+);
+
 const orderSchema = mongoose.Schema(
   {
     user: {
@@ -57,18 +65,10 @@ const orderSchema = mongoose.Schema(
       required: true,
     },
     paymentResult: {
-      id: {
-        type: String,
-      },
-      status: {
-        type: String,
-      },
-      update_time: {
-        type: String,
-      },
-      email_address: {
-        type: String,
-      },
+      id: { type: String },
+      status: { type: String },
+      update_time: { type: String },
+      email_address: { type: String },
     },
 
     itemsPrice: {
@@ -106,6 +106,27 @@ const orderSchema = mongoose.Schema(
     },
     deliveredAt: {
       type: Date,
+    },
+
+    // ─── Full Order Lifecycle ────────────────────────────────────────────────
+    status: {
+      type: String,
+      enum: [
+        "pending",
+        "confirmed",
+        "processing",
+        "shipped",
+        "out_for_delivery",
+        "delivered",
+        "cancelled",
+        "refund_requested",
+        "refunded",
+      ],
+      default: "pending",
+    },
+    statusHistory: {
+      type: [statusHistorySchema],
+      default: [],
     },
   },
 

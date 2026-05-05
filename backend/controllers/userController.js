@@ -3,10 +3,10 @@ import User from "../models/userModel.js";
 import Product from "../models/productModel.js";
 import generateToken from "../utils/generateToken.js";
 import validator from "validator";
+import jwt from "jsonwebtoken";
 import { generateOTP } from '../utils/otp_generator.js'; 
 import { sendOTPEmail,sendResetPasswordEmail,sendSellerRequestEmail,sendSellerApprovalEmail,sendSellerRejectionEmail } from '../utils/smtp_function.js'; 
-    
-     
+
 const authUser = asyncHandler(async (req, res) => {
   const { email, phone, password } = req.body;
   // Determine which identifier is provided
@@ -424,8 +424,47 @@ export const resendResetPasswordOTP = async (req, res) => {
 
 const logoutUser = (req, res) => {
   res.clearCookie("jwt");
+  res.clearCookie("jwt_refresh", { path: "/api/users/refresh" });
   res.status(200).json({ message: "Logged out successfully" });
 };
+
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  const refreshToken = req.cookies.jwt_refresh;
+
+  if (!refreshToken) {
+    res.status(401);
+    throw new Error("No refresh token");
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+  } catch {
+    res.status(401);
+    throw new Error("Invalid or expired refresh token");
+  }
+
+  const user = await User.findById(decoded.userId).select("-password");
+  if (!user || user.accountStatus !== "active") {
+    res.status(401);
+    throw new Error("User not found or inactive");
+  }
+
+  // Issue new access token only
+  const accessToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+    expiresIn: "15m",
+  });
+
+  const SECURE_COOKIE = process.env.NODE_ENV === "production";
+  res.cookie("jwt", accessToken, {
+    httpOnly: true,
+    secure: SECURE_COOKIE,
+    sameSite: "strict",
+    maxAge: 15 * 60 * 1000,
+  });
+
+  res.json({ message: "Token refreshed" });
+});
 
 
 
@@ -891,6 +930,7 @@ export {
   resendOTP,
   verifyOTP, 
   logoutUser,
+  refreshAccessToken,
   resetPassword,
   requestResetPassword,  
   getUserProfile,

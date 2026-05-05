@@ -9,6 +9,7 @@ import {
   registerUser,
   updatePushToken,  
   logoutUser,
+  refreshAccessToken,
   resendOTP,
   verifyOTP,
   requestResetPassword,
@@ -45,6 +46,7 @@ router.post("/request-reset-password", requestResetPassword);
 router.post("/reset-password", resetPassword);
 router.post("/resend-reset-password-otp", resendResetPasswordOTP);
 router.post("/logout", logoutUser);
+router.post("/refresh", refreshAccessToken);
 
 
 

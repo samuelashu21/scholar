@@ -1,15 +1,19 @@
 import asyncHandler from "../middleware/asyncHandler.js";
 import Product from "../models/productModel.js";
 import Category from "../models/categoryModel.js";
-import Subcategory from "../models/subcategoryModel.js"; // Import Subcategory
+import Subcategory from "../models/subcategoryModel.js";
 import Like from "../models/likeModel.js";
 import mongoose from 'mongoose';
+import { cacheGet, cacheSet, cacheDelPattern } from "../config/redis.js";
+
+const PRODUCT_LIST_TTL = 5 * 60;   // 5 minutes
+const PRODUCT_DETAIL_TTL = 10 * 60; // 10 minutes
 
  
 export const getProducts = asyncHandler(async (req, res) => {
   const pageSize = 8;
   const page = Number(req.query.pageNumber) || 1;
-  const { keyword, category, subcategory, mine } = req.query;
+  const { keyword, category, subcategory, mine, exclude } = req.query;
    
   let query = {}; 
   
@@ -27,23 +31,30 @@ export const getProducts = asyncHandler(async (req, res) => {
   }
   if (category) query.category = new mongoose.Types.ObjectId(category);
   if (subcategory) query.subcategory = new mongoose.Types.ObjectId(subcategory);
+  // Exclude a specific product (for recommendations)
+  if (exclude && mongoose.Types.ObjectId.isValid(exclude)) {
+    query._id = { $ne: new mongoose.Types.ObjectId(exclude) };
+  }
 
-  // 2. The Aggregation Pipeline (The "Magic" Sort)
+  // Cache key based on query params (skip for authenticated mine queries)
+  const cacheKey = `products:list:${page}:${keyword || ""}:${category || ""}:${subcategory || ""}:${exclude || ""}`;
+  const cached = await cacheGet(cacheKey);
+  if (cached) return res.json(cached);
+
+  // 2. The Aggregation Pipeline
   const products = await Product.aggregate([
-    { $match: query }, // Filter products first
+    { $match: query },
     {
       $lookup: {
-        from: "users", // Join with the User collection
+        from: "users",
         localField: "user",
         foreignField: "_id",
         as: "seller"
       }
     },
-    { $unwind: "$seller" }, // Convert seller array to object
+    { $unwind: "$seller" },
     {
       $addFields: {
-        // We create a priority score. 
-        // If subscription is expired, we force it to level 0 (Free)
         effectivePriority: {
           $cond: [
             { $gt: ["$seller.sellerRequest.subscriptionEnd", new Date()] },
@@ -65,12 +76,12 @@ export const getProducts = asyncHandler(async (req, res) => {
 
   // 3. Count total for pagination
   const totalCount = await Product.countDocuments(query);
-  // 4. Populate Category/Subcategory (Manually since aggregate doesn't auto-populate)
+  // 4. Populate Category/Subcategory
   const populatedProducts = await Product.populate(products, [
     { path: "category", select: "categoryname image" },
     { path: "subcategory", select: "subcategoryName image" }
   ]);
-  // 5. Like Handling (Reuse your existing logic)
+  // 5. Like Handling
   const userId = req.user?._id?.toString();
   const productIds = populatedProducts.map((p) => p._id);
   const likes = await Like.find({ product: { $in: productIds } });
@@ -84,7 +95,8 @@ export const getProducts = asyncHandler(async (req, res) => {
   const userLikedSet = new Set(
     userId ? likes.filter(l => l.user.toString() === userId).map(l => l.product.toString()) : []
   );
-  res.json({
+
+  const result = {
     products: populatedProducts.map((p) => ({
       ...p,
       likesCount: likeCountMap[p._id.toString()] || 0,
@@ -93,7 +105,10 @@ export const getProducts = asyncHandler(async (req, res) => {
     page,
     pages: Math.ceil(totalCount / pageSize),
     total: totalCount,
-  });
+  };
+
+  await cacheSet(cacheKey, result, PRODUCT_LIST_TTL);
+  res.json(result);
 });
     
 
@@ -150,11 +165,14 @@ export const getMyProducts = asyncHandler(async (req, res) => {
 // @route   GET /api/products/:id 
 
 const getProductById = asyncHandler(async (req, res) => {
- 
+  const cacheKey = `products:detail:${req.params.id}`;
+  const cached = await cacheGet(cacheKey);
+  if (cached) return res.json(cached);
+
   const product = await Product.findById(req.params.id)
     .populate("user", "FirstName LastName email")
     .populate("category", "categoryname")
-    .populate("subcategory", "subcategoryName") // Added populate 
+    .populate("subcategory", "subcategoryName")
     .populate({
       path: "reviews.user", 
       select: "FirstName LastName",
@@ -165,40 +183,38 @@ const getProductById = asyncHandler(async (req, res) => {
     throw new Error("Product not found");
   }
 
-  // Defensive default for arrays
-  // Handle Likes for Single Product
-  // Assuming 'likes' is an array of User IDs in your Product model 
   product.likes = product.likes || [];
   product.reviews = product.reviews || [];
 
   const userId = req.user?._id?.toString();
    
-  // Count likes from the Like collection
   const likesCount = await Like.countDocuments({ product: req.params.id });
 
   const isLiked = userId 
     ? await Like.exists({ product: req.params.id, user: userId }) 
     : false; 
  
-  res.json({
+  const result = {
     _id: product._id,
     name: product.name,
     price: product.price,
     image: product.image,
     description: product.description,
     category: product.category,
-    subcategory: product.subcategory, // Added to response 
+    subcategory: product.subcategory,
     user: product.user,
     countInStock: product.countInStock,
+    variants: product.variants || [],
     rating: product.rating,
     numReviews: product.numReviews,
-    reviews: product.reviews || [], // make sure this is included!
+    reviews: product.reviews || [],
     createdAt: product.createdAt,
-
-    // ✅ SAFE
     likesCount,
     isLiked: !!isLiked, 
-  });
+  };
+
+  await cacheSet(cacheKey, result, PRODUCT_DETAIL_TTL);
+  res.json(result);
 });
  
  
@@ -232,6 +248,7 @@ const createProduct = asyncHandler(async (req, res) => {
   });
 
   const createdProduct = await product.save();
+  await cacheDelPattern("products:list:*");
   res.status(201).json(createdProduct);
 }); 
 
@@ -270,6 +287,8 @@ const updateProduct = asyncHandler(async (req, res) => {
   }  
   
   const updatedProduct = await product.save();
+  await cacheDelPattern("products:list:*");
+  await cacheDelPattern(`products:detail:${product._id}`);
  
   // Populate category name before sending response
   await updatedProduct.populate("category", "categoryname");
@@ -297,6 +316,8 @@ const deleteProduct = asyncHandler(async (req, res) => {
   }
 
   await Product.deleteOne({ _id: product._id });
+  await cacheDelPattern("products:list:*");
+  await cacheDelPattern(`products:detail:${product._id}`);
   res.json({ message: "Product successfully deleted" });
 });
 
@@ -364,6 +385,7 @@ const createProductReview = asyncHandler(async (req, res) => {
     product.reviews.length;
 
   await product.save();
+  await cacheDelPattern(`products:detail:${req.params.id}`);
   res.status(201).json({ message: "Review added" });
 });
 
@@ -402,6 +424,62 @@ const createProductReview = asyncHandler(async (req, res) => {
 });
 
 
+
+// @desc    Get popular products by popularity score: (views*0.3 + numReviews*0.5 + rating*0.2)
+// @route   GET /api/products/popular?limit=10
+// @access  Public
+export const getPopularProducts = asyncHandler(async (req, res) => {
+  const limit = Number(req.query.limit) || 10;
+  const cacheKey = `products:popular:${limit}`;
+  const cached = await cacheGet(cacheKey);
+  if (cached) return res.json(cached);
+
+  const products = await Product.aggregate([
+    {
+      $addFields: {
+        popularityScore: {
+          $add: [
+            { $multiply: ["$views", 0.3] },
+            { $multiply: ["$numReviews", 0.5] },
+            { $multiply: ["$rating", 0.2] },
+          ],
+        },
+      },
+    },
+    { $sort: { popularityScore: -1 } },
+    { $limit: limit },
+  ]);
+
+  const populated = await Product.populate(products, [
+    { path: "category", select: "categoryname image" },
+    { path: "subcategory", select: "subcategoryName image" },
+  ]);
+
+  await cacheSet(cacheKey, populated, PRODUCT_LIST_TTL);
+  res.json(populated);
+});
+
+// @desc    Get recently viewed products by list of IDs
+// @route   GET /api/products/recently-viewed?ids=id1,id2,...
+// @access  Public
+export const getRecentlyViewedProducts = asyncHandler(async (req, res) => {
+  const ids = req.query.ids ? req.query.ids.split(",").filter(id => mongoose.Types.ObjectId.isValid(id)) : [];
+
+  if (ids.length === 0) return res.json([]);
+
+  const objectIds = ids.map(id => new mongoose.Types.ObjectId(id));
+
+  const products = await Product.find({ _id: { $in: objectIds } })
+    .populate("category", "categoryname image")
+    .populate("subcategory", "subcategoryName image")
+    .lean();
+
+  // Preserve the client-provided order (most recent first)
+  const idOrder = ids.reduce((acc, id, i) => { acc[id] = i; return acc; }, {});
+  products.sort((a, b) => idOrder[a._id.toString()] - idOrder[b._id.toString()]);
+
+  res.json(products);
+});
 
 export {
   getProductById, 
