@@ -1,0 +1,123 @@
+{
+  "common": {
+    "loading": "በመጫን ላይ...",
+    "error": "ችግር ተፈጥሯል",
+    "retry": "እንደገና ሞክር",
+    "save": "አስቀምጥ",
+    "cancel": "ሰርዝ",
+    "confirm": "አረጋግጥ",
+    "delete": "ሰርዝ",
+    "edit": "አስተካክል",
+    "back": "ተመለስ",
+    "search": "ፈልግ",
+    "noResults": "ምንም ውጤት አልተገኘም",
+    "offline": "ከኢንተርኔት ተቋርጠዋል — የተቀመጠ ውሂብ እያሳዩ ነው",
+    "tryAgain": "ሲገናኙ እንደገና ይሞክሩ"
+  },
+  "auth": {
+    "login": "ግባ",
+    "register": "ተመዝገብ",
+    "logout": "ውጣ",
+    "email": "ኢሜይል",
+    "phone": "ስልክ ቁጥር",
+    "password": "የይለፍ ቃል",
+    "firstName": "የመጀመሪያ ስም",
+    "lastName": "የአባት ስም",
+    "forgotPassword": "የይለፍ ቃልዎን ረሱት?",
+    "resetPassword": "የይለፍ ቃል ዳግም አስጀምር",
+    "verifyOtp": "OTP ያረጋግጡ",
+    "otpSent": "OTP ወደ ኢሜይልዎ ተልኳል",
+    "enterOtp": "OTP ያስገቡ",
+    "resendOtp": "OTP እንደገና ላክ",
+    "loginSuccess": "በተሳካ ሁኔታ ገብቷል",
+    "logoutSuccess": "በተሳካ ሁኔታ ወጥቷል"
+  },
+  "home": {
+    "title": "ሾላ ገበያ",
+    "categories": "ምድቦች",
+    "featured": "ተለዩ ምርቶች",
+    "popular": "ታዋቂ ምርቶች",
+    "recentlyViewed": "በቅርቡ የተጎበኙ",
+    "newArrivals": "አዲስ ምርቶች"
+  },
+  "product": {
+    "addToCart": "ወደ ጋሪ ጨምር",
+    "outOfStock": "ክምችት አልቋል",
+    "inStock": "ክምችት አለ",
+    "reviews": "ግምገማዎች",
+    "noReviews": "ምንም ግምገማ የለም",
+    "writeReview": "ግምገማ ጻፍ",
+    "rating": "ደረጃ",
+    "price": "ዋጋ",
+    "description": "መግለጫ",
+    "category": "ምድብ",
+    "moreFromCategory": "ከዚህ ምድብ ተጨማሪ",
+    "totalPrice": "ጠቅላላ ዋጋ",
+    "selectVariant": "ምርጫ ይምረጡ",
+    "variant": "አይነት"
+  },
+  "cart": {
+    "title": "ጋሪዬ",
+    "empty": "ጋሪዎ ባዶ ነው",
+    "checkout": "ክፍያ",
+    "total": "ጠቅላላ",
+    "quantity": "ብዛት",
+    "remove": "አስወግድ"
+  },
+  "order": {
+    "title": "ትዕዛዞቼ",
+    "placeOrder": "ትዕዛዝ ሰጥ",
+    "orderPlaced": "ትዕዛዝ ተልኳል",
+    "status": {
+      "pending": "በመጠባበቅ ላይ",
+      "confirmed": "ተረጋግጧል",
+      "processing": "በሂደት ላይ",
+      "shipped": "ተልኳል",
+      "out_for_delivery": "ለማድረስ ወጥቷል",
+      "delivered": "ደርሷል",
+      "cancelled": "ተሰርዟል",
+      "refund_requested": "ተመላሽ ተጠይቋል",
+      "refunded": "ተመላሽ ተደርጓል"
+    },
+    "shipping": "የመላኪያ አድራሻ",
+    "payment": "የክፍያ ዘዴ",
+    "summary": "የትዕዛዝ ማጠቃለያ",
+    "items": "ዕቃዎች",
+    "subtotal": "ንዑስ ድምር",
+    "tax": "ቀረጥ",
+    "shippingFee": "የማድረሻ ክፍያ"
+  },
+  "wishlist": {
+    "title": "ምኞት ዝርዝር",
+    "empty": "ምኞት ዝርዝርዎ ባዶ ነው",
+    "addToWishlist": "ወደ ምኞት ዝርዝር ጨምር",
+    "removeFromWishlist": "ከምኞት ዝርዝር አስወግድ"
+  },
+  "account": {
+    "title": "መለያዬ",
+    "profile": "መገለጫ",
+    "editProfile": "መገለጫ አስተካክል",
+    "orders": "ትዕዛዞች",
+    "settings": "ቅንጅቶች",
+    "language": "ቋንቋ",
+    "notifications": "ማሳወቂያዎች"
+  },
+  "seller": {
+    "dashboard": "የሻጭ ዳሽቦርድ",
+    "myProducts": "ምርቶቼ",
+    "addProduct": "ምርት ጨምር",
+    "sales": "ሽያጮች",
+    "requestToBeSeller": "ሻጭ ለመሆን ጥያቄ አቅርብ"
+  },
+  "admin": {
+    "dashboard": "የአስተዳዳሪ ዳሽቦርድ",
+    "users": "ተጠቃሚዎች",
+    "products": "ምርቶች",
+    "orders": "ትዕዛዞች",
+    "categories": "ምድቦች",
+    "analytics": "ትንታኔ",
+    "revenue": "ገቢ",
+    "topProducts": "ምርጥ ምርቶች",
+    "userGrowth": "የተጠቃሚ እድገት"
+  }
+}

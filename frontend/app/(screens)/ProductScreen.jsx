@@ -8,13 +8,16 @@ import {
   Platform,
   SafeAreaView,
   StatusBar,
+  FlatList,
 } from "react-native";
 import React, { useState, useEffect, useRef } from "react";
 import Toast from "react-native-toast-message";
+import * as Haptics from "expo-haptics";
 import {
   useGetProductDetailsQuery,
   useCreateReviewMutation,
   useAddViewMutation,
+  useGetProductsQuery,
 } from "../../slices/productsApiSlice";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -26,12 +29,16 @@ import ProductImageCard from "../../components/ProductImageCard";
 import ProductDetailsCard from "../../components/ProductDetailsCard";
 import ProductReviewSection from "../../components/ProductReviewSection";
 import AddReviewModal from "../../components/AddReviewModal";
+import { ProductDetailSkeleton } from "../../components/SkeletonLoader";
+import ProductCard from "../../components/ProductCard";
 
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 const ProductScreen = () => {
   const dispatch = useDispatch();
   const router = useRouter();
+  const { t } = useTranslation();
   const { productId } = useLocalSearchParams();
   const { userInfo } = useSelector((state) => state.auth);
 
@@ -39,6 +46,7 @@ const ProductScreen = () => {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
+  const [selectedVariant, setSelectedVariant] = useState(null); // {variantName, option}
 
   const viewAddedRef = useRef(false);
 
@@ -54,6 +62,16 @@ const ProductScreen = () => {
   } = useGetProductDetailsQuery(productId, {
     skip: !productId || productId === "undefined",
   });
+
+  // Related products (same category, exclude current)
+  const { data: relatedData } = useGetProductsQuery(
+    {
+      category: product?.category?._id,
+      exclude: productId,
+      pageNumber: 1,
+    },
+    { skip: !product?.category?._id }
+  );
 
   /* ---------------- ADD VIEW (ONCE) ---------------- */
   useEffect(() => {
@@ -74,12 +92,17 @@ const ProductScreen = () => {
     incrementView();
   }, [product, addView]);
 
+  // Reset variant selection when product changes
+  useEffect(() => {
+    setSelectedVariant(null);
+  }, [productId]);
+
   /* ---------------- GUARDS ---------------- */
   if (isLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <ProductDetailSkeleton />
+      </SafeAreaView>
     );
   }
 
@@ -96,12 +119,38 @@ const ProductScreen = () => {
     );
   }
 
+  /* ---------------- VARIANT HELPERS ---------------- */
+  const hasVariants = product.variants && product.variants.length > 0;
+
+  // Determine the effective price considering selected variant
+  const effectivePrice =
+    selectedVariant?.option?.price > 0
+      ? selectedVariant.option.price
+      : product.price;
+
   /* ---------------- HANDLERS ---------------- */
   const handleAddToCart = () => {
-    dispatch(addToCart({ ...product, qty }));
+    if (hasVariants && !selectedVariant) {
+      Toast.show({
+        type: "error",
+        text1: "Select a variant",
+        text2: "Please select a product option before adding to cart.",
+      });
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    dispatch(
+      addToCart({
+        ...product,
+        price: effectivePrice,
+        qty,
+        selectedVariant: selectedVariant || null,
+      })
+    );
     Toast.show({
       type: "success",
-      text1: "Added to cart",
+      text1: t("product.addToCart"),
       text2: `${product.name} has been added.`,
     });
     router.push("(screens)/Cart");
@@ -136,12 +185,11 @@ const ProductScreen = () => {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
         
-        {/* NON-STICKY TOP NAVIGATION (Moves with scroll) */}
+        {/* TOP NAVIGATION */}
         <View style={styles.topNavigation}>
           <TouchableOpacity onPress={() => router.back()} style={styles.roundBtn}>
             <Ionicons name="chevron-back" size={26} color="#333" />
           </TouchableOpacity>
-          {/* Add a placeholder or other icons here if needed */}
           <View style={{ width: 45 }} /> 
         </View>
 
@@ -161,6 +209,59 @@ const ProductScreen = () => {
             hideButton={true} 
           />
 
+          {/* ─── VARIANT SELECTOR ────────────────────────────────────── */}
+          {hasVariants && (
+            <View style={styles.variantSection}>
+              {product.variants.map((variant) => (
+                <View key={variant.name} style={styles.variantGroup}>
+                  <Text style={styles.variantGroupLabel}>
+                    {t("product.selectVariant")}: <Text style={styles.variantGroupName}>{variant.name}</Text>
+                  </Text>
+                  <View style={styles.variantOptions}>
+                    {variant.options.map((option) => {
+                      const isSelected =
+                        selectedVariant?.variantName === variant.name &&
+                        selectedVariant?.option?.label === option.label;
+                      return (
+                        <TouchableOpacity
+                          key={option.label}
+                          style={[
+                            styles.variantChip,
+                            isSelected && styles.variantChipSelected,
+                            option.stock === 0 && styles.variantChipOutOfStock,
+                          ]}
+                          onPress={() => {
+                            if (option.stock === 0) return;
+                            Haptics.selectionAsync();
+                            setSelectedVariant(
+                              isSelected ? null : { variantName: variant.name, option }
+                            );
+                          }}
+                          disabled={option.stock === 0}
+                        >
+                          <Text
+                            style={[
+                              styles.variantChipText,
+                              isSelected && styles.variantChipTextSelected,
+                              option.stock === 0 && styles.variantChipTextOutOfStock,
+                            ]}
+                          >
+                            {option.label}
+                          </Text>
+                          {option.price > 0 && option.price !== product.price && (
+                            <Text style={[styles.variantChipPrice, isSelected && styles.variantChipTextSelected]}>
+                              {" "}+{(option.price - product.price).toFixed(0)}
+                            </Text>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
           <View style={styles.divider} />
 
           <ProductReviewSection
@@ -168,15 +269,39 @@ const ProductScreen = () => {
             userInfo={userInfo}
             onAddReviewPress={() => setIsReviewModalOpen(true)}
           />
+
+          {/* ─── RELATED PRODUCTS ────────────────────────────────────── */}
+          {relatedData?.products?.length > 0 && (
+            <View style={styles.relatedSection}>
+              <Text style={styles.relatedTitle}>{t("product.moreFromCategory")}</Text>
+              <FlatList
+                data={relatedData.products.slice(0, 6)}
+                keyExtractor={(item) => item._id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.relatedCard}
+                    onPress={() =>
+                      router.push({ pathname: "(screens)/ProductScreen", params: { productId: item._id } })
+                    }
+                  >
+                    <ProductCard product={item} />
+                  </TouchableOpacity>
+                )}
+                contentContainerStyle={{ gap: 10 }}
+              />
+            </View>
+          )}
         </View>
       </ScrollView>
 
-      {/* STICKY BOTTOM ACTION BAR (Stays fixed) */}
+      {/* STICKY BOTTOM ACTION BAR */}
       <View style={styles.bottomBar}>
         <View style={styles.priceSection}>
-          <Text style={styles.priceLabel}>Total Price</Text>
+          <Text style={styles.priceLabel}>{t("product.totalPrice")}</Text>
           <Text style={styles.totalPrice}>
-            ${(product.price * qty).toFixed(2)}
+            ${(effectivePrice * qty).toFixed(2)}
           </Text>
         </View>
         <TouchableOpacity
@@ -189,7 +314,7 @@ const ProductScreen = () => {
         >
           <Ionicons name="bag-add-outline" size={22} color="#FFF" />
           <Text style={styles.mainBtnText}>
-            {product.countInStock === 0 ? "Out of Stock" : "Add to Cart"}
+            {product.countInStock === 0 ? t("product.outOfStock") : t("product.addToCart")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -218,13 +343,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
   },
   topNavigation: {
-    // Note: No absolute positioning here so it scrolls away
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'android' ? 45 : 10,
     paddingBottom: 10,
-    backgroundColor: "#F9F9F9", // Match image background
+    backgroundColor: "#F9F9F9",
   },
   roundBtn: {
     width: 45,
@@ -240,13 +364,13 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   scrollContainer: {
-    paddingBottom: 120, // Space for bottom bar
+    paddingBottom: 120,
   },
   imageWrapper: {
     backgroundColor: "#F9F9F9",
     height: 350,
     justifyContent: 'center',
-    marginTop: -10, // Slight overlap for design
+    marginTop: -10,
   },
   detailsWrapper: {
     paddingHorizontal: 20,
@@ -262,6 +386,76 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5F5F5",
     marginVertical: 25,
   },
+  // ─── Variant Selector ───────────────────────────────────────────────
+  variantSection: {
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  variantGroup: {
+    marginBottom: 14,
+  },
+  variantGroupLabel: {
+    fontSize: 13,
+    color: "#999",
+    fontWeight: "600",
+    marginBottom: 8,
+    textTransform: "uppercase",
+  },
+  variantGroupName: {
+    color: Colors.primary,
+  },
+  variantOptions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  variantChip: {
+    flexDirection: "row",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: "#E0E0E0",
+    backgroundColor: "#F8F9FA",
+  },
+  variantChipSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary + "15",
+  },
+  variantChipOutOfStock: {
+    opacity: 0.4,
+    borderColor: "#E0E0E0",
+  },
+  variantChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#333",
+  },
+  variantChipTextSelected: {
+    color: Colors.primary,
+  },
+  variantChipTextOutOfStock: {
+    color: "#999",
+  },
+  variantChipPrice: {
+    fontSize: 11,
+    color: "#666",
+  },
+  // ─── Related Products ────────────────────────────────────────────────
+  relatedSection: {
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  relatedTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1A1A1A",
+    marginBottom: 12,
+  },
+  relatedCard: {
+    width: 150,
+  },
+  // ─── Bottom Bar ──────────────────────────────────────────────────────
   bottomBar: {
     position: "absolute",
     bottom: 0,

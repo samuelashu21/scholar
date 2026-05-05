@@ -94,6 +94,22 @@ export const productsApiSlice = apiSlice.injectEndpoints({
       }), 
       keepUnusedDataFor: 5,
     }),
+
+    getPopularProducts: builder.query({
+      query: (limit = 10) => ({
+        url: `${PRODUCT_URL}/popular`,
+        params: { limit },
+      }),
+      keepUnusedDataFor: 60,
+    }),
+
+    getRecentlyViewedProducts: builder.query({
+      query: (ids) => ({
+        url: `${PRODUCT_URL}/recently-viewed`,
+        params: { ids: ids.join(",") },
+      }),
+      keepUnusedDataFor: 5,
+    }),
   }),
 });
 
@@ -108,5 +124,7 @@ export const {
   useCreateProductMutation,
   useAddViewMutation,
   useToggleLikeMutation,
-  useGetBannerProductsQuery
+  useGetBannerProductsQuery,
+  useGetPopularProductsQuery,
+  useGetRecentlyViewedProductsQuery,
 } = productsApiSlice;

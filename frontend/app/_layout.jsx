@@ -3,6 +3,8 @@ import { Provider } from "react-redux";
 import store, { persistor } from "../store";
 import Toast from "react-native-toast-message";
 import { PersistGate } from "redux-persist/integration/react";
+import "../i18n"; // Initialize i18next
+import OfflineBanner from "../components/OfflineBanner";
 
 const RootLayout = () => {
   return (
@@ -18,6 +20,7 @@ const RootLayout = () => {
           <Stack.Screen name="(screens)" />
 
         </Stack>
+        <OfflineBanner />
         <Toast />
       </PersistGate>
     </Provider>

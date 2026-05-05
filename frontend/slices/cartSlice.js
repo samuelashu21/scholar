@@ -1,8 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { updateCart } from "../constants/CartUtils"; // Assuming updateCart handles AsyncStorage internally or you'll adjust it
+import { updateCart } from "../constants/CartUtils";
 
-// Define a placeholder initial state. The actual state will be loaded asynchronously.
 const initialState = {
   cartItems: [],
   shippingAddress: {},
@@ -13,58 +12,60 @@ const cartSlice = createSlice({
   name: "cart",
   initialState,
   reducers: {
-    // Action to set the cart state after it's loaded from AsyncStorage
     setCartFromStorage: (state, action) => {
-      return action.payload; // Replace the entire state with the loaded data
+      return action.payload;
     },
     addToCart: (state, action) => {
-      const { user, rating, numReviews, reviews, ...item } = action.payload;
+      const { user, rating, numReviews, reviews, selectedVariant, ...item } = action.payload;
 
-      const existItem = state.cartItems.find((x) => x._id === item._id);
+      // Build a unique cart key: productId + variant label (if any)
+      const variantKey = selectedVariant ? `${item._id}::${selectedVariant.label}` : item._id;
+      const itemWithVariant = { ...item, selectedVariant: selectedVariant || null, variantKey };
+
+      const existItem = state.cartItems.find((x) => x.variantKey === variantKey);
 
       if (existItem) {
         state.cartItems = state.cartItems.map((x) =>
-          x._id === existItem._id ? item : x
+          x.variantKey === variantKey ? itemWithVariant : x
         );
       } else {
-        state.cartItems = [...state.cartItems, item];
+        state.cartItems = [...state.cartItems, itemWithVariant];
       }
-      // Assuming updateCart handles saving to AsyncStorage internally,
-      // or you'll adjust it to accept a callback or return a promise
-      const updatedState = updateCart(state, item);
-      AsyncStorage.setItem("cart", JSON.stringify(updatedState)); // Save to AsyncStorage
+
+      const updatedState = updateCart(state, itemWithVariant);
+      AsyncStorage.setItem("cart", JSON.stringify(updatedState));
       return updatedState;
     },
     removeFromCart: (state, action) => {
-      state.cartItems = state.cartItems.filter((x) => x._id !== action.payload);
-      const updatedState = updateCart(state); // updateCart might calculate totals, etc.
-      AsyncStorage.setItem("cart", JSON.stringify(updatedState)); // Save to AsyncStorage
+      // action.payload can be _id (legacy) or variantKey
+      state.cartItems = state.cartItems.filter(
+        (x) => x.variantKey !== action.payload && x._id !== action.payload
+      );
+      const updatedState = updateCart(state);
+      AsyncStorage.setItem("cart", JSON.stringify(updatedState));
       return updatedState;
     },
     saveShippingAddress: (state, action) => {
       state.shippingAddress = action.payload;
-      AsyncStorage.setItem("cart", JSON.stringify(state)); // Save to AsyncStorage
+      AsyncStorage.setItem("cart", JSON.stringify(state));
     },
     savePaymentMethod: (state, action) => {
       state.paymentMethod = action.payload;
-      AsyncStorage.setItem("cart", JSON.stringify(state)); // Save to AsyncStorage
+      AsyncStorage.setItem("cart", JSON.stringify(state));
     },
     clearCartItems: (state) => {
-      // Removed action as it's not used
       state.cartItems = [];
-      AsyncStorage.setItem("cart", JSON.stringify(state)); // Save to AsyncStorage
+      AsyncStorage.setItem("cart", JSON.stringify(state));
     },
-    // Resetting the cart should also clear AsyncStorage
-    resetCart: (state) => {
-      const newState = initialState; // Use the predefined empty initial state
-      AsyncStorage.removeItem("cart"); // Clear from AsyncStorage
-      return newState;
+    resetCart: () => {
+      AsyncStorage.removeItem("cart");
+      return initialState;
     },
   },
 });
 
 export const {
-  setCartFromStorage, // Export the new action
+  setCartFromStorage,
   addToCart,
   removeFromCart,
   saveShippingAddress,

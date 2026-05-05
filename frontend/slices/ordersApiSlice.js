@@ -73,17 +73,23 @@ export const orderApiSlice = apiSlice.injectEndpoints({
         method: "PUT",
       }),
     }),
+
+    updateOrderStatus: builder.mutation({
+      query: ({ orderId, status, note }) => ({
+        url: `${ORDERS_URL}/${orderId}/status`,
+        method: "PUT",
+        body: { status, note },
+      }),
+      invalidatesTags: ["Order"],
+    }),
   }),
 });
 
 export const { 
   useCreateOrderMutation,
   useGetOrderDetailsQuery, 
-  // usePayOrderMutation,
-  // useCreatePaypalOrderMutation, 
-  // useCapturePaypalOrderMutation,
-  // useGetPaypalClientIdQuery,
   useGetMyOrdersQuery,
   useDeliverOrderMutation,
   useGetOrdersQuery,
+  useUpdateOrderStatusMutation,
 } = orderApiSlice;

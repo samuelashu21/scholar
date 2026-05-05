@@ -5,37 +5,43 @@ import {
   View,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   Platform,
   SafeAreaView,
+  RefreshControl,
 } from "react-native"; 
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Product from "../../components/Product";
 import Message from "../../components/Message";
 import Header from "../../components/Header";
+import { ProductGridSkeleton } from "../../components/SkeletonLoader";
 
 import { Colors } from "../../constants/Utils";
 import { useGetProductsQuery } from "../../slices/productsApiSlice";
 
 const Home = () => {
-  // 1. Destructure 'category' from search params
   const { keyword = "", pageNumber = "1", category = "" } = useLocalSearchParams();
 
   const router = useRouter(); 
 
-  // 2. Pass 'category' into the RTK Query hook
   const { data, isLoading, error, refetch } = useGetProductsQuery({
     keyword,
     pageNumber: Number(pageNumber),
-    category, // This matches your backend controller's req.query.category
+    category,
   });
 
-  // 3. Ensure refetch happens when category changes
+  const [refreshing, setRefreshing] = useState(false);
+
   useEffect(() => {
     refetch();
   }, [keyword, pageNumber, category, refetch]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   const renderPaginationButtons = () => {
     if (!data?.pages || data.pages <= 1) return null;
@@ -53,7 +59,7 @@ const Home = () => {
               router.setParams({
                 pageNumber: page.toString(),
                 ...(keyword ? { keyword } : {}),
-                ...(category ? { category } : {}), // Persist category during pagination
+                ...(category ? { category } : {}),
               });
             }}
           >
@@ -87,9 +93,13 @@ const Home = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
+        <FlatList
+          data={[]}
+          keyExtractor={(_, i) => String(i)}
+          ListHeaderComponent={<Header />}
+          ListFooterComponent={<ProductGridSkeleton count={6} />}
+          contentContainerStyle={styles.list}
+        />
       ) : (
         <FlatList
           data={data?.products}
@@ -101,6 +111,14 @@ const Home = () => {
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={ListHeader}
           ListFooterComponent={ListFooter}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[Colors.primary]}
+              tintColor={Colors.primary}
+            />
+          }
           ListEmptyComponent={
             !error && (
               <Message variant="info" style={styles.emptyMessage}>
@@ -116,8 +134,6 @@ const Home = () => {
 
 export default Home;
  
-// ... styles remain the same
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

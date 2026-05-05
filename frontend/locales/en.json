@@ -1,0 +1,123 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "search": "Search",
+    "noResults": "No results found",
+    "offline": "You're offline — showing cached data",
+    "tryAgain": "Try again when connected"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "email": "Email",
+    "phone": "Phone",
+    "password": "Password",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "forgotPassword": "Forgot Password?",
+    "resetPassword": "Reset Password",
+    "verifyOtp": "Verify OTP",
+    "otpSent": "OTP sent to your email",
+    "enterOtp": "Enter OTP",
+    "resendOtp": "Resend OTP",
+    "loginSuccess": "Logged in successfully",
+    "logoutSuccess": "Logged out successfully"
+  },
+  "home": {
+    "title": "Shola Marketplace",
+    "categories": "Categories",
+    "featured": "Featured",
+    "popular": "Popular Products",
+    "recentlyViewed": "Recently Viewed",
+    "newArrivals": "New Arrivals"
+  },
+  "product": {
+    "addToCart": "Add to Cart",
+    "outOfStock": "Out of Stock",
+    "inStock": "In Stock",
+    "reviews": "Reviews",
+    "noReviews": "No reviews yet",
+    "writeReview": "Write a Review",
+    "rating": "Rating",
+    "price": "Price",
+    "description": "Description",
+    "category": "Category",
+    "moreFromCategory": "More from this category",
+    "totalPrice": "Total Price",
+    "selectVariant": "Select Option",
+    "variant": "Variant"
+  },
+  "cart": {
+    "title": "My Cart",
+    "empty": "Your cart is empty",
+    "checkout": "Checkout",
+    "total": "Total",
+    "quantity": "Quantity",
+    "remove": "Remove"
+  },
+  "order": {
+    "title": "My Orders",
+    "placeOrder": "Place Order",
+    "orderPlaced": "Order Placed",
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "processing": "Processing",
+      "shipped": "Shipped",
+      "out_for_delivery": "Out for Delivery",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled",
+      "refund_requested": "Refund Requested",
+      "refunded": "Refunded"
+    },
+    "shipping": "Shipping Address",
+    "payment": "Payment Method",
+    "summary": "Order Summary",
+    "items": "Items",
+    "subtotal": "Subtotal",
+    "tax": "Tax",
+    "shippingFee": "Shipping Fee"
+  },
+  "wishlist": {
+    "title": "Wishlist",
+    "empty": "Your wishlist is empty",
+    "addToWishlist": "Add to Wishlist",
+    "removeFromWishlist": "Remove from Wishlist"
+  },
+  "account": {
+    "title": "My Account",
+    "profile": "Profile",
+    "editProfile": "Edit Profile",
+    "orders": "Orders",
+    "settings": "Settings",
+    "language": "Language",
+    "notifications": "Notifications"
+  },
+  "seller": {
+    "dashboard": "Seller Dashboard",
+    "myProducts": "My Products",
+    "addProduct": "Add Product",
+    "sales": "Sales",
+    "requestToBeSeller": "Request to Become a Seller"
+  },
+  "admin": {
+    "dashboard": "Admin Dashboard",
+    "users": "Users",
+    "products": "Products",
+    "orders": "Orders",
+    "categories": "Categories",
+    "analytics": "Analytics",
+    "revenue": "Revenue",
+    "topProducts": "Top Products",
+    "userGrowth": "User Growth"
+  }
+}
