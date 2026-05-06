@@ -1,10 +1,9 @@
 import asyncHandler from "../middleware/asyncHandler.js";
 import User from "../models/userModel.js";
 import Product from "../models/productModel.js";
-import generateToken from "../utils/generateToken.js";
+import generateToken, { signAccessToken } from "../utils/generateToken.js";
 import validator from "validator";
 import crypto from "crypto";
-import jwt from "jsonwebtoken";
 import { generateOTP } from '../utils/otp_generator.js'; 
 import { sendOTPEmail,sendResetPasswordEmail,sendSellerRequestEmail,sendSellerApprovalEmail,sendSellerRejectionEmail } from '../utils/smtp_function.js'; 
     
@@ -453,10 +452,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     throw new Error("Invalid or expired refresh token");
   }
 
-  // Issue new access token
-  const accessToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-    expiresIn: "15m",
-  });
+  // Issue new access token using shared helper
+  const accessToken = signAccessToken(user._id);
 
   const isProd = process.env.NODE_ENV === "production";
   res.cookie("jwt", accessToken, {

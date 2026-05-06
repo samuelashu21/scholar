@@ -2,11 +2,12 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import User from "../models/userModel.js";
 
+// Shared helper: sign a short-lived access JWT
+const signAccessToken = (userId) =>
+  jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "15m" });
+
 const generateToken = async (res, userId) => {
-  // Short-lived access token (15 minutes)
-  const accessToken = jwt.sign({ userId }, process.env.JWT_SECRET, {
-    expiresIn: "15m",
-  });
+  const accessToken = signAccessToken(userId);
 
   // Long-lived refresh token (30 days) — opaque random value
   const rawRefreshToken = crypto.randomBytes(64).toString("hex");
@@ -36,4 +37,5 @@ const generateToken = async (res, userId) => {
   });
 };
 
+export { signAccessToken };
 export default generateToken; 

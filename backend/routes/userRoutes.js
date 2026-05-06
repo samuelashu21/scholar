@@ -56,7 +56,7 @@ router.post("/request-reset-password", authLimiter, requestResetPassword);
 router.post("/reset-password", authLimiter, resetPassword);
 router.post("/resend-reset-password-otp", authLimiter, resendResetPasswordOTP);
 router.post("/logout", logoutUser);
-router.post("/refresh", refreshAccessToken);
+router.post("/refresh", authLimiter, refreshAccessToken);
 
 
 
