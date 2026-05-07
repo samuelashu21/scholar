@@ -1,4 +1,5 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 
 import {
   getProducts,
@@ -19,11 +20,20 @@ import { protect, protectOptional, sellerOrAdmin } from "../middleware/authMiddl
 
 const router = express.Router();
 
+// General read limiter for recommendation/popular endpoints
+const readLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many requests, please try again later." },
+});
+
 // Static routes — must come before parameterised /:id routes
 router.get("/my-products", protect, getMyProducts);
 router.get("/banner", getBannerProducts);
-router.get("/popular", getPopularProducts);
-router.post("/recently-viewed", getRecentlyViewedProducts);
+router.get("/popular", readLimiter, getPopularProducts);
+router.post("/recently-viewed", readLimiter, getRecentlyViewedProducts);
 
 router
   .route("/")

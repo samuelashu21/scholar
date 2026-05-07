@@ -1,6 +1,6 @@
 import asyncHandler from "../middleware/asyncHandler.js";
 import Order from "../models/orderModel.js";
-import Product from "../models/productModel.js";
+import Product, { POPULARITY_WEIGHTS } from "../models/productModel.js";
 import User from "../models/userModel.js";
 
 /**
@@ -58,9 +58,9 @@ export const getTopProducts = asyncHandler(async (req, res) => {
       $addFields: {
         popularityScore: {
           $add: [
-            { $multiply: [{ $ifNull: ["$views", 0] }, 0.3] },
-            { $multiply: [{ $ifNull: ["$numReviews", 0] }, 0.5] },
-            { $multiply: [{ $ifNull: ["$rating", 0] }, 0.2] },
+            { $multiply: [{ $ifNull: ["$views", 0] }, POPULARITY_WEIGHTS.views] },
+            { $multiply: [{ $ifNull: ["$numReviews", 0] }, POPULARITY_WEIGHTS.reviews] },
+            { $multiply: [{ $ifNull: ["$rating", 0] }, POPULARITY_WEIGHTS.rating] },
           ],
         },
       },

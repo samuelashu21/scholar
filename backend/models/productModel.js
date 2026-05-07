@@ -128,6 +128,9 @@ const productSchema = new mongoose.Schema(
   }
 );
 
+// Popularity score weights (single source of truth — used here and in analyticsController)
+export const POPULARITY_WEIGHTS = { views: 0.3, reviews: 0.5, rating: 0.2 };
+
 // Virtual: total stock = sum of all variant option stocks when variants exist,
 // otherwise falls back to countInStock field.
 productSchema.virtual("totalStock").get(function () {
@@ -139,9 +142,9 @@ productSchema.virtual("totalStock").get(function () {
 
 // Virtual: popularity score for recommendation ranking
 productSchema.virtual("popularityScore").get(function () {
-  return (this.views || 0) * 0.3 +
-    (this.numReviews || 0) * 0.5 +
-    (this.rating || 0) * 0.2;
+  return (this.views || 0) * POPULARITY_WEIGHTS.views +
+    (this.numReviews || 0) * POPULARITY_WEIGHTS.reviews +
+    (this.rating || 0) * POPULARITY_WEIGHTS.rating;
 });
 
 const Product = mongoose.model("Product", productSchema);

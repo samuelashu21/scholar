@@ -1,5 +1,5 @@
 import asyncHandler from "../middleware/asyncHandler.js";
-import Product from "../models/productModel.js";
+import Product, { POPULARITY_WEIGHTS } from "../models/productModel.js";
 import Category from "../models/categoryModel.js";
 import Subcategory from "../models/subcategoryModel.js"; // Import Subcategory
 import Like from "../models/likeModel.js";
