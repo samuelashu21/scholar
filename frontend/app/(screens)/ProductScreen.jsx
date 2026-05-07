@@ -15,6 +15,7 @@ import {
   useGetProductDetailsQuery,
   useCreateReviewMutation,
   useAddViewMutation,
+  useGetProductsQuery,
 } from "../../slices/productsApiSlice";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -54,6 +55,24 @@ const ProductScreen = () => {
   } = useGetProductDetailsQuery(productId, {
     skip: !productId || productId === "undefined",
   });
+
+  // Fetch "More from this category" recommendations
+  const {
+    data: relatedData,
+  } = useGetProductsQuery(
+    {
+      category: product?.category?._id,
+      pageNumber: 1,
+    },
+    {
+      skip: !product?.category?._id,
+    }
+  );
+
+  // Filter out the current product from related products
+  const relatedProducts = (relatedData?.products || [])
+    .filter((p) => p._id !== productId)
+    .slice(0, 6);
 
   /* ---------------- ADD VIEW (ONCE) ---------------- */
   useEffect(() => {
@@ -168,6 +187,37 @@ const ProductScreen = () => {
             userInfo={userInfo}
             onAddReviewPress={() => setIsReviewModalOpen(true)}
           />
+
+          {/* MORE FROM THIS CATEGORY */}
+          {relatedProducts.length > 0 && (
+            <View style={styles.relatedSection}>
+              <Text style={styles.relatedTitle}>More from this category</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 12 }}
+              >
+                {relatedProducts.map((item) => (
+                  <TouchableOpacity
+                    key={item._id}
+                    style={styles.relatedCard}
+                    onPress={() =>
+                      router.push({
+                        pathname: "(screens)/ProductScreen",
+                        params: { productId: item._id },
+                      })
+                    }
+                  >
+                    <ProductImageCard imageUrl={item.image} />
+                    <Text style={styles.relatedName} numberOfLines={2}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.relatedPrice}>${item.price}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -327,5 +377,35 @@ const styles = StyleSheet.create({
   backText: {
     color: "#FFF",
     fontWeight: "600",
+  },
+  relatedSection: {
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  relatedTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#212529",
+    marginBottom: 14,
+  },
+  relatedCard: {
+    width: 140,
+    backgroundColor: "#F8F9FA",
+    borderRadius: 12,
+    padding: 8,
+    overflow: "hidden",
+  },
+  relatedName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#212529",
+    marginTop: 6,
+    lineHeight: 16,
+  },
+  relatedPrice: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: Colors.primary,
+    marginTop: 4,
   },
 });

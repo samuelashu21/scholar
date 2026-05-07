@@ -154,6 +154,48 @@ export async function sendSellerApprovalEmail(user) {
 } 
 
 
+export async function sendOrderStatusEmail(user, order, newStatus) {
+    const transporter = createTransporter();
+    const statusLabels = {
+        pending: "Pending",
+        confirmed: "Confirmed",
+        processing: "Processing",
+        shipped: "Shipped",
+        out_for_delivery: "Out for Delivery",
+        delivered: "Delivered",
+        cancelled: "Cancelled",
+        refund_requested: "Refund Requested",
+        refunded: "Refunded",
+    };
+    const label = statusLabels[newStatus] || newStatus;
+    const mailOptions = {
+        from: `"Shola Marketplace" <${process.env.AUTH_EMAIL}>`,
+        to: user.email,
+        subject: `Your order status has been updated: ${label}`,
+        html: `
+            <div style="${emailStyles.container}">
+                <div style="${emailStyles.header}"><h1>Order Update</h1></div>
+                <div style="${emailStyles.body}">
+                    <h2>Hi ${user.FirstName},</h2>
+                    <p>Your order <b>#${order._id}</b> status has been updated to:</p>
+                    <div style="${emailStyles.otpBox}">
+                        <h2 style="color: #007bff; margin: 0;">${label}</h2>
+                    </div>
+                    <p>Total: <b>$${order.totalPrice?.toFixed(2)}</b></p>
+                    <p>If you have any questions, please contact our support team.</p>
+                </div>
+                ${getFooter()}
+            </div>
+        `,
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+    } catch (error) {
+        console.error("Order status email error:", error);
+    }
+}
+
 export async function sendSellerRejectionEmail(user) {
     const transporter = createTransporter();
     const mailOptions = {

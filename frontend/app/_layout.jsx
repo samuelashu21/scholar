@@ -3,11 +3,13 @@ import { Provider } from "react-redux";
 import store, { persistor } from "../store";
 import Toast from "react-native-toast-message";
 import { PersistGate } from "redux-persist/integration/react";
+import OfflineBanner from "../components/OfflineBanner";
 
 const RootLayout = () => {
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
+        <OfflineBanner />
         <Stack screenOptions={{ headerShown: false }}>
           
           {/* ✅ WELCOME / ENTRY SCREEN */}

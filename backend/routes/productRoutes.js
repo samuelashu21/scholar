@@ -10,6 +10,8 @@ import {
   createProductReview,
   addView,
   getBannerProducts,
+  getPopularProducts,
+  getRecentlyViewedProducts,
 } from "../controllers/productController.js";
 
 import { toggleLike } from "../controllers/likeController.js";
@@ -17,12 +19,12 @@ import { protect, protectOptional, sellerOrAdmin } from "../middleware/authMiddl
 
 const router = express.Router();
 
-// ✅ put static route first
+// Static routes — must come before parameterised /:id routes
 router.get("/my-products", protect, getMyProducts);
- 
-// routes/productRoutes.js
 router.get("/banner", getBannerProducts);
- 
+router.get("/popular", getPopularProducts);
+router.post("/recently-viewed", getRecentlyViewedProducts);
+
 router
   .route("/")
   .get(protectOptional, getProducts)

@@ -18,6 +18,8 @@ import uploadProfileRoutes from "./routes/uploadProfileRoutes.js";
 import User from "./models/userModel.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 dotenv.config();
 
@@ -84,6 +86,8 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/uploadprofile", uploadProfileRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/chats", chatRoutes);
+app.use("/api/admin/analytics", analyticsRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // --- 5. SOCKET.IO REAL-TIME LOGIC ---
 io.on("connection", (socket) => {

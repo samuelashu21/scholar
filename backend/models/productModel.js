@@ -23,6 +23,26 @@ const reviewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Variant option sub-schema (e.g. "Red / M" with its own sku, stock, price)
+const variantOptionSchema = new mongoose.Schema(
+  {
+    label: { type: String, required: true },
+    sku: { type: String, default: "" },
+    stock: { type: Number, default: 0 },
+    price: { type: Number, default: 0 },
+  },
+  { _id: false }
+);
+
+// Variant group (e.g. "Color", "Size")
+const variantSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    options: { type: [variantOptionSchema], default: [] },
+  },
+  { _id: false }
+);
+
 const productSchema = new mongoose.Schema(
   {
     user: {
@@ -86,15 +106,43 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       required: true,
-    }, 
+    },
+
+    // Base stock (used when no variants defined)
     countInStock: {
       type: Number,
       required: true,
       default: 0,
-    }, 
+    },
+
+    // Product variants (e.g. Color/Size combinations)
+    variants: {
+      type: [variantSchema],
+      default: [],
+    },
   }, 
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
+
+// Virtual: total stock = sum of all variant option stocks when variants exist,
+// otherwise falls back to countInStock field.
+productSchema.virtual("totalStock").get(function () {
+  if (!this.variants || this.variants.length === 0) return this.countInStock;
+  return this.variants.reduce((sum, variant) => {
+    return sum + variant.options.reduce((s, opt) => s + (opt.stock || 0), 0);
+  }, 0);
+});
+
+// Virtual: popularity score for recommendation ranking
+productSchema.virtual("popularityScore").get(function () {
+  return (this.views || 0) * 0.3 +
+    (this.numReviews || 0) * 0.5 +
+    (this.rating || 0) * 0.2;
+});
 
 const Product = mongoose.model("Product", productSchema);
 export default Product;

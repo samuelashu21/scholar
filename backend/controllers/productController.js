@@ -4,12 +4,24 @@ import Category from "../models/categoryModel.js";
 import Subcategory from "../models/subcategoryModel.js"; // Import Subcategory
 import Like from "../models/likeModel.js";
 import mongoose from 'mongoose';
+import { cacheGet, cacheSet, cacheInvalidatePattern } from "../utils/redisClient.js";
+
+// Cache TTLs
+const PRODUCT_LIST_TTL = 5 * 60;  // 5 minutes
+const PRODUCT_DETAIL_TTL = 10 * 60; // 10 minutes
 
  
 export const getProducts = asyncHandler(async (req, res) => {
   const pageSize = 8;
   const page = Number(req.query.pageNumber) || 1;
   const { keyword, category, subcategory, mine } = req.query;
+
+  // Build cache key from query params (skip for authenticated mine queries)
+  const cacheKey = `products:list:${keyword || ""}:${category || ""}:${subcategory || ""}:${page}`;
+  const cached = await cacheGet(cacheKey);
+  if (cached) {
+    return res.json(cached);
+  }
    
   let query = {}; 
   
@@ -84,7 +96,8 @@ export const getProducts = asyncHandler(async (req, res) => {
   const userLikedSet = new Set(
     userId ? likes.filter(l => l.user.toString() === userId).map(l => l.product.toString()) : []
   );
-  res.json({
+
+  const responseData = {
     products: populatedProducts.map((p) => ({
       ...p,
       likesCount: likeCountMap[p._id.toString()] || 0,
@@ -93,7 +106,14 @@ export const getProducts = asyncHandler(async (req, res) => {
     page,
     pages: Math.ceil(totalCount / pageSize),
     total: totalCount,
-  });
+  };
+
+  // Cache the result (skip user-specific likes — cache only for anonymous/general queries)
+  if (!userId) {
+    await cacheSet(cacheKey, responseData, PRODUCT_LIST_TTL);
+  }
+
+  res.json(responseData);
 });
     
 
@@ -232,6 +252,8 @@ const createProduct = asyncHandler(async (req, res) => {
   });
 
   const createdProduct = await product.save();
+  // Invalidate product list cache on new product
+  await cacheInvalidatePattern("products:list:*");
   res.status(201).json(createdProduct);
 }); 
 
@@ -270,6 +292,11 @@ const updateProduct = asyncHandler(async (req, res) => {
   }  
   
   const updatedProduct = await product.save();
+  // Invalidate caches for this product and the list
+  await Promise.all([
+    cacheInvalidatePattern("products:list:*"),
+    cacheInvalidatePattern(`products:detail:${product._id}`),
+  ]);
  
   // Populate category name before sending response
   await updatedProduct.populate("category", "categoryname");
@@ -297,6 +324,11 @@ const deleteProduct = asyncHandler(async (req, res) => {
   }
 
   await Product.deleteOne({ _id: product._id });
+  // Invalidate caches
+  await Promise.all([
+    cacheInvalidatePattern("products:list:*"),
+    cacheInvalidatePattern(`products:detail:${product._id}`),
+  ]);
   res.json({ message: "Product successfully deleted" });
 });
 
@@ -401,6 +433,68 @@ const createProductReview = asyncHandler(async (req, res) => {
   res.json(populated);
 });
 
+/**
+ * GET /api/products/popular?limit=10
+ * Returns products sorted by popularity score (views * 0.3 + numReviews * 0.5 + rating * 0.2)
+ */
+const getPopularProducts = asyncHandler(async (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 10, 50);
+
+  const products = await Product.aggregate([
+    {
+      $addFields: {
+        popularityScore: {
+          $add: [
+            { $multiply: [{ $ifNull: ["$views", 0] }, 0.3] },
+            { $multiply: [{ $ifNull: ["$numReviews", 0] }, 0.5] },
+            { $multiply: [{ $ifNull: ["$rating", 0] }, 0.2] },
+          ],
+        },
+      },
+    },
+    { $sort: { popularityScore: -1 } },
+    { $limit: limit },
+  ]);
+
+  const populated = await Product.populate(products, [
+    { path: "category", select: "categoryname image" },
+    { path: "subcategory", select: "subcategoryName image" },
+  ]);
+
+  res.json(populated);
+});
+
+/**
+ * POST /api/products/recently-viewed
+ * Body: { ids: ["id1", "id2", ...] }
+ * Accepts a list of product IDs (stored client-side) and returns populated products.
+ * Avoids growing viewedBy array per user on the server side.
+ */
+const getRecentlyViewedProducts = asyncHandler(async (req, res) => {
+  const { ids } = req.body;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.json([]);
+  }
+
+  const objectIds = ids
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+
+  const products = await Product.find({ _id: { $in: objectIds } })
+    .populate("category", "categoryname image")
+    .populate("subcategory", "subcategoryName image")
+    .select("-viewedBy -viewedByDevices -reviews");
+
+  // Preserve client-side order
+  const productMap = Object.fromEntries(products.map((p) => [p._id.toString(), p]));
+  const ordered = objectIds
+    .map((id) => productMap[id.toString()])
+    .filter(Boolean);
+
+  res.json(ordered);
+});
+
 
 
 export {
@@ -409,5 +503,7 @@ export {
   updateProduct, 
   deleteProduct, 
   createProductReview,
-  getBannerProducts
+  getBannerProducts,
+  getPopularProducts,
+  getRecentlyViewedProducts,
 };

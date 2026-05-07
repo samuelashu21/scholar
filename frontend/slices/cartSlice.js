@@ -9,6 +9,17 @@ const initialState = {
   paymentMethod: "PayPal",
 }; 
 
+/**
+ * Returns a unique cart key for a product+variant combination.
+ * This allows the same product with different variants to be separate cart entries.
+ */
+const getCartItemKey = (item) => {
+  if (item.selectedVariant) {
+    return `${item._id}:${item.selectedVariant.name}:${item.selectedVariant.label}`;
+  }
+  return item._id;
+};
+
 const cartSlice = createSlice({ 
   name: "cart",
   initialState,
@@ -20,23 +31,26 @@ const cartSlice = createSlice({
     addToCart: (state, action) => {
       const { user, rating, numReviews, reviews, ...item } = action.payload;
 
-      const existItem = state.cartItems.find((x) => x._id === item._id);
+      const itemKey = getCartItemKey(item);
+      const existItem = state.cartItems.find((x) => getCartItemKey(x) === itemKey);
 
       if (existItem) {
         state.cartItems = state.cartItems.map((x) =>
-          x._id === existItem._id ? item : x
+          getCartItemKey(x) === itemKey ? item : x
         );
       } else {
         state.cartItems = [...state.cartItems, item];
       }
-      // Assuming updateCart handles saving to AsyncStorage internally,
-      // or you'll adjust it to accept a callback or return a promise
       const updatedState = updateCart(state, item);
       AsyncStorage.setItem("cart", JSON.stringify(updatedState)); // Save to AsyncStorage
       return updatedState;
     },
     removeFromCart: (state, action) => {
-      state.cartItems = state.cartItems.filter((x) => x._id !== action.payload);
+      // action.payload may be a plain _id string (backward compat) or a cart key
+      const key = action.payload;
+      state.cartItems = state.cartItems.filter(
+        (x) => getCartItemKey(x) !== key && x._id !== key
+      );
       const updatedState = updateCart(state); // updateCart might calculate totals, etc.
       AsyncStorage.setItem("cart", JSON.stringify(updatedState)); // Save to AsyncStorage
       return updatedState;

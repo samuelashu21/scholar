@@ -5,9 +5,9 @@ export const productsApiSlice = apiSlice.injectEndpoints({
   overrideExisting: true,
   endpoints: (builder) => ({
     getProducts: builder.query({
-      query: ({ keyword, pageNumber, category, subcategory, sort }) => ({
+      query: ({ keyword, pageNumber, category, subcategory, sort, exclude } = {}) => ({
         url: PRODUCT_URL,
-        params: { keyword, pageNumber, category, subcategory, sort },
+        params: { keyword, pageNumber, category, subcategory, sort, exclude },
       }),
       keepUnusedDataFor: 5,
       providesTags: ["Product", "Auth"],
@@ -28,6 +28,23 @@ export const productsApiSlice = apiSlice.injectEndpoints({
       }),
       keepUnusedDataFor: 5,
       providesTags: ["Product"],
+    }),
+
+    // Product recommendations
+    getPopularProducts: builder.query({
+      query: (limit = 10) => ({
+        url: `${PRODUCT_URL}/popular`,
+        params: { limit },
+      }),
+      keepUnusedDataFor: 60,
+    }),
+
+    getRecentlyViewedProducts: builder.mutation({
+      query: (ids) => ({
+        url: `${PRODUCT_URL}/recently-viewed`,
+        method: "POST",
+        body: { ids },
+      }),
     }),
 
     createReview: builder.mutation({
@@ -62,10 +79,9 @@ export const productsApiSlice = apiSlice.injectEndpoints({
     }),
     createProduct: builder.mutation({
       query: (data) => ({
-        // 1. Add (data) here
         url: PRODUCT_URL,
         method: "POST",
-        body: data, // 2. Add body: data here
+        body: data,
       }),
       invalidatesTags: ["Product"],
     }),
@@ -84,7 +100,7 @@ export const productsApiSlice = apiSlice.injectEndpoints({
         url: `/api/products/${productId}/like`,
         method: "PUT",
       }),
-      invalidatesTags: ["Product"], // This refreshes the product data in the UI
+      invalidatesTags: ["Product"],
     }),
 
     getBannerProducts: builder.query({
@@ -101,6 +117,8 @@ export const {
   useGetProductsQuery,
   useGetMyProductsQuery,
   useGetProductDetailsQuery,
+  useGetPopularProductsQuery,
+  useGetRecentlyViewedProductsMutation,
   useCreateReviewMutation,
   useDeleteProductMutation,
   useUpdateProductMutation,

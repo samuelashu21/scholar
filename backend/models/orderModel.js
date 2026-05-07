@@ -1,5 +1,36 @@
 import mongoose from "mongoose";
 
+const ORDER_STATUSES = [
+  "pending",
+  "confirmed",
+  "processing",
+  "shipped",
+  "out_for_delivery",
+  "delivered",
+  "cancelled",
+  "refund_requested",
+  "refunded",
+];
+
+const statusHistorySchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      enum: ORDER_STATUSES,
+      required: true,
+    },
+    note: {
+      type: String,
+      default: "",
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
+);
+
 const orderSchema = mongoose.Schema(
   {
     user: {
@@ -14,7 +45,7 @@ const orderSchema = mongoose.Schema(
           required: true,
         },
         image: {
-          type: String, 
+          type: String,
           required: true,
         },
         price: {
@@ -29,6 +60,10 @@ const orderSchema = mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           required: true,
           ref: "Product",
+        },
+        selectedVariant: {
+          type: mongoose.Schema.Types.Mixed,
+          default: null,
         },
       },
     ],
@@ -91,6 +126,19 @@ const orderSchema = mongoose.Schema(
       required: true,
       default: 0.0,
     },
+
+    // Full lifecycle status (replaces binary isPaid/isDelivered logically)
+    status: {
+      type: String,
+      enum: ORDER_STATUSES,
+      default: "pending",
+    },
+    statusHistory: {
+      type: [statusHistorySchema],
+      default: [],
+    },
+
+    // Kept for backward compatibility
     isPaid: {
       type: Boolean,
       required: true,
@@ -111,6 +159,8 @@ const orderSchema = mongoose.Schema(
 
   { timestamps: true }
 );
+
+export { ORDER_STATUSES };
 
 const Order = mongoose.model("Order", orderSchema);
 

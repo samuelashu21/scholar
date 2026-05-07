@@ -1,13 +1,14 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
-    "scheme": "frontend",
+    "name": "Shola Marketplace",
+    "slug": "shola-marketplace",
+    "scheme": "shola",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "jsEngine": "hermes",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -15,15 +16,20 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.shola.frontend"
+      "bundleIdentifier": "com.shola.marketplace"
     },
     "android": {
-      "package": "com.shola.frontend",
+      "package": "com.shola.marketplace",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -31,7 +37,26 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-asset"
-    ]
+      "expo-asset",
+      [
+        "expo-image",
+        {}
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#007bff",
+          "sounds": []
+        }
+      ]
+    ],
+    "extra": {
+      "privacyPolicyUrl": "https://shola.app/privacy",
+      "contentRating": "Everyone",
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    }
   }
 }
