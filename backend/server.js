@@ -2,6 +2,8 @@ import express from "express";
 import dotenv from "dotenv";
 import { createServer } from "http"; // 1. Import HTTP createServer
 import { Server } from "socket.io"; // 2. Import Socket.io
+import helmet from "helmet";
+import mongoSanitize from "express-mongo-sanitize";
 import connectDB from "./config/db.js";
 import productRoutes from "./routes/productRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -18,10 +20,40 @@ import wishlistRoutes from "./routes/wishlistRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 
 dotenv.config();
+
+// ---- Validate required environment variables at startup ----
+const REQUIRED_ENV = [
+  "MONGO_URI",
+  "JWT_SECRET",
+  "REFRESH_JWT_SECRET",
+  "GMAIL_USER",
+  "GMAIL_PASS",
+];
+const missing = REQUIRED_ENV.filter((key) => !process.env[key]);
+if (missing.length > 0) {
+  console.error(`❌ Missing required environment variables: ${missing.join(", ")}`);
+  process.exit(1);
+}
+
 connectDB();
 
 const app = express();
 const port = 9090;
+
+// ---- Allowed origins whitelist ----
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
+  : [];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin '${origin}' not allowed`));
+  },
+  credentials: true,
+};
 
 // 3. Wrap Express app with HTTP Server
 const httpServer = createServer(app);
@@ -29,12 +61,15 @@ const httpServer = createServer(app);
 // 4. Initialize Socket.io
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // Adjust this to your frontend URL in production
+    origin: allowedOrigins.length > 0 ? allowedOrigins : false,
     methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 
-app.use(cors());
+app.use(helmet());
+app.use(cors(corsOptions));
+app.use(mongoSanitize());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

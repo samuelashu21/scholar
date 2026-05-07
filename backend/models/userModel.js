@@ -104,6 +104,7 @@ sellerRequest: {
     otpresetpassword: String,
     resetPasswordOTP: { type: String },
     resetPasswordOTPExpires: { type: Date },
+    refreshToken: { type: String, select: false },
     wishlist: [
       {
         type: mongoose.Schema.Types.ObjectId,

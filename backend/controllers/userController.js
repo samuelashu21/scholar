@@ -1,12 +1,13 @@
 import asyncHandler from "../middleware/asyncHandler.js";
 import User from "../models/userModel.js";
 import Product from "../models/productModel.js";
-import generateToken from "../utils/generateToken.js";
+import generateToken, { signAccessToken } from "../utils/generateToken.js";
 import validator from "validator";
+import crypto from "crypto";
 import { generateOTP } from '../utils/otp_generator.js'; 
 import { sendOTPEmail,sendResetPasswordEmail,sendSellerRequestEmail,sendSellerApprovalEmail,sendSellerRejectionEmail } from '../utils/smtp_function.js'; 
     
-     
+      
 const authUser = asyncHandler(async (req, res) => {
   const { email, phone, password } = req.body;
   // Determine which identifier is provided
@@ -422,10 +423,48 @@ export const resendResetPasswordOTP = async (req, res) => {
  
  
 
-const logoutUser = (req, res) => {
+const logoutUser = asyncHandler(async (req, res) => {
+  const rawRefreshToken = req.cookies.refreshToken;
+  if (rawRefreshToken) {
+    const hashed = crypto.createHash("sha256").update(rawRefreshToken).digest("hex");
+    await User.findOneAndUpdate({ refreshToken: hashed }, { refreshToken: null });
+  }
   res.clearCookie("jwt");
+  res.clearCookie("refreshToken", { path: "/api/users/refresh" });
   res.status(200).json({ message: "Logged out successfully" });
-};
+});
+
+// @desc  Refresh access token using refresh token cookie
+// @route POST /api/users/refresh
+// @access Public
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  const rawRefreshToken = req.cookies.refreshToken;
+  if (!rawRefreshToken) {
+    res.status(401);
+    throw new Error("No refresh token");
+  }
+
+  const hashed = crypto.createHash("sha256").update(rawRefreshToken).digest("hex");
+  const user = await User.findOne({ refreshToken: hashed }).select("+refreshToken");
+
+  if (!user) {
+    res.status(401);
+    throw new Error("Invalid or expired refresh token");
+  }
+
+  // Issue new access token using shared helper
+  const accessToken = signAccessToken(user._id);
+
+  const isProd = process.env.NODE_ENV === "production";
+  res.cookie("jwt", accessToken, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "strict" : "lax",
+    maxAge: 15 * 60 * 1000,
+  });
+
+  res.json({ message: "Token refreshed" });
+});
 
 
 
@@ -891,6 +930,7 @@ export {
   resendOTP,
   verifyOTP, 
   logoutUser,
+  refreshAccessToken,
   resetPassword,
   requestResetPassword,  
   getUserProfile,
@@ -906,4 +946,4 @@ export {
   getSellerRequests,
   approveSeller,
   rejectSeller,
-};
+}; 

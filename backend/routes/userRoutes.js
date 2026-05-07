@@ -1,4 +1,5 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 
 import multer from "multer";
 import path from "path";
@@ -9,6 +10,7 @@ import {
   registerUser,
   updatePushToken,  
   logoutUser,
+  refreshAccessToken,
   resendOTP,
   verifyOTP,
   requestResetPassword,
@@ -33,18 +35,28 @@ import { protect, admin ,sellerOrAdmin} from "../middleware/authMiddleware.js";
  
 const router = express.Router();
 
+// Rate limiter for auth-sensitive routes (10 requests per 15 minutes per IP)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many requests, please try again later." },
+});
+
 // ---------------------------
 // PUBLIC ROUTES
 // ---------------------------
-router.post("/", registerUser);
-router.post("/auth", authUser);
-router.post("/verify-otp", verifyOTP);
-router.post("/resend-otp", resendOTP);
+router.post("/", authLimiter, registerUser);
+router.post("/auth", authLimiter, authUser);
+router.post("/verify-otp", authLimiter, verifyOTP);
+router.post("/resend-otp", authLimiter, resendOTP);
 router.route('/push-token').put(protect, updatePushToken); 
-router.post("/request-reset-password", requestResetPassword);
-router.post("/reset-password", resetPassword);
-router.post("/resend-reset-password-otp", resendResetPasswordOTP);
+router.post("/request-reset-password", authLimiter, requestResetPassword);
+router.post("/reset-password", authLimiter, resetPassword);
+router.post("/resend-reset-password-otp", authLimiter, resendResetPasswordOTP);
 router.post("/logout", logoutUser);
+router.post("/refresh", authLimiter, refreshAccessToken);
 
 
 
