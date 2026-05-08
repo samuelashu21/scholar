@@ -7,7 +7,6 @@ import {
   ActivityIndicator, 
   Platform,
   SafeAreaView,
-  Image,
   StatusBar,
 } from "react-native";
 import React, { useEffect } from "react";
@@ -18,6 +17,7 @@ import { useCreateOrderMutation } from "../../slices/ordersApiSlice";
 import { clearCartItems } from "../../slices/cartSlice";
 import { Colors } from "../../constants/Utils";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 
 const PlaceOrderScreen = () => {
   const router = useRouter();
@@ -113,7 +113,7 @@ const PlaceOrderScreen = () => {
           <Text style={styles.sectionTitle}>Items</Text>
           {cart.cartItems.map((item, index) => (
             <View key={index} style={styles.orderItem}>
-              <Image source={{ uri: item.image }} style={styles.productImage} />
+              <Image source={{ uri: item.image }} style={styles.productImage} contentFit="cover" cachePolicy="memory-disk" />
               <View style={styles.productDetails}>
                 <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
                 <Text style={styles.productPrice}>

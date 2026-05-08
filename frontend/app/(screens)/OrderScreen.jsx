@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Platform,
   SafeAreaView,
-  Image,
   StatusBar,
 } from "react-native";
 import React from "react";
@@ -15,6 +14,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useGetOrderDetailsQuery } from "../../slices/ordersApiSlice"; // Assuming this exists
 import { Colors } from "../../constants/Utils";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 
 const OrderScreen = () => {
   const router = useRouter();
@@ -97,7 +97,7 @@ const OrderScreen = () => {
           <Text style={styles.sectionTitle}>Ordered Items</Text>
           {order.orderItems.map((item, index) => (
             <View key={index} style={styles.orderItem}>
-              <Image source={{ uri: item.image }} style={styles.productImage} />
+              <Image source={{ uri: item.image }} style={styles.productImage} contentFit="cover" cachePolicy="memory-disk" />
               <View style={styles.productDetails}>
                 <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
                 <Text style={styles.productPrice}>

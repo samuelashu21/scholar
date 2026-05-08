@@ -10,6 +10,8 @@ import {
   createProductReview,
   addView,
   getBannerProducts,
+  getPopularProducts,
+  getRecentlyViewedProducts,
 } from "../controllers/productController.js";
 
 import { toggleLike } from "../controllers/likeController.js";
@@ -22,6 +24,8 @@ router.get("/my-products", protect, getMyProducts);
  
 // routes/productRoutes.js
 router.get("/banner", getBannerProducts);
+router.get("/popular", protectOptional, getPopularProducts);
+router.post("/recently-viewed", protectOptional, getRecentlyViewedProducts);
  
 router
   .route("/")

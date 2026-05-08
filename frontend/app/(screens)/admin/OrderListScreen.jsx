@@ -267,7 +267,9 @@ const OrderListScreen = () => {
               {/* USER INFO */}
               <View style={styles.userInfo}>
                 <Text style={styles.userLabel}>Customer</Text>
-                <Text style={styles.userName}>{order.user?.name || "Guest User"}</Text>
+                <Text style={styles.userName}>
+                  {order.user?.name || `${order.user?.FirstName || ""} ${order.user?.LastName || ""}`.trim() || "Guest User"}
+                </Text>
               </View>
 
               <View style={styles.divider} />

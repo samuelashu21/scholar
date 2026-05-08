@@ -13,6 +13,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Toast from "react-native-toast-message";
 import {
   useGetProductDetailsQuery,
+  useGetProductsQuery,
   useCreateReviewMutation,
   useAddViewMutation,
 } from "../../slices/productsApiSlice";
@@ -54,6 +55,16 @@ const ProductScreen = () => {
   } = useGetProductDetailsQuery(productId, {
     skip: !productId || productId === "undefined",
   });
+
+  const { data: relatedProductsData } = useGetProductsQuery(
+    {
+      category: product?.category?._id || product?.category,
+      exclude: product?._id,
+      limit: 6,
+      pageNumber: 1,
+    },
+    { skip: !product?._id || !(product?.category?._id || product?.category) }
+  );
 
   /* ---------------- ADD VIEW (ONCE) ---------------- */
   useEffect(() => {
@@ -98,7 +109,20 @@ const ProductScreen = () => {
 
   /* ---------------- HANDLERS ---------------- */
   const handleAddToCart = () => {
-    dispatch(addToCart({ ...product, qty }));
+    const defaultVariant =
+      product?.variants?.length && product.variants[0]?.options?.length
+        ? {
+            name: product.variants[0].name,
+            optionLabel: product.variants[0].options[0].label,
+            sku: product.variants[0].options[0].sku,
+          }
+        : null;
+    const variantPrice =
+      defaultVariant && product.variants[0]?.options?.[0]?.price
+        ? product.variants[0].options[0].price
+        : product.price;
+
+    dispatch(addToCart({ ...product, qty, selectedVariant: defaultVariant, price: variantPrice }));
     Toast.show({
       type: "success",
       text1: "Added to cart",
@@ -152,12 +176,12 @@ const ProductScreen = () => {
 
         {/* CONTENT SECTION */}
         <View style={styles.detailsWrapper}>
-          <ProductDetailsCard
-            product={product}
+            <ProductDetailsCard
+              product={product}
             qty={qty}
             setQty={setQty}
             handleAddToCart={handleAddToCart}
-            disableAddToCart={product.countInStock === 0}
+              disableAddToCart={product.countInStock === 0}
             hideButton={true} 
           />
 
@@ -168,6 +192,29 @@ const ProductScreen = () => {
             userInfo={userInfo}
             onAddReviewPress={() => setIsReviewModalOpen(true)}
           />
+
+          {(relatedProductsData?.products || []).length > 0 ? (
+            <View style={styles.relatedSection}>
+              <Text style={styles.relatedTitle}>More from this category</Text>
+              {relatedProductsData.products.map((relatedProduct) => (
+                <TouchableOpacity
+                  key={relatedProduct._id}
+                  style={styles.relatedItem}
+                  onPress={() =>
+                    router.push({
+                      pathname: "(screens)/ProductScreen",
+                      params: { productId: relatedProduct._id },
+                    })
+                  }
+                >
+                  <Text numberOfLines={1} style={styles.relatedName}>
+                    {relatedProduct.name}
+                  </Text>
+                  <Text style={styles.relatedPrice}>${relatedProduct.price}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
         </View>
       </ScrollView>
 
@@ -261,6 +308,33 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#F5F5F5",
     marginVertical: 25,
+  },
+  relatedSection: {
+    marginTop: 8,
+  },
+  relatedTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1A1A1A",
+    marginBottom: 10,
+  },
+  relatedItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F3F5",
+  },
+  relatedName: {
+    fontSize: 14,
+    color: "#212529",
+    flex: 1,
+    marginRight: 8,
+  },
+  relatedPrice: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.primary,
   },
   bottomBar: {
     position: "absolute",

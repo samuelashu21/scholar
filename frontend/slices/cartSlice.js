@@ -9,6 +9,11 @@ const initialState = {
   paymentMethod: "PayPal",
 }; 
 
+const getCartItemKey = (item) =>
+  item.selectedVariant?.sku
+    ? `${item._id}-${item.selectedVariant.sku}`
+    : `${item._id}-${item.selectedVariant?.name || "default"}-${item.selectedVariant?.optionLabel || "default"}`;
+
 const cartSlice = createSlice({ 
   name: "cart",
   initialState,
@@ -19,24 +24,29 @@ const cartSlice = createSlice({
     },
     addToCart: (state, action) => {
       const { user, rating, numReviews, reviews, ...item } = action.payload;
+      const normalizedItem = {
+        ...item,
+        selectedVariant: item.selectedVariant || null,
+      };
+      normalizedItem.cartItemKey = getCartItemKey(normalizedItem);
 
-      const existItem = state.cartItems.find((x) => x._id === item._id);
+      const existItem = state.cartItems.find((x) => x.cartItemKey === normalizedItem.cartItemKey);
 
       if (existItem) {
         state.cartItems = state.cartItems.map((x) =>
-          x._id === existItem._id ? item : x
+          x.cartItemKey === existItem.cartItemKey ? normalizedItem : x
         );
       } else {
-        state.cartItems = [...state.cartItems, item];
+        state.cartItems = [...state.cartItems, normalizedItem];
       }
       // Assuming updateCart handles saving to AsyncStorage internally,
       // or you'll adjust it to accept a callback or return a promise
-      const updatedState = updateCart(state, item);
+      const updatedState = updateCart(state, normalizedItem);
       AsyncStorage.setItem("cart", JSON.stringify(updatedState)); // Save to AsyncStorage
       return updatedState;
     },
     removeFromCart: (state, action) => {
-      state.cartItems = state.cartItems.filter((x) => x._id !== action.payload);
+      state.cartItems = state.cartItems.filter((x) => x.cartItemKey !== action.payload);
       const updatedState = updateCart(state); // updateCart might calculate totals, etc.
       AsyncStorage.setItem("cart", JSON.stringify(updatedState)); // Save to AsyncStorage
       return updatedState;

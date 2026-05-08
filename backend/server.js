@@ -18,6 +18,8 @@ import uploadProfileRoutes from "./routes/uploadProfileRoutes.js";
 import User from "./models/userModel.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import { setupBullBoard, startQueueProcessors } from "./queues/jobQueues.js";
 
 dotenv.config();
 
@@ -84,6 +86,16 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/uploadprofile", uploadProfileRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/chats", chatRoutes);
+app.use("/api/notifications", notificationRoutes);
+
+startQueueProcessors();
+
+if (process.env.NODE_ENV !== "production") {
+  const bullBoardRouter = setupBullBoard();
+  if (bullBoardRouter) {
+    app.use("/api/dev/queues", bullBoardRouter);
+  }
+}
 
 // --- 5. SOCKET.IO REAL-TIME LOGIC ---
 io.on("connection", (socket) => {

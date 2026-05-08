@@ -25,6 +25,11 @@ const orderSchema = mongoose.Schema(
           type: Number,
           required: true,
         },
+        selectedVariant: {
+          name: { type: String },
+          optionLabel: { type: String },
+          sku: { type: String },
+        },
         product: {
           type: mongoose.Schema.Types.ObjectId,
           required: true,
@@ -91,26 +96,76 @@ const orderSchema = mongoose.Schema(
       required: true,
       default: 0.0,
     },
-    isPaid: {
-      type: Boolean,
+    status: {
+      type: String,
       required: true,
-      default: false,
+      enum: [
+        "pending",
+        "confirmed",
+        "processing",
+        "shipped",
+        "out_for_delivery",
+        "delivered",
+        "cancelled",
+        "refund_requested",
+        "refunded",
+      ],
+      default: "pending",
     },
-    paidAt: {
-      type: Date,
-    },
-    isDelivered: {
-      type: Boolean,
-      required: true,
-      default: false,
-    },
-    deliveredAt: {
-      type: Date,
-    },
+    statusHistory: [
+      {
+        status: {
+          type: String,
+          enum: [
+            "pending",
+            "confirmed",
+            "processing",
+            "shipped",
+            "out_for_delivery",
+            "delivered",
+            "cancelled",
+            "refund_requested",
+            "refunded",
+          ],
+          required: true,
+        },
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
+        note: {
+          type: String,
+          default: "",
+        },
+      },
+    ],
   },
 
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
+
+orderSchema.virtual("isPaid").get(function () {
+  const paidLikeStatuses = ["confirmed", "processing", "shipped", "out_for_delivery", "delivered"];
+  return paidLikeStatuses.includes(this.status);
+});
+
+orderSchema.virtual("isDelivered").get(function () {
+  return this.status === "delivered";
+});
+
+orderSchema.virtual("paidAt").get(function () {
+  const paidEntry = this.statusHistory?.find((entry) => entry.status === "confirmed");
+  return paidEntry?.timestamp ?? null;
+});
+
+orderSchema.virtual("deliveredAt").get(function () {
+  const deliveredEntry = this.statusHistory?.find((entry) => entry.status === "delivered");
+  return deliveredEntry?.timestamp ?? null;
+});
 
 const Order = mongoose.model("Order", orderSchema);
 

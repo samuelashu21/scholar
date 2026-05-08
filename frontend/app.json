@@ -4,6 +4,7 @@
     "slug": "frontend",
     "scheme": "frontend",
     "version": "1.0.0",
+    "jsEngine": "hermes",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -19,6 +20,7 @@
     },
     "android": {
       "package": "com.shola.frontend",
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.shola.frontend",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -31,7 +33,20 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-asset"
-    ]
+      "expo-asset",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "googlePlayStoreNumber": "TBD",
+      "privacyPolicyUrl": "https://example.com/privacy-policy",
+      "contentRating": "Everyone"
+    }
   }
 }

@@ -3,7 +3,6 @@ import {
   Text,
   View,
   TouchableOpacity,
-  Image,
   FlatList,
   SafeAreaView,
   StatusBar,
@@ -16,6 +15,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { addToCart, removeFromCart } from "../../slices/cartSlice";
 import { Colors } from "../../constants/Utils";
 import { BASE_URL } from "../../constants/Urls"; // 1. Import BASE_URL 
+import { Image } from "expo-image";
 
 const Cart = () => {
   const router = useRouter();
@@ -41,8 +41,8 @@ const Cart = () => {
     }
   };
 
-  const deleteItem = (id) => {
-    dispatch(removeFromCart(id));
+  const deleteItem = (cartItemKey) => {
+    dispatch(removeFromCart(cartItemKey));
   };
  
   const handleCheckout = () => { 
@@ -73,17 +73,23 @@ const Cart = () => {
       <Image 
         source={{ uri: getImageUrl(item.image) }} 
         style={styles.image} 
-        resizeMode="cover"
+        contentFit="cover"
+        cachePolicy="memory-disk"
       />
         
       <View style={styles.infoContainer}>
         <View style={styles.titleRow}>
           <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-          <TouchableOpacity onPress={() => deleteItem(item._id)}>
+          <TouchableOpacity onPress={() => deleteItem(item.cartItemKey)}>
             <Ionicons name="close-circle" size={22} color={Colors.textRed} />
           </TouchableOpacity>
         </View>
         <Text style={styles.price}>${item.price}</Text>
+        {item.selectedVariant?.optionLabel ? (
+          <Text style={styles.variantText}>
+            {item.selectedVariant.name}: {item.selectedVariant.optionLabel}
+          </Text>
+        ) : null}
         <View style={styles.actionRow}>
           <View style={styles.quantitySelector}>
             <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQuantity(item, item.qty - 1)}>
@@ -128,7 +134,7 @@ const Cart = () => {
           <View style={{ flex: 1 }}>
             <FlatList
               data={cartItems}
-              keyExtractor={(item) => item._id.toString()} // Ensure ID is a string
+              keyExtractor={(item) => item.cartItemKey || item._id.toString()}
               renderItem={renderItem}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
@@ -208,6 +214,7 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   name: { fontSize: 16, fontWeight: "700", color: "#333", flex: 1, marginRight: 10 },
   price: { fontSize: 15, fontWeight: "600", color: Colors.primary, marginTop: 2 },
+  variantText: { fontSize: 12, color: "#6C757D", marginTop: 2 },
   actionRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 10 },
   quantitySelector: {
     flexDirection: "row",

@@ -1,9 +1,17 @@
 import asyncHandler from "../middleware/asyncHandler.js";
 import Category from "../models/categoryModel.js";
+import { deleteCacheByPattern, getCachedValue, setCachedValue } from "../utils/cache.js";
  
 // @desc    Get all categories
 const getCategories = asyncHandler(async (req, res) => {
+  const cacheKey = "categories:all";
+  const cached = await getCachedValue(cacheKey);
+  if (cached) {
+    return res.json(cached);
+  }
+
   const categories = await Category.find({});
+  await setCachedValue(cacheKey, categories, 24 * 60 * 60);
   res.json(categories);
 }); 
  
@@ -25,6 +33,7 @@ const createCategory = asyncHandler(async (req, res) => {
     const category = new Category({ categoryname, image });
 
     const createdCategory = await category.save();
+    await deleteCacheByPattern("categories:*");
     res.status(201).json(createdCategory);
   } catch (error) {
     res.status(500).json({
@@ -58,6 +67,7 @@ const updateCategory = asyncHandler(async (req, res) => {
   if (image) category.image = image;
 
   const updatedCategory = await category.save();
+  await deleteCacheByPattern("categories:*");
   res.status(200).json(updatedCategory);
 });
 
@@ -72,6 +82,7 @@ const deleteCategory = asyncHandler(async (req, res) => {
   }
 
   await category.deleteOne();
+  await deleteCacheByPattern("categories:*");
   res.json({ message: "Category successfully deleted" });
 });
 

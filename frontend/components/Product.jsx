@@ -269,7 +269,7 @@
 
 
 
-import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useState, useEffect } from "react";
 import Rating from "./Rating";
 import { Colors } from "../constants/Utils";
@@ -292,6 +292,7 @@ import {
   useToggleLikeMutation,
   useAddViewMutation,
 } from "../slices/productsApiSlice";
+import { Image } from "expo-image";
 
 // --- Priority Constants ---
 const PRIORITY_THEMES = {
@@ -417,7 +418,7 @@ function Product({ product }) {
       )}
 
       {/* IMAGE */}
-      <Image source={{ uri: getImageUrl() }} style={styles.image} resizeMode="contain" />
+      <Image source={{ uri: getImageUrl() }} style={styles.image} contentFit="contain" cachePolicy="memory-disk" />
 
       {/* INFO */}
       <View style={styles.info}>

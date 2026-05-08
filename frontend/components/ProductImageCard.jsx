@@ -1,7 +1,8 @@
-import { StyleSheet, Text, View, Image } from "react-native";
+import { StyleSheet, View } from "react-native";
 import React from "react"; 
 import { Colors } from "../constants/Utils";
 import { BASE_URL } from "../constants/Urls";
+import { Image } from "expo-image";
 
 const ProductImageCard = ({ imageUrl }) => {
   const getImageUrl = (imagePath) => {
@@ -19,7 +20,8 @@ const ProductImageCard = ({ imageUrl }) => {
       <Image
         source={{ uri: getImageUrl(imageUrl) }}
         style={styles.productImage}
-        resizeMode="contain"
+        contentFit="contain"
+        cachePolicy="memory-disk"
         onError={(e) => {
           console.log("product image card error"), e.nativeEvent.error;
         }}

@@ -1,9 +1,10 @@
 import React from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Colors } from "../constants/Utils";
 import { useRouter } from "expo-router";
 import { BASE_URL } from "../constants/Urls";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { Image } from "expo-image";
 
 const ProductCard = ({ product, isWishlistItem = false, onRemove }) => {
   const router = useRouter();
@@ -33,7 +34,8 @@ const ProductCard = ({ product, isWishlistItem = false, onRemove }) => {
         <Image
           source={{ uri: getImageUrl() }}
           style={styles.image}
-          resizeMode="contain"
+          contentFit="contain"
+          cachePolicy="memory-disk"
         /> 
 
         <Text numberOfLines={2} style={styles.name}>
