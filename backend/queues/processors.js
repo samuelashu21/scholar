@@ -50,7 +50,7 @@ export const registerQueueProcessors = () => {
 
   if (analyticsQueue) {
     analyticsQueue.process(async (job) => {
-      // Placeholder queue for async analytics events.
+      // TODO: Replace placeholder with persisted analytics event aggregation/forwarding pipeline.
       return { processed: true, event: job.data?.type || "unknown" };
     });
 

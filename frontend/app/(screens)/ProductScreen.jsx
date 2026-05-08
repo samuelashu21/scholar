@@ -153,10 +153,11 @@ const ProductScreen = () => {
   /* ---------------- HANDLERS ---------------- */
   const handleAddToCart = () => {
     const variantPrice = selectedVariant?.price ? Number(selectedVariant.price) : null;
+    const resolvedUnitPrice = variantPrice && variantPrice > 0 ? variantPrice : product.price;
     dispatch(
       addToCart({
         ...product,
-        price: variantPrice && variantPrice > 0 ? variantPrice : product.price,
+        price: resolvedUnitPrice,
         selectedVariant,
         qty,
       })
@@ -193,6 +194,8 @@ const ProductScreen = () => {
 
   /* ---------------- UI ---------------- */
   const availableStock = selectedVariant?.stock ?? product.countInStock;
+  const resolvedUnitPrice =
+    selectedVariant?.price && selectedVariant.price > 0 ? selectedVariant.price : product.price;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -310,7 +313,7 @@ const ProductScreen = () => {
         <View style={styles.priceSection}>
           <Text style={styles.priceLabel}>Total Price</Text>
           <Text style={styles.totalPrice}>
-            ${((selectedVariant?.price && selectedVariant.price > 0 ? selectedVariant.price : product.price) * qty).toFixed(2)}
+            ${(resolvedUnitPrice * qty).toFixed(2)}
           </Text>
         </View>
         <TouchableOpacity

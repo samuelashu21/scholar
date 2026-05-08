@@ -15,6 +15,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useGetMyOrdersQuery } from "../../slices/ordersApiSlice";
 import { Colors } from "../../constants/Utils";
 import Message from "../../components/Message";
+import { formatOrderLifecycleStatus } from "../../utils/orderStatus";
 
 const orders = () => {
   const { userInfo } = useSelector((state) => state.auth);
@@ -106,9 +107,7 @@ const orders = () => {
                 ]}
               >
                 <Text style={styles.statusTextSuccess}>
-                  {(order.status || (order.isDelivered ? "delivered" : order.isPaid ? "confirmed" : "pending"))
-                    .replaceAll("_", " ")
-                    .toUpperCase()}
+                  {formatOrderLifecycleStatus(order)}
                 </Text>
               </View>
               <TouchableOpacity

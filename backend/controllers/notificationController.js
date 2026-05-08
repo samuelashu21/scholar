@@ -1,6 +1,7 @@
 import asyncHandler from "../middleware/asyncHandler.js";
 import User from "../models/userModel.js";
 import { enqueueJob, notificationQueue } from "../queues/index.js";
+import mongoose from "mongoose";
 
 const sendNotification = asyncHandler(async (req, res) => {
   const { userId, pushToken, title, body, data = {} } = req.body;
@@ -13,6 +14,10 @@ const sendNotification = asyncHandler(async (req, res) => {
   let token = pushToken;
 
   if (!token && userId) {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      res.status(400);
+      throw new Error("Invalid userId");
+    }
     const user = await User.findById(userId).select("pushToken");
     token = user?.pushToken;
   }

@@ -8,6 +8,12 @@ import mongoose from "mongoose";
 import { cacheKeys, invalidateCachePatterns, withCache } from "../services/cacheService.js";
 import { enqueueJob, notificationQueue } from "../queues/index.js";
 
+const POPULARITY_WEIGHTS = {
+  views: 0.3,
+  numReviews: 0.5,
+  rating: 0.2,
+};
+
 const normalizeVariants = (variants = []) =>
   variants.map((variant) => ({
     name: variant.name,
@@ -445,9 +451,9 @@ const getPopularProducts = asyncHandler(async (req, res) => {
       $addFields: {
         popularityScore: {
           $add: [
-            { $multiply: [{ $ifNull: ["$views", 0] }, 0.3] },
-            { $multiply: [{ $ifNull: ["$numReviews", 0] }, 0.5] },
-            { $multiply: [{ $ifNull: ["$rating", 0] }, 0.2] },
+            { $multiply: [{ $ifNull: ["$views", 0] }, POPULARITY_WEIGHTS.views] },
+            { $multiply: [{ $ifNull: ["$numReviews", 0] }, POPULARITY_WEIGHTS.numReviews] },
+            { $multiply: [{ $ifNull: ["$rating", 0] }, POPULARITY_WEIGHTS.rating] },
           ],
         },
       },

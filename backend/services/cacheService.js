@@ -48,8 +48,14 @@ export const invalidateCachePatterns = async (patterns = []) => {
 };
 
 export const cacheKeys = {
+  encode: (value = "") => encodeURIComponent(String(value)),
   categories: () => "categories:list",
   products: ({ keyword = "", category = "", subcategory = "", page = 1, limit = 8, exclude = "", userId = "anon" }) =>
-    `products:list:${userId}:${keyword}:${category}:${subcategory}:${page}:${limit}:${exclude}`,
-  productById: ({ id, userId = "anon" }) => `products:detail:${id}:${userId}`,
+    `products:list:${cacheKeys.encode(userId)}:${cacheKeys.encode(keyword)}:${cacheKeys.encode(
+      category
+    )}:${cacheKeys.encode(subcategory)}:${cacheKeys.encode(page)}:${cacheKeys.encode(
+      limit
+    )}:${cacheKeys.encode(exclude)}`,
+  productById: ({ id, userId = "anon" }) =>
+    `products:detail:${cacheKeys.encode(id)}:${cacheKeys.encode(userId)}`,
 };

@@ -17,6 +17,7 @@ const statusHistorySchema = mongoose.Schema(
       default: "",
     },
     actor: {
+      // User (admin/seller) who performed the status transition.
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },

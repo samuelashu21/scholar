@@ -2,6 +2,7 @@ import asyncHandler from "../middleware/asyncHandler.js";
 import Order from "../models/orderModel.js";
 import Product from "../models/productModel.js";
 import User from "../models/userModel.js";
+import { PAID_EQUIVALENT_STATUS_LIST } from "../utils/orderStatus.js";
 
 const getRevenueAnalytics = asyncHandler(async (req, res) => {
   const period = req.query.period || "week";
@@ -17,7 +18,7 @@ const getRevenueAnalytics = asyncHandler(async (req, res) => {
   }
 
   const revenue = await Order.aggregate([
-    { $match: { createdAt: { $gte: startDate }, status: { $in: ["confirmed", "processing", "shipped", "out_for_delivery", "delivered", "refund_requested", "refunded"] } } },
+    { $match: { createdAt: { $gte: startDate }, status: { $in: PAID_EQUIVALENT_STATUS_LIST } } },
     {
       $group: {
         _id: {

@@ -20,7 +20,7 @@ const cartSlice = createSlice({
     addToCart: (state, action) => {
       const { user, rating, numReviews, reviews, ...item } = action.payload;
       const variantKey = item.selectedVariant?.sku || `${item.selectedVariant?.name || ""}:${item.selectedVariant?.label || ""}`;
-      const cartKey = `${item._id}:${variantKey || "default"}`;
+      const cartKey = `${encodeURIComponent(item._id)}::${encodeURIComponent(variantKey || "default")}`;
       item.cartKey = cartKey;
 
       const existItem = state.cartItems.find((x) => x.cartKey === cartKey);

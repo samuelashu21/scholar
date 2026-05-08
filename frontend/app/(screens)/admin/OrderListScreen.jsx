@@ -203,6 +203,7 @@ import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { useGetOrdersQuery } from "../../../slices/ordersApiSlice";
 import Message from "../../../components/Message";
 import { Colors } from "../../../constants/Utils";
+import { formatOrderLifecycleStatus } from "../../../utils/orderStatus";
 
 const OrderListScreen = () => {
   const { data: orders, isLoading, error } = useGetOrdersQuery();
@@ -280,9 +281,7 @@ const OrderListScreen = () => {
                   <View style={[styles.badge, styles.badgePaid]}>
                     <FontAwesome name="history" size={12} color="#228BE6" />
                     <Text style={styles.badgeTextPaid}>
-                      {(order.status || (order.isDelivered ? "delivered" : order.isPaid ? "confirmed" : "pending"))
-                        .replaceAll("_", " ")
-                        .toUpperCase()}
+                      {formatOrderLifecycleStatus(order)}
                     </Text>
                   </View>
                 </View>

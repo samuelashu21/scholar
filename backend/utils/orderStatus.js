@@ -10,7 +10,7 @@ export const ORDER_STATUSES = [
   "refunded",
 ];
 
-const PAID_EQUIVALENT_STATUSES = new Set([
+export const PAID_EQUIVALENT_STATUS_LIST = [
   "confirmed",
   "processing",
   "shipped",
@@ -18,7 +18,9 @@ const PAID_EQUIVALENT_STATUSES = new Set([
   "delivered",
   "refund_requested",
   "refunded",
-]);
+];
+
+const PAID_EQUIVALENT_STATUSES = new Set(PAID_EQUIVALENT_STATUS_LIST);
 
 const DELIVERED_EQUIVALENT_STATUSES = new Set(["delivered"]);
 
