@@ -19,12 +19,15 @@ const cartSlice = createSlice({
     },
     addToCart: (state, action) => {
       const { user, rating, numReviews, reviews, ...item } = action.payload;
+      const variantKey = item.selectedVariant?.sku || `${item.selectedVariant?.name || ""}:${item.selectedVariant?.label || ""}`;
+      const cartKey = `${item._id}:${variantKey || "default"}`;
+      item.cartKey = cartKey;
 
-      const existItem = state.cartItems.find((x) => x._id === item._id);
+      const existItem = state.cartItems.find((x) => x.cartKey === cartKey);
 
       if (existItem) {
         state.cartItems = state.cartItems.map((x) =>
-          x._id === existItem._id ? item : x
+          x.cartKey === existItem.cartKey ? item : x
         );
       } else {
         state.cartItems = [...state.cartItems, item];
@@ -36,7 +39,9 @@ const cartSlice = createSlice({
       return updatedState;
     },
     removeFromCart: (state, action) => {
-      state.cartItems = state.cartItems.filter((x) => x._id !== action.payload);
+      state.cartItems = state.cartItems.filter(
+        (x) => x.cartKey !== action.payload && x._id !== action.payload
+      );
       const updatedState = updateCart(state); // updateCart might calculate totals, etc.
       AsyncStorage.setItem("cart", JSON.stringify(updatedState)); // Save to AsyncStorage
       return updatedState;

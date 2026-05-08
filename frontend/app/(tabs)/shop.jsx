@@ -338,41 +338,61 @@ import {
 } from "react-native";
 import { Ionicons, Feather } from "@expo/vector-icons"; 
 import { useRouter } from "expo-router";
+import { useDispatch, useSelector } from "react-redux";
 
 // --- API & Utils Imports ---
 import { Colors } from "../../constants/Utils"; // Adjust path if needed
 import { BASE_URL } from "../../constants/Urls"; // Adjust path if needed
 import { useGetCategoriesQuery } from "../../slices/categoryApiSlice.js";
 import { useGetSubcategoriesQuery } from "../../slices/subcategoryApiSlice.js";
+import { cacheCatalogData } from "../../slices/catalogCacheSlice.js";
 
 const { width } = Dimensions.get("window");
 
 const CategoryScreen = () => { 
   const router = useRouter();
+  const dispatch = useDispatch();
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const { isConnected } = useSelector((state) => state.network);
+  const { categories: cachedCategories, subcategories: cachedSubcategories } = useSelector(
+    (state) => state.catalogCache
+  );
 
   // --- Fetch Data ---
   const { data: categories, isLoading: catLoading } = useGetCategoriesQuery();
   const { data: subcategories, isLoading: subLoading } = useGetSubcategoriesQuery();
+  const categorySource = categories?.length ? categories : cachedCategories;
+  const subcategorySource = subcategories?.length ? subcategories : cachedSubcategories;
 
   // Set initial category once data loads
   useEffect(() => {
-    if (categories && categories.length > 0 && !selectedCategory) {
-      setSelectedCategory(categories[0]._id);
+    if (categorySource && categorySource.length > 0 && !selectedCategory) {
+      setSelectedCategory(categorySource[0]._id);
     }
-  }, [categories]);
+  }, [categorySource, selectedCategory]);
+
+  useEffect(() => {
+    if (categories?.length || subcategories?.length) {
+      dispatch(
+        cacheCatalogData({
+          categories,
+          subcategories,
+        })
+      );
+    }
+  }, [categories, subcategories, dispatch]);
 
   // --- Filter Logic ---
   // We filter subcategories that belong to the selected parent category
-  const currentSubcategories = subcategories?.filter(
+  const currentSubcategories = subcategorySource?.filter(
     (sub) => (sub.parentCategory?._id || sub.parentCategory) === selectedCategory
   ) || [];
 
-  const activeCategoryName = categories?.find(c => c._id === selectedCategory)?.categoryname;
+  const activeCategoryName = categorySource?.find(c => c._id === selectedCategory)?.categoryname;
 
   const getImageUri = (img) => (img?.startsWith("http") ? img : `${BASE_URL}${img}`);
 
-  if (catLoading || subLoading) {
+  if ((catLoading || subLoading) && !cachedCategories?.length) {
     return (
       <View style={styles.loaderContainer}>
         <ActivityIndicator size="large" color="#FF4747" />
@@ -421,7 +441,7 @@ const CategoryScreen = () => {
         {/* --- LEFT: SIDEBAR (Dynamic Categories) --- */}
         <View style={styles.sidebar}>
           <ScrollView showsVerticalScrollIndicator={false}>
-            {categories?.map((cat) => (
+            {categorySource?.map((cat) => (
               <TouchableOpacity
                 key={cat._id}
                 onPress={() => setSelectedCategory(cat._id)}
@@ -455,7 +475,9 @@ const CategoryScreen = () => {
             {/* Promo Banner with Category Image */}
             <View style={styles.promoBanner}>
               <Text style={styles.promoTitle}>{activeCategoryName}</Text>
-              <Text style={styles.promoSubtitle}>Discover the latest trends</Text>
+              <Text style={styles.promoSubtitle}>
+                {isConnected ? "Discover the latest trends" : "Offline mode: showing cached data"}
+              </Text>
             </View>
 
             <Text style={styles.gridTitle}>Popular in {activeCategoryName}</Text>

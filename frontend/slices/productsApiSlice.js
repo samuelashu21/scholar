@@ -5,9 +5,9 @@ export const productsApiSlice = apiSlice.injectEndpoints({
   overrideExisting: true,
   endpoints: (builder) => ({
     getProducts: builder.query({
-      query: ({ keyword, pageNumber, category, subcategory, sort }) => ({
+      query: ({ keyword, pageNumber, category, subcategory, sort, exclude, limit }) => ({
         url: PRODUCT_URL,
-        params: { keyword, pageNumber, category, subcategory, sort },
+        params: { keyword, pageNumber, category, subcategory, sort, exclude, limit },
       }),
       keepUnusedDataFor: 5,
       providesTags: ["Product", "Auth"],
@@ -94,6 +94,20 @@ export const productsApiSlice = apiSlice.injectEndpoints({
       }), 
       keepUnusedDataFor: 5,
     }),
+    getPopularProducts: builder.query({
+      query: (limit = 10) => ({
+        url: `${PRODUCT_URL}/popular`,
+        params: { limit },
+      }),
+      keepUnusedDataFor: 5,
+    }),
+    getRecentlyViewedProducts: builder.query({
+      query: (ids = []) => ({
+        url: `${PRODUCT_URL}/recently-viewed`,
+        params: { ids: ids.join(",") },
+      }),
+      keepUnusedDataFor: 5,
+    }),
   }),
 });
 
@@ -108,5 +122,7 @@ export const {
   useCreateProductMutation,
   useAddViewMutation,
   useToggleLikeMutation,
-  useGetBannerProductsQuery
+  useGetBannerProductsQuery,
+  useGetPopularProductsQuery,
+  useGetRecentlyViewedProductsQuery,
 } = productsApiSlice;

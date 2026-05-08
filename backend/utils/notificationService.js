@@ -1,37 +1,43 @@
-import axios from 'axios';
+import axios from "axios";
+import { Expo } from "expo-server-sdk";
 
-/**
- * Sends a push notification via Expo Push Service
- * @param {string} expoPushToken - The receiver's stored token
- * @param {string} title - The title of the notification (e.g., Sender Name)
- * @param {string} body - The message content
- * @param {object} data - Extra data (e.g., { chatId: '123' })
- */
-export const sendPushNotification = async (expoPushToken, title, body, data = {}) => {
-  if (!expoPushToken || !expoPushToken.startsWith('ExponentPushToken')) {
-    console.log("Invalid or missing push token.");
-    return;
+const expo = new Expo();
+
+const fallbackWithAxios = async (message) => {
+  await axios.post("https://exp.host/--/api/v2/push/send", message, {
+    headers: {
+      Accept: "application/json",
+      "Accept-encoding": "gzip, deflate",
+      "Content-Type": "application/json",
+    },
+  });
+};
+
+export const sendPushNotification = async ({ to, title, body, data = {} }) => {
+  if (!to || !Expo.isExpoPushToken(to)) {
+    return { sent: false, reason: "invalid_token" };
   }
 
   const message = {
-    to: expoPushToken,
-    sound: 'default',
-    title: title,
-    body: body,
-    data: data,
-    _displayInForeground: true, // Shows notification even if app is open
+    to,
+    sound: "default",
+    title,
+    body,
+    data,
+    _displayInForeground: true,
   };
 
   try {
-    await axios.post('https://exp.host/--/api/v2/push/send', message, {
-      headers: {
-        'Accept': 'application/json',
-        'Accept-encoding': 'gzip, deflate',
-        'Content-Type': 'application/json',
-      },
-    });
-    console.log("Notification sent successfully");
+    await expo.sendPushNotificationsAsync([message]);
+    return { sent: true };
   } catch (error) {
-    console.error("Error sending push notification:", error);
+    console.error("Expo SDK send failed, falling back to axios:", error.message);
+    try {
+      await fallbackWithAxios(message);
+      return { sent: true, fallback: true };
+    } catch (fallbackError) {
+      console.error("Axios fallback failed:", fallbackError.message);
+      return { sent: false, reason: "send_failed" };
+    }
   }
-};   
+};

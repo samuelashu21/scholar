@@ -177,6 +177,7 @@ const Account = () => {
               <MenuItem icon="grid-outline" title="Manage Products" onPress={() => router.push("/admin/ProductListScreen")} />
               <MenuItem icon="grid-outline" title="Manage Categories" onPress={() => router.push("/admin/CategoryScreen")} />
               <MenuItem icon="list-circle-outline" title="Order Management" onPress={() => router.push("/admin/OrderListScreen")} />
+              <MenuItem icon="bar-chart-outline" title="Analytics Dashboard" onPress={() => router.push("/admin/AdminAnalyticsScreen")} />
               <MenuItem icon="people-outline" title="User Management" onPress={() => router.push("/admin/UserListScreen")} />
               <MenuItem icon="mail-unread-outline" title="Seller Requests" onPress={() => router.push("/admin/SellerRequestListScreen")} isLast />
             </View>

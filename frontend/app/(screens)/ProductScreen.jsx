@@ -11,10 +11,14 @@ import {
 } from "react-native";
 import React, { useState, useEffect, useRef } from "react";
 import Toast from "react-native-toast-message";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   useGetProductDetailsQuery,
   useCreateReviewMutation,
   useAddViewMutation,
+  useGetProductsQuery,
+  useGetPopularProductsQuery,
+  useGetRecentlyViewedProductsQuery,
 } from "../../slices/productsApiSlice";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -26,6 +30,7 @@ import ProductImageCard from "../../components/ProductImageCard";
 import ProductDetailsCard from "../../components/ProductDetailsCard";
 import ProductReviewSection from "../../components/ProductReviewSection";
 import AddReviewModal from "../../components/AddReviewModal";
+import ProductCard from "../../components/ProductCard";
 
 import { useRouter, useLocalSearchParams } from "expo-router";
 
@@ -39,6 +44,8 @@ const ProductScreen = () => {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
+  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [recentlyViewedIds, setRecentlyViewedIds] = useState([]);
 
   const viewAddedRef = useRef(false);
 
@@ -53,6 +60,18 @@ const ProductScreen = () => {
     error,
   } = useGetProductDetailsQuery(productId, {
     skip: !productId || productId === "undefined",
+  });
+  const { data: moreFromCategory } = useGetProductsQuery(
+    {
+      category: product?.category?._id || product?.category,
+      exclude: product?._id,
+      limit: 6,
+    },
+    { skip: !product?._id || !(product?.category?._id || product?.category) }
+  );
+  const { data: popularProducts } = useGetPopularProductsQuery(10);
+  const { data: recentlyViewedProducts } = useGetRecentlyViewedProductsQuery(recentlyViewedIds, {
+    skip: !recentlyViewedIds.length,
   });
 
   /* ---------------- ADD VIEW (ONCE) ---------------- */
@@ -73,6 +92,41 @@ const ProductScreen = () => {
 
     incrementView();
   }, [product, addView]);
+
+  useEffect(() => {
+    if (!product?.variants?.length) return;
+    const firstVariant = product.variants[0];
+    const firstOption = firstVariant?.options?.[0];
+    if (firstOption) {
+      setSelectedVariant({
+        name: firstVariant.name,
+        label: firstOption.label,
+        sku: firstOption.sku,
+        stock: firstOption.stock,
+        price: firstOption.price,
+      });
+    }
+  }, [product?.variants]);
+
+  useEffect(() => {
+    const availableStock = selectedVariant?.stock ?? product?.countInStock ?? 0;
+    if (qty > availableStock && availableStock > 0) {
+      setQty(1);
+    }
+  }, [selectedVariant, product?.countInStock, qty]);
+
+  useEffect(() => {
+    const persistRecent = async () => {
+      if (!product?._id) return;
+      const raw = await AsyncStorage.getItem("recentlyViewedProductIds");
+      const existing = raw ? JSON.parse(raw) : [];
+      const updated = [product._id, ...existing.filter((id) => id !== product._id)].slice(0, 15);
+      await AsyncStorage.setItem("recentlyViewedProductIds", JSON.stringify(updated));
+      setRecentlyViewedIds(updated);
+    };
+
+    persistRecent();
+  }, [product?._id]);
 
   /* ---------------- GUARDS ---------------- */
   if (isLoading) {
@@ -98,7 +152,15 @@ const ProductScreen = () => {
 
   /* ---------------- HANDLERS ---------------- */
   const handleAddToCart = () => {
-    dispatch(addToCart({ ...product, qty }));
+    const variantPrice = selectedVariant?.price ? Number(selectedVariant.price) : null;
+    dispatch(
+      addToCart({
+        ...product,
+        price: variantPrice && variantPrice > 0 ? variantPrice : product.price,
+        selectedVariant,
+        qty,
+      })
+    );
     Toast.show({
       type: "success",
       text1: "Added to cart",
@@ -130,6 +192,8 @@ const ProductScreen = () => {
   };
 
   /* ---------------- UI ---------------- */
+  const availableStock = selectedVariant?.stock ?? product.countInStock;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
@@ -157,9 +221,49 @@ const ProductScreen = () => {
             qty={qty}
             setQty={setQty}
             handleAddToCart={handleAddToCart}
-            disableAddToCart={product.countInStock === 0}
+            disableAddToCart={availableStock === 0}
+            maxQty={availableStock}
             hideButton={true} 
           />
+
+          <View style={styles.divider} />
+
+          {product.variants?.length ? (
+            <View style={styles.variantSection}>
+              <Text style={styles.variantTitle}>Select Variant</Text>
+              {product.variants.map((variant) => (
+                <View key={variant.name} style={styles.variantGroup}>
+                  <Text style={styles.variantGroupTitle}>{variant.name}</Text>
+                  <View style={styles.variantOptionsRow}>
+                    {(variant.options || []).map((option) => {
+                      const selected =
+                        selectedVariant?.name === variant.name &&
+                        selectedVariant?.label === option.label;
+                      return (
+                        <TouchableOpacity
+                          key={`${variant.name}-${option.label}`}
+                          style={[styles.variantOption, selected && styles.variantOptionSelected]}
+                          onPress={() =>
+                            setSelectedVariant({
+                              name: variant.name,
+                              label: option.label,
+                              sku: option.sku,
+                              stock: option.stock,
+                              price: option.price,
+                            })
+                          }
+                        >
+                          <Text style={[styles.variantOptionText, selected && styles.variantOptionTextSelected]}>
+                            {option.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : null}
 
           <View style={styles.divider} />
 
@@ -168,6 +272,36 @@ const ProductScreen = () => {
             userInfo={userInfo}
             onAddReviewPress={() => setIsReviewModalOpen(true)}
           />
+
+          {moreFromCategory?.products?.length ? (
+            <View style={styles.recoSection}>
+              <Text style={styles.recoTitle}>More from this category</Text>
+              {moreFromCategory.products.slice(0, 6).map((item) => (
+                <ProductCard key={item._id} product={item} />
+              ))}
+            </View>
+          ) : null}
+
+          {popularProducts?.length ? (
+            <View style={styles.recoSection}>
+              <Text style={styles.recoTitle}>Popular picks</Text>
+              {popularProducts.slice(0, 4).map((item) => (
+                <ProductCard key={`popular-${item._id}`} product={item} />
+              ))}
+            </View>
+          ) : null}
+
+          {recentlyViewedProducts?.length ? (
+            <View style={styles.recoSection}>
+              <Text style={styles.recoTitle}>Recently viewed</Text>
+              {recentlyViewedProducts
+                .filter((item) => item._id !== product._id)
+                .slice(0, 4)
+                .map((item) => (
+                  <ProductCard key={`recent-${item._id}`} product={item} />
+                ))}
+            </View>
+          ) : null}
         </View>
       </ScrollView>
 
@@ -176,20 +310,20 @@ const ProductScreen = () => {
         <View style={styles.priceSection}>
           <Text style={styles.priceLabel}>Total Price</Text>
           <Text style={styles.totalPrice}>
-            ${(product.price * qty).toFixed(2)}
+            ${((selectedVariant?.price && selectedVariant.price > 0 ? selectedVariant.price : product.price) * qty).toFixed(2)}
           </Text>
         </View>
         <TouchableOpacity
           style={[
             styles.mainBtn,
-            product.countInStock === 0 && styles.disabledBtn,
+            availableStock === 0 && styles.disabledBtn,
           ]}
           onPress={handleAddToCart}
-          disabled={product.countInStock === 0}
+          disabled={availableStock === 0}
         >
           <Ionicons name="bag-add-outline" size={22} color="#FFF" />
           <Text style={styles.mainBtnText}>
-            {product.countInStock === 0 ? "Out of Stock" : "Add to Cart"}
+            {availableStock === 0 ? "Out of Stock" : "Add to Cart"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -261,6 +395,57 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#F5F5F5",
     marginVertical: 25,
+  },
+  variantSection: {
+    marginBottom: 20,
+  },
+  variantTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#212529",
+    marginBottom: 12,
+  },
+  variantGroup: {
+    marginBottom: 10,
+  },
+  variantGroupTitle: {
+    fontSize: 13,
+    color: "#6C757D",
+    marginBottom: 8,
+  },
+  variantOptionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  variantOption: {
+    borderWidth: 1,
+    borderColor: "#DEE2E6",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "#FFF",
+  },
+  variantOptionSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: "#F0F4FF",
+  },
+  variantOptionText: {
+    color: "#495057",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  variantOptionTextSelected: {
+    color: Colors.primary,
+  },
+  recoSection: {
+    marginTop: 10,
+  },
+  recoTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 10,
+    color: "#1A1A1A",
   },
   bottomBar: {
     position: "absolute",

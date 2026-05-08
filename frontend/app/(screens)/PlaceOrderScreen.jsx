@@ -116,6 +116,11 @@ const PlaceOrderScreen = () => {
               <Image source={{ uri: item.image }} style={styles.productImage} />
               <View style={styles.productDetails}>
                 <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+                {item.selectedVariant?.label ? (
+                  <Text style={styles.variantText}>
+                    {item.selectedVariant.name}: {item.selectedVariant.label}
+                  </Text>
+                ) : null}
                 <Text style={styles.productPrice}>
                   {item.qty} x ${item.price} = <Text style={styles.itemTotal}>${(item.qty * item.price).toFixed(2)}</Text>
                 </Text>
@@ -235,6 +240,7 @@ const styles = StyleSheet.create({
   productImage: { width: 50, height: 50, borderRadius: 8, marginRight: 15 },
   productDetails: { flex: 1 },
   productName: { fontSize: 14, fontWeight: "600", color: "#333" },
+  variantText: { fontSize: 12, color: "#6C757D", marginTop: 2 },
   productPrice: { fontSize: 13, color: "#666", marginTop: 2 },
   itemTotal: { fontWeight: "700", color: Colors.primary },
   summaryCard: {

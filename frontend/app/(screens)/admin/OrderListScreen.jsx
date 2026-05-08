@@ -276,32 +276,29 @@ const OrderListScreen = () => {
               <View style={styles.statusContainer}>
                 {/* PAID STATUS */}
                 <View style={styles.statusItem}>
+                  <Text style={styles.statusLabel}>Order Status</Text>
+                  <View style={[styles.badge, styles.badgePaid]}>
+                    <FontAwesome name="history" size={12} color="#228BE6" />
+                    <Text style={styles.badgeTextPaid}>
+                      {(order.status || (order.isDelivered ? "delivered" : order.isPaid ? "confirmed" : "pending"))
+                        .replaceAll("_", " ")
+                        .toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* PAYMENT STATUS */}
+                <View style={styles.statusItem}>
                   <Text style={styles.statusLabel}>Payment</Text>
                   {order.isPaid ? (
                     <View style={[styles.badge, styles.badgePaid]}>
                       <FontAwesome name="check-circle" size={12} color="#228BE6" />
-                      <Text style={styles.badgeTextPaid}>Paid ({order.paidAt.substring(0, 10)})</Text>
+                      <Text style={styles.badgeTextPaid}>{order.paidAt?.substring?.(0, 10) || "Paid"}</Text>
                     </View>
                   ) : (
                     <View style={[styles.badge, styles.badgePending]}>
                       <FontAwesome name="clock-o" size={12} color="#FA5252" />
                       <Text style={styles.badgeTextPending}>Pending</Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* DELIVERY STATUS */}
-                <View style={styles.statusItem}>
-                  <Text style={styles.statusLabel}>Delivery</Text>
-                  {order.isDelivered ? (
-                    <View style={[styles.badge, styles.badgeDelivered]}>
-                      <FontAwesome name="truck" size={12} color="#40C057" />
-                      <Text style={styles.badgeTextDelivered}>Delivered</Text>
-                    </View>
-                  ) : (
-                    <View style={[styles.badge, styles.badgePending]}>
-                      <FontAwesome name="times-circle" size={12} color="#FA5252" />
-                      <Text style={styles.badgeTextPending}>Not Sent</Text>
                     </View>
                   )}
                 </View>

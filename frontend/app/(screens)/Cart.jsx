@@ -79,11 +79,16 @@ const Cart = () => {
       <View style={styles.infoContainer}>
         <View style={styles.titleRow}>
           <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-          <TouchableOpacity onPress={() => deleteItem(item._id)}>
+          <TouchableOpacity onPress={() => deleteItem(item.cartKey || item._id)}>
             <Ionicons name="close-circle" size={22} color={Colors.textRed} />
           </TouchableOpacity>
         </View>
-        <Text style={styles.price}>${item.price}</Text>
+          <Text style={styles.price}>${item.price}</Text>
+          {item.selectedVariant?.label ? (
+            <Text style={styles.variantText}>
+              {item.selectedVariant.name}: {item.selectedVariant.label}
+            </Text>
+          ) : null}
         <View style={styles.actionRow}>
           <View style={styles.quantitySelector}>
             <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQuantity(item, item.qty - 1)}>
@@ -128,7 +133,7 @@ const Cart = () => {
           <View style={{ flex: 1 }}>
             <FlatList
               data={cartItems}
-              keyExtractor={(item) => item._id.toString()} // Ensure ID is a string
+               keyExtractor={(item) => (item.cartKey || item._id).toString()} // Ensure key is unique per variant
               renderItem={renderItem}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
@@ -208,6 +213,7 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   name: { fontSize: 16, fontWeight: "700", color: "#333", flex: 1, marginRight: 10 },
   price: { fontSize: 15, fontWeight: "600", color: Colors.primary, marginTop: 2 },
+  variantText: { fontSize: 12, color: "#6C757D", marginTop: 2 },
   actionRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 10 },
   quantitySelector: {
     flexDirection: "row",

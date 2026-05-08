@@ -14,6 +14,7 @@ const ProductDetailsCard = ({
   setQty,
   handleAddToCart,
   disableAddToCart,
+  maxQty,
   hideButton, // <--- 1. NOW RECEIVING THE PROP
 }) => { 
   const router = useRouter();
@@ -100,7 +101,7 @@ const ProductDetailsCard = ({
                 onValueChange={setQty}
                 style={styles.picker}
               >
-                {[...Array(product.countInStock).keys()].map((x) => (
+                {[...Array(maxQty || product.countInStock).keys()].map((x) => (
                   <Picker.Item
                     key={x}
                     label={`${x + 1}`}

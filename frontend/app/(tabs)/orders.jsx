@@ -81,7 +81,7 @@ const orders = () => {
         <View style={styles.tableHeader}>
           <Text style={[styles.headerCell, { flex: 1 }]}>#</Text>
           <Text style={[styles.headerCell, { flex: 1 }]}>Total</Text>
-          <Text style={[styles.headerCell, { flex: 1 }]}>Paid</Text>
+          <Text style={[styles.headerCell, { flex: 1.5 }]}>Status</Text>
           <Text style={[styles.headerCell, { flex: 1 }]}>View</Text>
         </View>
 
@@ -99,19 +99,17 @@ const orders = () => {
                 style={[
                   styles.cell,
                   {
-                    flex: 2,
+                    flex: 1.5,
                     alignItems: "center",
                     justifyContent: "center",
                   },
                 ]}
               >
-                {order.isPaid ? (
-                  <Text style={styles.statusTextSuccess}>
-                    {order.paidAt.substring(0, 10)}
-                  </Text>
-                ) : (
-                  <FontAwesome name="times" size={16} color={Colors.textRed} />
-                )}
+                <Text style={styles.statusTextSuccess}>
+                  {(order.status || (order.isDelivered ? "delivered" : order.isPaid ? "confirmed" : "pending"))
+                    .replaceAll("_", " ")
+                    .toUpperCase()}
+                </Text>
               </View>
               <TouchableOpacity
                 style={[styles.cell, { flex: 1 }]}

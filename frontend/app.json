@@ -4,6 +4,7 @@
     "slug": "frontend",
     "scheme": "frontend",
     "version": "1.0.0",
+    "jsEngine": "hermes",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -19,11 +20,13 @@
     },
     "android": {
       "package": "com.shola.frontend",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.shola.frontend"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -32,6 +35,11 @@
       "expo-router",
       "expo-secure-store",
       "expo-asset"
-    ]
+    ],
+    "extra": {
+      "googlePlayStoreNumber": "com.shola.frontend",
+      "privacyPolicyUrl": "https://example.com/privacy-policy",
+      "contentRating": "Teen"
+    }
   }
 }

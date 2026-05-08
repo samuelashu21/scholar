@@ -68,7 +68,7 @@ const OrderScreen = () => {
           </View>
           <View style={[styles.statusBadge, { backgroundColor: order.isDelivered ? "#E7F6EC" : "#FFF4E5" }]}>
             <Text style={[styles.statusText, { color: order.isDelivered ? "#28A745" : "#FD7E14" }]}>
-              {order.isDelivered ? "Delivered" : "Processing"}
+              {(order.status || "processing").replaceAll("_", " ").toUpperCase()}
             </Text>
           </View>
         </View>
@@ -100,6 +100,11 @@ const OrderScreen = () => {
               <Image source={{ uri: item.image }} style={styles.productImage} />
               <View style={styles.productDetails}>
                 <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+                {item.selectedVariant?.label ? (
+                  <Text style={styles.variantText}>
+                    {item.selectedVariant.name}: {item.selectedVariant.label}
+                  </Text>
+                ) : null}
                 <Text style={styles.productPrice}>
                   {item.qty} x ${item.price} = <Text style={styles.itemTotal}>${(item.qty * item.price).toFixed(2)}</Text>
                 </Text>
@@ -107,6 +112,19 @@ const OrderScreen = () => {
             </View>
           ))}
         </View>
+
+        {order.statusHistory?.length ? (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Status Timeline</Text>
+            {order.statusHistory.map((entry, index) => (
+              <View key={`${entry.status}-${index}`} style={styles.timelineItem}>
+                <Text style={styles.timelineStatus}>{entry.status.replaceAll("_", " ")}</Text>
+                <Text style={styles.timelineDate}>{new Date(entry.timestamp).toLocaleString()}</Text>
+                {entry.note ? <Text style={styles.timelineNote}>{entry.note}</Text> : null}
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         {/* SUMMARY */}
         <View style={styles.summaryCard}>
@@ -200,8 +218,18 @@ const styles = StyleSheet.create({
   productImage: { width: 50, height: 50, borderRadius: 8, marginRight: 15 },
   productDetails: { flex: 1 },
   productName: { fontSize: 14, fontWeight: "600", color: "#333" },
+  variantText: { fontSize: 12, color: "#6C757D", marginTop: 2 },
   productPrice: { fontSize: 13, color: "#666", marginTop: 2 },
   itemTotal: { fontWeight: "700", color: Colors.primary },
+  timelineItem: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F3F5",
+    paddingBottom: 10,
+    marginBottom: 10,
+  },
+  timelineStatus: { fontSize: 13, fontWeight: "700", color: "#212529", textTransform: "capitalize" },
+  timelineDate: { fontSize: 12, color: "#6C757D", marginTop: 2 },
+  timelineNote: { fontSize: 12, color: "#495057", marginTop: 4 },
   summaryCard: {
     backgroundColor: "#FFF",
     borderRadius: 15,

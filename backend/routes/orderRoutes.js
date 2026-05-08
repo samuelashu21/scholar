@@ -6,10 +6,11 @@ import {
   getOrderById,
   updateOrderToPaid,
   updateOrderToDelivered,
+  updateOrderStatus,
   getOrders,  
 } from "../controllers/orderController.js";
 
-import { admin, protect } from "../middleware/authMiddleware.js";
+import { admin, protect, sellerOrAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -23,5 +24,6 @@ router.route("/:id/pay").put(protect,updateOrderToPaid)
 
 
 router.route("/:id/deliver").put(protect,admin, updateOrderToDelivered)
+router.route("/:id/status").put(protect, sellerOrAdmin, updateOrderStatus);
 
 export default router;

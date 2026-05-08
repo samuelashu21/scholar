@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import { createServer } from "http"; // 1. Import HTTP createServer
 import { Server } from "socket.io"; // 2. Import Socket.io
+import { createRequire } from "module";
 import helmet from "helmet";
 import mongoSanitize from "express-mongo-sanitize";
 import connectDB from "./config/db.js";
@@ -18,8 +19,14 @@ import uploadProfileRoutes from "./routes/uploadProfileRoutes.js";
 import User from "./models/userModel.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import adminAnalyticsRoutes from "./routes/adminAnalyticsRoutes.js";
+import { registerQueueProcessors } from "./queues/processors.js";
+import { isRedisEnabled } from "./config/redis.js";
+import { analyticsQueue, emailQueue, notificationQueue } from "./queues/index.js";
 
 dotenv.config();
+const require = createRequire(import.meta.url);
 
 // ---- Validate required environment variables at startup ----
 const REQUIRED_ENV = [
@@ -84,6 +91,17 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/uploadprofile", uploadProfileRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/chats", chatRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/admin/analytics", adminAnalyticsRoutes);
+
+registerQueueProcessors();
+
+if (process.env.NODE_ENV !== "production" && isRedisEnabled) {
+  const bullBoard = require("bull-board");
+  const queues = [emailQueue, notificationQueue, analyticsQueue].filter(Boolean);
+  bullBoard.setQueues(queues.map((queue) => new bullBoard.BullAdapter(queue)));
+  app.use("/api/admin/queues", bullBoard.router);
+}
 
 // --- 5. SOCKET.IO REAL-TIME LOGIC ---
 io.on("connection", (socket) => {
