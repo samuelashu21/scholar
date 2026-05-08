@@ -33,7 +33,7 @@ const getEffectiveStock = (product) => {
   return Number(product.countInStock || 0);
 };
 
-export const getProducts = asyncHandler(async (req, res) => {
+const getProducts = asyncHandler(async (req, res) => {
   const defaultPageSize = Number(req.query.limit) || 8;
   const page = Number(req.query.pageNumber) || 1;
   const { keyword, category, subcategory, exclude } = req.query;
@@ -141,7 +141,7 @@ export const getProducts = asyncHandler(async (req, res) => {
   res.json(payload);
 });
 
-export const getMyProducts = asyncHandler(async (req, res) => {
+const getMyProducts = asyncHandler(async (req, res) => {
   const pageSize = 8;
   const page = Number(req.query.pageNumber) || 1;
   const { keyword, category, subcategory } = req.query;
@@ -326,7 +326,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
   res.json({ message: "Product successfully deleted" });
 });
 
-export const addView = async (req, res) => {
+const addView = async (req, res) => {
   const product = await Product.findById(req.params.id);
   if (!product) return res.status(404).json({ message: "Not found" });
 
