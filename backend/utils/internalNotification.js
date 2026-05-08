@@ -1,8 +1,10 @@
 import User from "../models/userModel.js";
+import mongoose from "mongoose";
 import { enqueueNotification } from "../queues/jobQueues.js";
 
 export const sendInternalNotification = async ({ userId, title, body, data = {} }) => {
   if (!userId) return;
+  if (!mongoose.Types.ObjectId.isValid(userId)) return;
   const user = await User.findById(userId).select("pushToken");
   if (!user?.pushToken) return;
 
