@@ -1,10 +1,10 @@
 import express from "express";
-import rateLimit from "express-rate-limit";
 
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { uploadPolicy } from "../src/uploads/uploadPolicy.js";
+import { authLimiter } from "../middleware/rateLimiters.js";
 
 import {
   authUser,
@@ -35,15 +35,6 @@ import {
 import { protect, admin ,sellerOrAdmin} from "../middleware/authMiddleware.js";
  
 const router = express.Router();
-
-// Rate limiter for auth-sensitive routes (10 requests per 15 minutes per IP)
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { message: "Too many requests, please try again later." },
-});
 
 // ---------------------------
 // PUBLIC ROUTES
@@ -144,4 +135,3 @@ router.get("/:id", protect, getUserById);
 router.put("/:id", protect, admin, updateUser);
 router.delete("/:id", protect, admin, deleteUser); 
 export default router;
-export { authLimiter };

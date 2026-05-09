@@ -1,5 +1,5 @@
 import express from "express";
-import { authLimiter } from "./userRoutes.js";
+import { authLimiter } from "../middleware/rateLimiters.js";
 import {
   authUser,
   logoutUser,

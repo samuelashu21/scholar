@@ -6,6 +6,7 @@ import helmet from "helmet";
 import mongoSanitize from "express-mongo-sanitize";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
+import csrf from "csurf";
 import connectDB from "./config/db.js";
 import productRoutes from "./routes/productRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -21,7 +22,6 @@ import uploadProfileRoutes from "./routes/uploadProfileRoutes.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import registerSocketHandlers from "./src/socket/registerSocketHandlers.js";
-import { ensureCsrfCookie, csrfProtection } from "./src/middleware/csrfProtection.js";
 
 dotenv.config();
 
@@ -78,8 +78,50 @@ app.use(mongoSanitize());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(ensureCsrfCookie);
-app.use(csrfProtection({ allowedOrigins }));
+
+const isProd = process.env.NODE_ENV === "production";
+const csrfMiddleware = csrf({
+  cookie: {
+    key: "csrfSecret",
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "strict" : "lax",
+    path: "/api",
+  },
+  value: (req) => req.get("x-csrf-token") || req.body?._csrf || req.query?._csrf,
+});
+
+app.use((req, res, next) => {
+  const hasAuthCookie = Boolean(req.cookies?.jwt || req.cookies?.refreshToken);
+  const origin = req.get("origin");
+  const isBrowserRequest = Boolean(origin);
+  const shouldProtect = hasAuthCookie && isBrowserRequest;
+
+  if (!shouldProtect) return next();
+
+  if (allowedOrigins.length > 0 && !allowedOrigins.includes(origin)) {
+    return res.status(403).json({
+      success: false,
+      message: "Invalid request origin",
+      error: { code: "FORBIDDEN" },
+    });
+  }
+
+  return csrfMiddleware(req, res, (err) => {
+    if (err) return next(err);
+
+    const token = req.csrfToken();
+    res.cookie("csrfToken", token, {
+      httpOnly: false,
+      secure: isProd,
+      sameSite: isProd ? "strict" : "lax",
+      path: "/api",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    return next();
+  });
+});
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

@@ -23,13 +23,12 @@ const tryRefreshSession = async (): Promise<boolean> => {
     refreshPromise = (async () => {
       const endpoints = [API_ROUTES.auth.refresh, API_ROUTES.auth.fallbackRefresh];
       for (const endpoint of endpoints) {
+        const csrfToken = getCookieValue("csrfToken");
         const response = await fetch(resolveUrl(endpoint), {
           method: "POST",
-      credentials: "include",
-      headers: {
-        "x-csrf-token": getCookieValue("csrfToken") || "",
-      },
-    });
+          credentials: "include",
+          headers: csrfToken ? { "x-csrf-token": csrfToken } : undefined,
+        });
 
         if (response.ok) return true;
       }
@@ -43,12 +42,13 @@ const tryRefreshSession = async (): Promise<boolean> => {
 };
 
 export const apiRequest = async <T>(url: string, options: RequestOptions = {}): Promise<T> => {
+  const csrfToken = getCookieValue("csrfToken");
   const response = await fetch(resolveUrl(url), {
     ...options,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...(getCookieValue("csrfToken") ? { "x-csrf-token": getCookieValue("csrfToken") as string } : {}),
+      ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
       ...(options.headers || {}),
     },
   });
@@ -56,14 +56,13 @@ export const apiRequest = async <T>(url: string, options: RequestOptions = {}): 
   if (response.status === 401) {
     const refreshed = await tryRefreshSession();
     if (refreshed) {
+      const retryCsrfToken = getCookieValue("csrfToken");
       const retryResponse = await fetch(resolveUrl(url), {
         ...options,
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          ...(getCookieValue("csrfToken")
-            ? { "x-csrf-token": getCookieValue("csrfToken") as string }
-            : {}),
+          ...(retryCsrfToken ? { "x-csrf-token": retryCsrfToken } : {}),
           ...(options.headers || {}),
         },
       });

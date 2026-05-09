@@ -13,15 +13,19 @@ class OrderService {
     }
 
     const itemsFromDB = await this.orderRepository.findProductsByIds(orderItems.map((x) => x._id));
+    const existingIds = new Set(itemsFromDB.map((item) => item._id.toString()));
+    const missingIds = orderItems.map((item) => item._id).filter((id) => !existingIds.has(id));
+
+    if (missingIds.length > 0) {
+      throw new AppError("One or more products were not found", {
+        statusCode: 404,
+        code: ErrorCodes.NOT_FOUND,
+        details: { missingProductIds: missingIds },
+      });
+    }
 
     const dbOrderItems = orderItems.map((item) => {
       const dbItem = itemsFromDB.find((p) => p._id.toString() === item._id);
-      if (!dbItem) {
-        throw new AppError(`Product not found for item ${item._id}`, {
-          statusCode: 404,
-          code: ErrorCodes.NOT_FOUND,
-        });
-      }
 
       return {
         ...item,
