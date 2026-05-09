@@ -4,6 +4,7 @@ import rateLimit from "express-rate-limit";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { uploadPolicy } from "../src/uploads/uploadPolicy.js";
 
 import {
   authUser,
@@ -64,7 +65,7 @@ router.post("/refresh", authLimiter, refreshAccessToken);
 // ---------------------------
 // MULTER SETUP FOR PROFILE IMAGE
 // ---------------------------
-const uploadsDir = path.join(process.cwd(), "uploadsprofile");
+const uploadsDir = path.join(process.cwd(), uploadPolicy.profile.folder);
 
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -81,9 +82,8 @@ const storage = multer.diskStorage({
 });
 
 function checkFileType(file, cb) {
-  const filetypes = /jpg|jpeg|png/;
-  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = filetypes.test(file.mimetype);
+  const extname = uploadPolicy.profile.extensionPattern.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = uploadPolicy.profile.mimeTypes.includes(file.mimetype);
   if (extname && mimetype) {
     return cb(null, true);
   } else {
@@ -94,6 +94,7 @@ function checkFileType(file, cb) {
 const upload = multer({
   storage,
   fileFilter: checkFileType,
+  limits: { fileSize: uploadPolicy.profile.maxFileSizeBytes },
 });
 
  
@@ -142,4 +143,5 @@ router.get("/:id", protect, getUserById);
 // Update & delete (admin only)
 router.put("/:id", protect, admin, updateUser);
 router.delete("/:id", protect, admin, deleteUser); 
-export default router; 
+export default router;
+export { authLimiter };

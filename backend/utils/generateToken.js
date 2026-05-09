@@ -33,7 +33,7 @@ const generateToken = async (res, userId) => {
     secure: isProd,
     sameSite: isProd ? "strict" : "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-    path: "/api/users/refresh",
+    path: "/api",
   });
 };
 

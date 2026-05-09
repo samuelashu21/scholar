@@ -1,0 +1,13 @@
+import { ErrorCodes } from "./errorCodes.js";
+
+class AppError extends Error {
+  constructor(message, { statusCode = 500, code = ErrorCodes.INTERNAL_ERROR, details } = {}) {
+    super(message);
+    this.name = "AppError";
+    this.statusCode = statusCode;
+    this.code = code;
+    this.details = details;
+  }
+}
+
+export default AppError;

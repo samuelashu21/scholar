@@ -4,9 +4,12 @@ import { createServer } from "http"; // 1. Import HTTP createServer
 import { Server } from "socket.io"; // 2. Import Socket.io
 import helmet from "helmet";
 import mongoSanitize from "express-mongo-sanitize";
+import morgan from "morgan";
+import rateLimit from "express-rate-limit";
 import connectDB from "./config/db.js";
 import productRoutes from "./routes/productRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
 import cookieParser from "cookie-parser";
 import errorHandler from "./middleware/errorHandler.js";
 import orderRoutes from "./routes/orderRoutes.js";
@@ -15,9 +18,9 @@ import subcategoryRoutes from "./routes/subcategoryRoutes.js";
 import cors from "cors";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import uploadProfileRoutes from "./routes/uploadProfileRoutes.js";
-import User from "./models/userModel.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import registerSocketHandlers from "./src/socket/registerSocketHandlers.js";
 
 dotenv.config();
 
@@ -38,7 +41,7 @@ if (missing.length > 0) {
 connectDB();
 
 const app = express();
-const port = 9090;
+const port = Number(process.env.PORT || 9090);
 
 // ---- Allowed origins whitelist ----
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -68,15 +71,25 @@ const io = new Server(httpServer, {
 });
 
 app.use(helmet());
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(cors(corsOptions));
 app.use(mongoSanitize());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.API_RATE_LIMIT_MAX || 200),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api", apiLimiter);
+
 
 app.use("/api/products", productRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/categories", categoryRoutes); // added
 app.use("/api/subcategories", subcategoryRoutes); // added
@@ -86,51 +99,7 @@ app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/chats", chatRoutes);
 
 // --- 5. SOCKET.IO REAL-TIME LOGIC ---
-io.on("connection", (socket) => {
-  console.log("User Connected:", socket.id);
-
-  // Mark user as Online
-  socket.on("userOnline", async (userId) => {
-    socket.userId = userId; 
-    await User.findByIdAndUpdate(userId, { isOnline: true });
-    io.emit("userStatusChanged", { userId, isOnline: true });
-  });
-     
-  // Join a private chat room
-  socket.on("joinRoom", (chatId) => {
-    socket.join(chatId); 
-   // console.log(`User joined chat: ${chatId}`);
-  });
-  // Handle Typing Indicator
-  socket.on("typing", (data) => {
-    // Broadcast to the other user in the room
-    socket.to(data.chatId).emit("displayTyping", data);
-  });
-  // Handle Real-time Deletion
-  socket.on("deleteMessage", ({ chatId, messageId }) => {
-    // Broadcast to everyone else in the room  messageDeleted
-    socket.to(chatId).emit("deleteMessage", messageId);
-  }); 
-  // Handle Real-time Edit
-  socket.on("editMessage", (data) => {
-    // data: { chatId, messageId, newText }
-    socket.to(data.chatId).emit("messageEdited", data);
-  });
-  // Handle Message Sent (Immediate UI update for receiver)
-  socket.on("newMessage", (message) => {
-    // message should contain chatId
-    socket.to(message.chatId).emit("messageReceived", message);
-  });
-
-  socket.on("disconnect", async () => {
-    if (socket.userId) {
-      const now = new Date();
-      await User.findByIdAndUpdate(socket.userId, { isOnline: false, lastSeen: now });
-      io.emit("userStatusChanged", { userId: socket.userId, isOnline: false, lastSeen: now });
-    }
-    console.log("User Disconnected"); 
-  }); 
-});
+registerSocketHandlers(io);
 
 // Auto-clean expired OTP every 10 mins
 setInterval(async () => {

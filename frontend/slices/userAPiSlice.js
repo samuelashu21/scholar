@@ -1,5 +1,5 @@
 import { apiSlice } from "./apiSlice";
-import { USERS_URL } from "../constants/Urls";
+import { AUTH_URL, USERS_URL } from "../constants/Urls";
 
 export const userApiSlice = apiSlice.injectEndpoints({
   overrideExisting: true, // ✅ Add this line
@@ -9,7 +9,7 @@ export const userApiSlice = apiSlice.injectEndpoints({
     // ---------------------------
     login: builder.mutation({
       query: (data) => ({
-        url: `${USERS_URL}/auth`,
+        url: `${AUTH_URL}/login`,
         method: "POST",
         body: data,
       }),
@@ -45,7 +45,7 @@ export const userApiSlice = apiSlice.injectEndpoints({
 
     logout: builder.mutation({
       query: () => ({
-        url: `${USERS_URL}/logout`,
+        url: `${AUTH_URL}/logout`,
         method: "POST",
       }),
       invalidatesTags: ["User"],
