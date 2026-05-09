@@ -11,6 +11,12 @@ let refreshPromise: Promise<boolean> | null = null;
 type RequestOptions = RequestInit & { headers?: Record<string, string> };
 
 const resolveUrl = (url: string) => `${BASE_URL}${url}`;
+const getCookieValue = (name: string): string | null => {
+  if (typeof document === "undefined" || !document.cookie) return null;
+  const cookies = document.cookie.split(";").map((c) => c.trim());
+  const target = cookies.find((cookie) => cookie.startsWith(`${name}=`));
+  return target ? decodeURIComponent(target.split("=")[1]) : null;
+};
 
 const tryRefreshSession = async (): Promise<boolean> => {
   if (!refreshPromise) {
@@ -19,8 +25,11 @@ const tryRefreshSession = async (): Promise<boolean> => {
       for (const endpoint of endpoints) {
         const response = await fetch(resolveUrl(endpoint), {
           method: "POST",
-          credentials: "include",
-        });
+      credentials: "include",
+      headers: {
+        "x-csrf-token": getCookieValue("csrfToken") || "",
+      },
+    });
 
         if (response.ok) return true;
       }
@@ -39,6 +48,7 @@ export const apiRequest = async <T>(url: string, options: RequestOptions = {}): 
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      ...(getCookieValue("csrfToken") ? { "x-csrf-token": getCookieValue("csrfToken") as string } : {}),
       ...(options.headers || {}),
     },
   });
@@ -51,6 +61,9 @@ export const apiRequest = async <T>(url: string, options: RequestOptions = {}): 
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
+          ...(getCookieValue("csrfToken")
+            ? { "x-csrf-token": getCookieValue("csrfToken") as string }
+            : {}),
           ...(options.headers || {}),
         },
       });

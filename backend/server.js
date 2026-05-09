@@ -21,6 +21,7 @@ import uploadProfileRoutes from "./routes/uploadProfileRoutes.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import registerSocketHandlers from "./src/socket/registerSocketHandlers.js";
+import { ensureCsrfCookie, csrfProtection } from "./src/middleware/csrfProtection.js";
 
 dotenv.config();
 
@@ -77,6 +78,8 @@ app.use(mongoSanitize());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(ensureCsrfCookie);
+app.use(csrfProtection({ allowedOrigins }));
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

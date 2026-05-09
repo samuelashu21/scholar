@@ -2,6 +2,13 @@ import { fetchBaseQuery, createApi } from "@reduxjs/toolkit/query/react";
 import { BASE_URL } from "../constants/Urls.js";
 import { logout, setCredentials } from "./authSlice";
 
+const getCookieValue = (name) => {
+  if (typeof document === "undefined" || !document.cookie) return null;
+  const cookies = document.cookie.split(";").map((c) => c.trim());
+  const target = cookies.find((cookie) => cookie.startsWith(`${name}=`));
+  return target ? decodeURIComponent(target.split("=")[1]) : null;
+};
+
 const baseQuery = fetchBaseQuery({
   baseUrl: BASE_URL,
   credentials: "include",
@@ -12,6 +19,11 @@ const baseQuery = fetchBaseQuery({
     // 2. If token exists, add it to headers
     if (userInfo && userInfo.token) {
       headers.set("authorization", `Bearer ${userInfo.token}`);
+    }
+
+    const csrfToken = getCookieValue("csrfToken");
+    if (csrfToken) {
+      headers.set("x-csrf-token", csrfToken);
     }
     return headers;
   },
