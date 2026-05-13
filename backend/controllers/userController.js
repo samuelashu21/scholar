@@ -76,7 +76,7 @@ const authUser = asyncHandler(async (req, res) => {
   );
 
   // Generate token
-  generateToken(res, updatedUser._id);
+  await generateToken(res, updatedUser._id);
   // Send response
   res.json({
     _id: user._id,
@@ -200,7 +200,7 @@ const registerUser = asyncHandler(async (req, res) => {
     console.log("✅ User Created Successfully:", user._id);
 
     // ---- Generate Token ----
-    generateToken(res, user._id);
+    await generateToken(res, user._id);
 
     // ---- Response ----
     res.status(201).json({
