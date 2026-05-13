@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import { createServer } from "http"; // 1. Import HTTP createServer
 import { Server } from "socket.io"; // 2. Import Socket.io
 import helmet from "helmet";
-import mongoSanitize from "express-mongo-sanitize";
 import connectDB from "./config/db.js";
 import productRoutes from "./routes/productRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -75,16 +74,18 @@ app.use(cookieParser());
 app.use((req, res, next) => {
   const sanitizeRequestObject = (target) => {
     if (!target || typeof target !== "object") return;
-    const sanitized = mongoSanitize.sanitize(target);
-    if (sanitized && sanitized !== target && typeof sanitized === "object") {
-      Object.keys(target).forEach((key) => delete target[key]);
-      Object.assign(target, sanitized);
-    }
+
+    Object.keys(target).forEach((key) => {
+      if (key.startsWith("$") || key.includes(".")) {
+        delete target[key];
+        return;
+      }
+      sanitizeRequestObject(target[key]);
+    });
   };
 
   sanitizeRequestObject(req.body);
   sanitizeRequestObject(req.params);
-  sanitizeRequestObject(req.headers);
   sanitizeRequestObject(req.query);
   next();
 });
