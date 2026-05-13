@@ -69,10 +69,16 @@ const io = new Server(httpServer, {
 
 app.use(helmet());
 app.use(cors(corsOptions));
-app.use(mongoSanitize());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use((req, res, next) => {
+  if (req.body) mongoSanitize.sanitize(req.body);
+  if (req.params) mongoSanitize.sanitize(req.params);
+  if (req.headers) mongoSanitize.sanitize(req.headers);
+  if (req.query) mongoSanitize.sanitize(req.query);
+  next();
+});
 
 
 app.use("/api/products", productRoutes);
