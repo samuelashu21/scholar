@@ -189,14 +189,15 @@ const registerUser = asyncHandler(async (req, res) => {
     
     const user = await User.create(newUserData);
 
-  
+    await sendOTPEmail(email, otp);
+    
     if (!user) {
       console.log("❌ User Creation Failed");
       res.status(400);
       throw new Error("Invalid user data");
     }
 
-      await sendOTPEmail(email, otp);
+    console.log("✅ User Created Successfully:", user._id);
 
     // ---- Generate Token ----
     generateToken(res, user._id);

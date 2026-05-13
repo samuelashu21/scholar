@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import { createServer } from "http"; // 1. Import HTTP createServer
 import { Server } from "socket.io"; // 2. Import Socket.io
 import helmet from "helmet";
-import mongoSanitize from "express-mongo-sanitize";
 import connectDB from "./config/db.js";
 import productRoutes from "./routes/productRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -69,10 +68,27 @@ const io = new Server(httpServer, {
 
 app.use(helmet());
 app.use(cors(corsOptions));
-app.use(mongoSanitize());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use((req, res, next) => {
+  const sanitizeRequestObject = (target) => {
+    if (!target || typeof target !== "object") return;
+
+    Object.keys(target).forEach((key) => {
+      if (key.startsWith("$") || key.includes(".")) {
+        delete target[key];
+        return;
+      }
+      sanitizeRequestObject(target[key]);
+    });
+  };
+
+  sanitizeRequestObject(req.body);
+  sanitizeRequestObject(req.params);
+  sanitizeRequestObject(req.query);
+  next();
+});
 
 
 app.use("/api/products", productRoutes);
