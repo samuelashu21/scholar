@@ -73,10 +73,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use((req, res, next) => {
-  if (req.body) mongoSanitize.sanitize(req.body);
-  if (req.params) mongoSanitize.sanitize(req.params);
-  if (req.headers) mongoSanitize.sanitize(req.headers);
-  if (req.query) mongoSanitize.sanitize(req.query);
+  const sanitizeRequestObject = (target) => {
+    if (!target || typeof target !== "object") return;
+    const sanitized = mongoSanitize.sanitize(target);
+    if (sanitized && sanitized !== target && typeof sanitized === "object") {
+      Object.keys(target).forEach((key) => delete target[key]);
+      Object.assign(target, sanitized);
+    }
+  };
+
+  sanitizeRequestObject(req.body);
+  sanitizeRequestObject(req.params);
+  sanitizeRequestObject(req.headers);
+  sanitizeRequestObject(req.query);
   next();
 });
 
