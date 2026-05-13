@@ -104,7 +104,7 @@ The platform features real-time messaging between buyers and sellers, PayPal pay
 | Technology | Purpose |
 |---|---|
 | React Native | Cross-platform mobile UI |
-| Expo (SDK 53) | Development toolchain & runtime |
+| Expo (SDK 54) | Development toolchain & runtime |
 | Expo Router | File-based navigation |
 | Redux Toolkit + RTK Query | State management & data fetching |
 | Redux Persist + Async Storage | Persistent local state |
