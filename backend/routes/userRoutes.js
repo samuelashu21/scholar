@@ -106,7 +106,7 @@ router
   .put(protect, updateUserProfile); 
 
 // Profile image upload
-router.post("/uploadprofile", protect, upload.single("image"), uploadProfileImage);
+router.post("/uploadprofile", upload.single("image"), uploadProfileImage);
  
 
 // ---------------------------

@@ -6,7 +6,7 @@ import validator from "validator";
 import crypto from "crypto";
 import { generateOTP } from '../utils/otp_generator.js'; 
 import { sendOTPEmail,sendResetPasswordEmail,sendSellerRequestEmail,sendSellerApprovalEmail,sendSellerRejectionEmail } from '../utils/smtp_function.js'; 
-    
+     
       
 const authUser = asyncHandler(async (req, res) => {
   const { email, phone, password } = req.body;
@@ -189,16 +189,14 @@ const registerUser = asyncHandler(async (req, res) => {
     
     const user = await User.create(newUserData);
 
-    await sendOTPEmail(email, otp);
-    res.status(200).json({ message: "OTP sent to email" });
-
+  
     if (!user) {
       console.log("❌ User Creation Failed");
       res.status(400);
       throw new Error("Invalid user data");
     }
 
-    console.log("✅ User Created Successfully:", user._id);
+      await sendOTPEmail(email, otp);
 
     // ---- Generate Token ----
     generateToken(res, user._id);
@@ -576,19 +574,19 @@ const uploadProfileImage = asyncHandler(async (req, res) => {
 
   const imagePath = `/uploadsprofile/${req.file.filename}`;
 
-  // Update user's profileImage
-  const user = await User.findById(req.user._id);
-  if (!user) {
-    res.status(404);
-    throw new Error("User not found");
-  }
+  // If logged in → update profile
+  if (req.user) {
+    const user = await User.findById(req.user._id);
 
-  user.profileImage = imagePath;
-  await user.save();
+    if (user) {
+      user.profileImage = imagePath;
+      await user.save();
+    }
+  }
 
   res.status(200).json({
     message: "Image uploaded successfully",
-    profileImage: imagePath,
+    image: imagePath,
   });
 });
 
