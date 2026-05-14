@@ -76,8 +76,7 @@ const authUser = asyncHandler(async (req, res) => {
   );
 
   // Generate access + refresh cookies and return current access token
-  await generateToken(res, updatedUser._id);
-  const token = signAccessToken(updatedUser._id);
+  const token = await generateToken(res, updatedUser._id);
   // Send response
   res.json({
     _id: user._id,

@@ -38,7 +38,12 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
       const currentUserInfo = api.getState().auth.userInfo;
       if (!currentUserInfo) {
         api.dispatch(logout());
-        return result;
+        return {
+          error: {
+            status: 401,
+            data: { message: "Session expired. Please log in again." },
+          },
+        };
       }
 
       api.dispatch(
