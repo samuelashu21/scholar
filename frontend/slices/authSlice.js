@@ -1,5 +1,4 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { apiSlice } from "../slices/apiSlice";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
