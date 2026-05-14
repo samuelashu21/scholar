@@ -7,7 +7,7 @@ const baseQuery = fetchBaseQuery({
   prepareHeaders: (headers, { getState }) => {
     // 1. Get userInfo from the auth state
     const userInfo = getState().auth.userInfo;
-    
+     
     // 2. If token exists, add it to headers
     if (userInfo && userInfo.token) {
       headers.set("authorization", `Bearer ${userInfo.token}`);

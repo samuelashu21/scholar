@@ -76,7 +76,7 @@ const authUser = asyncHandler(async (req, res) => {
   );
 
   // Generate token
-  await generateToken(res, updatedUser._id);
+  const token = signAccessToken(updatedUser._id);
   // Send response
   res.json({
     _id: user._id,
@@ -89,6 +89,7 @@ const authUser = asyncHandler(async (req, res) => {
     accountStatus: user.accountStatus,
     verified: user.verified, 
     sellerRequest: sellerInfo,
+    token, 
   }); 
 }); 
 
@@ -96,7 +97,7 @@ const authUser = asyncHandler(async (req, res) => {
  
 const registerUser = asyncHandler(async (req, res) => {
    
-  try {
+  try { 
     const {
       FirstName,
       LastName,
@@ -200,9 +201,9 @@ const registerUser = asyncHandler(async (req, res) => {
     console.log("✅ User Created Successfully:", user._id);
 
     // ---- Generate Token ----
-    await generateToken(res, user._id);
+    const token = signAccessToken(user._id);
 
-    // ---- Response ----
+    // ---- Response ---- 
     res.status(201).json({
       _id: user._id,
       name: `${user.FirstName} ${user.LastName}`,
@@ -214,6 +215,7 @@ const registerUser = asyncHandler(async (req, res) => {
       isVerified: user.isVerified,
       accountStatus: user.accountStatus,
       sellerRequest: user.sellerRequest || null,
+      token,
     });
   } catch (error) {
     console.log("🔥 SERVER ERROR in registerUser:", error.message, error.stack);
