@@ -205,7 +205,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
     // ---- Response ---- 
     res.status(201).json({
-      _id: user._id,
+      _id: user._id, 
       name: `${user.FirstName} ${user.LastName}`,
       email: user.email,
       phone: user.phone,

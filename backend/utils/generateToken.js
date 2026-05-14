@@ -8,7 +8,7 @@ const signAccessToken = (userId) =>
 
 const generateToken = async (res, userId) => {
   const accessToken = signAccessToken(userId);
-
+ 
   // Long-lived refresh token (30 days) — opaque random value
   const rawRefreshToken = crypto.randomBytes(64).toString("hex");
   const hashedRefreshToken = crypto
