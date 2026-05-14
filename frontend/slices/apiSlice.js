@@ -55,6 +55,12 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
       result = await rawBaseQuery(args, api, extraOptions);
     } else {
       api.dispatch(logout());
+      return {
+        error: {
+          status: 401,
+          data: { message: "Session expired. Please log in again." },
+        },
+      };
     }
   }
 
