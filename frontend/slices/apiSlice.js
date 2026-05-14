@@ -34,7 +34,7 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
       extraOptions
     );
 
-    if (refreshResult?.data?.token) {
+    if (!refreshResult?.error && refreshResult?.data?.token) {
       const currentUserInfo = api.getState().auth.userInfo;
       if (!currentUserInfo) {
         api.dispatch(logout());
