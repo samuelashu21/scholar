@@ -43,6 +43,13 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: "Too many requests, please try again later." },
 });
+const adminActionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many requests, please try again later." },
+});
 
 // ---------------------------
 // PUBLIC ROUTES
@@ -126,9 +133,9 @@ router.get("/seller/:id", protect, getSellerById);
 
 // ADMIN  MANAGEMENT 
 // ---------------------------
-router.get("/seller-requests", protect, admin, getSellerRequests);
-router.put("/approve-seller/:id", protect, admin, approveSeller);
-router.put("/reject-seller/:id", protect, admin, rejectSeller);
+router.get("/seller-requests", adminActionLimiter, protect, admin, getSellerRequests);
+router.put("/approve-seller/:id", adminActionLimiter, protect, admin, approveSeller);
+router.put("/reject-seller/:id", adminActionLimiter, protect, admin, rejectSeller);
 // ---------------------------
 router.get("/", protect, getUsers);
 
