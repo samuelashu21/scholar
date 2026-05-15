@@ -13,7 +13,7 @@ import {
   TextInput,
   Image,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useRouter, useLocalSearchParams, Stack } from "expo-router";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
@@ -24,6 +24,11 @@ import {
 } from "../../../slices/productsApiSlice";
 import { Colors } from "../../../constants/Utils";
 import { BASE_URL } from "../../../constants/Urls";
+import {
+  buildProductReportHtml,
+  filterByDateRange,
+  runPdfAction,
+} from "../../../utils/reportGenerator";
 
 const ProductListScreen = () => {
   const { pageNumber = "1" } = useLocalSearchParams();
@@ -31,6 +36,10 @@ const ProductListScreen = () => {
 
   const [keyword, setKeyword] = useState("");
   const [sortOrder, setSortOrder] = useState("-createdAt");
+  const [reportStartDate, setReportStartDate] = useState("");
+  const [reportEndDate, setReportEndDate] = useState("");
+  const [sellerFilter, setSellerFilter] = useState("");
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const { data, isLoading, error, refetch, isFetching } = useGetProductsQuery({
     pageNumber: Number(pageNumber),
@@ -43,6 +52,43 @@ const ProductListScreen = () => {
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "https://via.placeholder.com/100";
     return imagePath.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
+  };
+
+  const reportProducts = useMemo(() => {
+    const source = data?.products || [];
+    const dateFiltered = filterByDateRange(source, (item) => item.createdAt, reportStartDate, reportEndDate);
+    return dateFiltered.filter((item) => {
+      if (!sellerFilter.trim()) return true;
+      const sellerName = item.user
+        ? `${item.user.FirstName || ""} ${item.user.LastName || ""}`.trim().toLowerCase()
+        : "";
+      const sellerEmail = item.user?.email?.toLowerCase() || "";
+      const normalized = sellerFilter.toLowerCase();
+      return sellerName.includes(normalized) || sellerEmail.includes(normalized);
+    });
+  }, [data, reportStartDate, reportEndDate, sellerFilter]);
+
+  const runReport = async (mode) => {
+    try {
+      setIsGeneratingReport(true);
+
+      const html = buildProductReportHtml({
+        products: reportProducts,
+        startDate: reportStartDate,
+        endDate: reportEndDate,
+        sellerFilter,
+        sourceLabel: "Admin Product Management",
+      });
+
+      const uri = await runPdfAction({ html, mode });
+      const modeLabel = mode === "share" ? "shared" : mode === "print" ? "sent to print" : "saved";
+
+      Alert.alert("PDF Report Ready", `Product report ${modeLabel}. File: ${uri.split("/").pop()}`);
+    } catch (err) {
+      Alert.alert("Report Error", err?.message || "Unable to generate PDF report.");
+    } finally {
+      setIsGeneratingReport(false);
+    }
   };
 
   const deleteHandler = async (id) => {
@@ -106,7 +152,6 @@ const ProductListScreen = () => {
       <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.push("/account")} style={styles.backButton}>
           <Ionicons name="arrow-back" size={26} color="#1A1A1A" />
@@ -117,7 +162,6 @@ const ProductListScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* SEARCH + SORT */}
       <View style={styles.filterContainer}>
         <View style={styles.searchSection}>
           <Ionicons name="search" size={18} color="#ADB5BD" style={styles.searchIcon} />
@@ -144,6 +188,54 @@ const ProductListScreen = () => {
         </View>
       </View>
 
+      <View style={styles.reportBox}>
+        <Text style={styles.reportTitle}>Product Report (PDF)</Text>
+        <View style={styles.reportRow}>
+          <TextInput
+            value={reportStartDate}
+            onChangeText={setReportStartDate}
+            placeholder="Start YYYY-MM-DD"
+            style={styles.reportInput}
+          />
+          <TextInput
+            value={reportEndDate}
+            onChangeText={setReportEndDate}
+            placeholder="End YYYY-MM-DD"
+            style={styles.reportInput}
+          />
+        </View>
+        <TextInput
+          value={sellerFilter}
+          onChangeText={setSellerFilter}
+          placeholder="Seller name/email filter"
+          style={styles.reportInputSingle}
+        />
+        <View style={styles.reportActionRow}>
+          <TouchableOpacity
+            style={[styles.reportBtn, isGeneratingReport && styles.disabledBtn]}
+            onPress={() => runReport("download")}
+            disabled={isGeneratingReport}
+          >
+            <Text style={styles.reportBtnText}>{isGeneratingReport ? "Generating..." : "Download"}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.reportBtn, styles.reportBtnSecondary, isGeneratingReport && styles.disabledBtn]}
+            onPress={() => runReport("share")}
+            disabled={isGeneratingReport}
+          >
+            <Text style={styles.reportBtnSecondaryText}>Share</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.reportBtn, styles.reportBtnSecondary, isGeneratingReport && styles.disabledBtn]}
+            onPress={() => runReport("print")}
+            disabled={isGeneratingReport}
+          >
+            <Text style={styles.reportBtnSecondaryText}>Print</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.reportMeta}>Included rows: {reportProducts.length}</Text>
+      </View>
+
       {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Colors.primary} />
@@ -162,7 +254,7 @@ const ProductListScreen = () => {
               style={styles.card}
               onPress={() =>
                 router.push({
-                  pathname: "/(screens)/ProductScreen", // change if your product details route differs
+                  pathname: "/(screens)/ProductScreen",
                   params: { productId: item._id },
                 })
               }
@@ -278,6 +370,48 @@ const styles = StyleSheet.create({
   },
   sortPicker: { height: 40, width: "100%" },
 
+  reportBox: {
+    backgroundColor: "#FFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E9ECEF",
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  reportTitle: { fontSize: 13, fontWeight: "700", color: "#374151", marginBottom: 8 },
+  reportRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
+  reportInput: {
+    flex: 1,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 10,
+    fontSize: 12,
+  },
+  reportInputSingle: {
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 10,
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  reportActionRow: { flexDirection: "row", gap: 8 },
+  reportBtn: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
+    height: 38,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reportBtnSecondary: {
+    backgroundColor: "#EEF2FF",
+  },
+  reportBtnText: { color: "#FFF", fontWeight: "700", fontSize: 12 },
+  reportBtnSecondaryText: { color: "#1E3A8A", fontWeight: "700", fontSize: 12 },
+  reportMeta: { marginTop: 6, fontSize: 11, color: "#6B7280" },
+  disabledBtn: { opacity: 0.65 },
+
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   listContent: { paddingHorizontal: 16, paddingBottom: 20, paddingTop: 8 },
 
@@ -339,4 +473,4 @@ const styles = StyleSheet.create({
   activePageButton: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   pageButtonText: { color: "#495057", fontWeight: "700" },
   activePageButtonText: { color: "#FFF" },
-});
+}); 

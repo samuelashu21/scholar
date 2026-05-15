@@ -288,7 +288,7 @@ const Account = () => {
                   title="Seller Dashboard"
                   onPress={() =>
                     router.push(
-                      "/seller/SellerProductListScreen"
+                      "/sellerDashboard"
                     )
                   }
                   isLast
@@ -318,6 +318,16 @@ const Account = () => {
             <SectionHeader title="Administrator Tools" />
 
             <View style={styles.menuCard}>
+              <MenuItem
+                icon="speedometer-outline"
+                title="Dashboard Overview"
+                onPress={() =>
+                  router.push(
+                    "/admin/DashboardScreen"
+                  )
+                }
+              />
+
               <MenuItem
                 icon="grid-outline"
                 title="Manage Products"
@@ -708,4 +718,4 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
   },
-});
+}); 
