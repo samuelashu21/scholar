@@ -5,7 +5,21 @@ import generateToken, { signAccessToken } from "../utils/generateToken.js";
 import validator from "validator";
 import crypto from "crypto";
 import { generateOTP } from '../utils/otp_generator.js'; 
-import { sendOTPEmail,sendResetPasswordEmail,sendSellerRequestEmail,sendSellerApprovalEmail,sendSellerRejectionEmail } from '../utils/smtp_function.js'; 
+import {
+  sendOTPEmail,
+  sendResetPasswordEmail,
+  sendSellerRequestEmail,
+  sendSellerApprovalEmail,
+  sendSellerRejectionEmail,
+  sendSubscriptionExpiredEmail,
+  sendSubscriptionWarningEmail,
+} from '../utils/smtp_function.js'; 
+import {
+  SUBSCRIPTION_TYPES,
+  calculateSubscription,
+  downgradeExpiredSubscription,
+  hasActivePremiumSubscription,
+} from "../utils/sellerSubscription.js";
      
       
 const authUser = asyncHandler(async (req, res) => {
@@ -42,11 +56,26 @@ const authUser = asyncHandler(async (req, res) => {
   }
   // Handle seller logic
   let sellerInfo = null;
+  let subscriptionWarning = null;
   if (user.isSeller) {
     const now = new Date();
-    const isSubscriptionActive = 
-      user.sellerRequest.subscriptionEnd &&
-      now <= user.sellerRequest.subscriptionEnd;
+    const isSubscriptionActive = hasActivePremiumSubscription(user.sellerRequest, now);
+
+    if (downgradeExpiredSubscription(user, now)) {
+      await user.save();
+      subscriptionWarning =
+        "Your premium subscription has expired. Your products are now displayed as standard listings.";
+      await sendSubscriptionExpiredEmail(user);
+    } else if (
+      user.sellerRequest?.subscriptionEnd &&
+      user.sellerRequest?.subscriptionLevel > 0
+    ) {
+      const msLeft = new Date(user.sellerRequest.subscriptionEnd).getTime() - now.getTime();
+      const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+      if (daysLeft > 0 && daysLeft <= 7) {
+        await sendSubscriptionWarningEmail(user, daysLeft);
+      }
+    }
 
     sellerInfo = {
       subscriptionType: user.sellerRequest.subscriptionType,
@@ -56,14 +85,6 @@ const authUser = asyncHandler(async (req, res) => {
       requestStatus: user.sellerRequest.status,
       subscriptionActive: isSubscriptionActive,
     };
-    if (
-      user.sellerRequest.status === "approved" &&
-      !isSubscriptionActive &&
-      user.sellerRequest.subscriptionType !== "free"
-    ) {
-      res.status(403);
-      throw new Error("Your seller subscription has expired. Renew to sell.");
-    }
   }
   // Atomically increment loginCount and update lastLogin
   const updatedUser = await User.findByIdAndUpdate(
@@ -89,6 +110,7 @@ const authUser = asyncHandler(async (req, res) => {
     accountStatus: user.accountStatus,
     verified: user.verified, 
     sellerRequest: sellerInfo,
+    subscriptionWarning,
     token, 
   }); 
 }); 
@@ -658,16 +680,55 @@ const searchSellers = asyncHandler(async (req, res) => {
   } 
   const searchCriteria = {
     isSeller: true,
+    accountStatus: "active",
+    "sellerRequest.status": "approved",
     $or: [
       { FirstName: { $regex: query, $options: "i" } },
       { LastName: { $regex: query, $options: "i" } },
       { "sellerProfile.storeName": { $regex: query, $options: "i" } },
     ],
   };
-  const sellers = await User.find(searchCriteria)
-    .select("FirstName LastName profileImage sellerProfile sellerRequest isSeller")
-    .limit(20);
- 
+  const now = new Date();
+  const sellers = await User.aggregate([
+    { $match: searchCriteria },
+    {
+      $addFields: {
+        effectivePriority: {
+          $cond: [
+            {
+              $and: [
+                { $eq: ["$sellerRequest.boostActive", true] },
+                { $gt: ["$sellerRequest.subscriptionEnd", now] },
+              ],
+            },
+            { $ifNull: ["$sellerRequest.subscriptionLevel", 0] },
+            0,
+          ],
+        },
+      },
+    },
+    {
+      $sort: {
+        effectivePriority: -1,
+        verified: -1,
+        "sellerProfile.rating": -1,
+        createdAt: -1,
+      },
+    },
+    { $limit: 20 },
+    {
+      $project: {
+        FirstName: 1,
+        LastName: 1,
+        profileImage: 1,
+        sellerProfile: 1,
+        sellerRequest: 1,
+        isSeller: 1,
+        verified: 1,
+      },
+    },
+  ]);
+  
   res.json(sellers);
 });
 // Add searchSellers to your export list at the bottom
@@ -772,36 +833,77 @@ const requestSeller = asyncHandler(async (req, res) => {
       storeLogo,
     } = req.body;
 
-     const validSubscriptions = ["free", "paid_1_month", "paid_6_month", "paid_1_year"]; 
-    if (!validSubscriptions.includes(subscriptionType)) {
-      return res.status(400).json({ message: "Invalid subscription type" });
+    if (!SUBSCRIPTION_TYPES.includes(subscriptionType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid subscription type",
+        data: null,
+      });
     }
+
+    const sanitizedStoreName = validator.escape((storeName || "").trim());
+    const sanitizedStoreDescription = validator.escape((storeDescription || "").trim());
+    const sanitizedStoreLogo = (storeLogo || "").trim();
 
     const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+        data: null,
+      });
     }
 
-    if (user.isSeller || user.sellerRequest?.isRequested) {
-      return res.status(400).json({ message: "Already requested or seller" });
+    if (!sanitizedStoreName) {
+      return res.status(400).json({
+        success: false,
+        message: "Store name is required",
+        data: null,
+      });
+    }
+    if (sanitizedStoreDescription.length < 20 || sanitizedStoreDescription.length > 500) {
+      return res.status(400).json({
+        success: false,
+        message: "Store description must be between 20 and 500 characters",
+        data: null,
+      });
+    }
+
+    if (user.sellerRequest?.status === "pending") {
+      return res.status(400).json({
+        success: false,
+        message: "Seller request pending admin approval",
+        data: null,
+      });
+    }
+
+    if (user.sellerRequest?.status === "approved" || user.isSeller) {
+      return res.status(400).json({
+        success: false,
+        message: "You are already an approved seller",
+        data: null,
+      });
     }
 
     // Ensure sellerRequest object exists
     if (!user.sellerRequest) user.sellerRequest = {};
  
     user.sellerRequest = {
-    isRequested: true,
-    status: "pending",
-    subscriptionType,
-    subscriptionLevel: 0, // Level stays 0 until Admin approves
-  }; 
+      isRequested: true,
+      status: "pending",
+      rejectionReason: "",
+      subscriptionType,
+      subscriptionLevel: 0,
+      subscriptionStart: null,
+      subscriptionEnd: null,
+      boostActive: false,
+    };
     // Update seller profile
     user.sellerProfile = {
       ...user.sellerProfile,
-      storeName: storeName || user.sellerProfile?.storeName || "",
-      storeDescription:
-        storeDescription || user.sellerProfile?.storeDescription || "",
-      storeLogo: storeLogo || user.sellerProfile?.storeLogo || "",
+      storeName: sanitizedStoreName,
+      storeDescription: sanitizedStoreDescription,
+      storeLogo: sanitizedStoreLogo || user.sellerProfile?.storeLogo || "",
     };
 
     await user.save();
@@ -811,13 +913,19 @@ const adminEmail = process.env.ADMIN_EMAIL; // Add your admin email in .env
 await sendSellerRequestEmail(user, adminEmail);
 
     res.json({
+      success: true,
       message: "Seller request submitted",
-      sellerRequest: user.sellerRequest,
-      sellerProfile: user.sellerProfile,
+      data: {
+        sellerRequest: user.sellerRequest,
+        sellerProfile: user.sellerProfile,
+      },
     });
   } catch (err) {
- 
-    res.status(500).json({ message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message,
+      data: null,
+    });
   }
 });
 
@@ -825,7 +933,9 @@ await sendSellerRequestEmail(user, adminEmail);
 
 // Admin: get all pending seller requests
 const getSellerRequests = asyncHandler(async (req, res) => {
-  const requests = await User.find({ "sellerRequest.status": "pending" });
+  const requests = await User.find({
+    $or: [{ "sellerRequest.isRequested": true }, { isSeller: true }],
+  }).sort({ "sellerRequest.status": 1, createdAt: -1 });
   res.json(requests);
 });
 
@@ -838,18 +948,50 @@ const approveSeller = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const { status, storeName, storeDescription, subscriptionType: subTypeBody } = req.body;
+    const {
+      status,
+      storeName,
+      storeDescription,
+      subscriptionType: subTypeBody,
+      rejectionReason = "",
+      accountStatus,
+      isAdmin,
+    } = req.body;
+
+    if (typeof isAdmin !== "undefined") {
+      user.isAdmin = Boolean(isAdmin);
+    }
+    if (accountStatus) {
+      if (!["active", "suspended", "inactive"].includes(accountStatus)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid account status",
+          data: null,
+        });
+      }
+      user.accountStatus = accountStatus;
+    }
 
     // --- 1. HANDLE REJECTION ---
     if (status === "rejected") {
       user.isSeller = false;
       user.sellerRequest.status = "rejected";
-      user.sellerRequest.isRequested = false; // Optional: lets them re-apply later
+      user.sellerRequest.isRequested = false;
+      user.sellerRequest.rejectionReason = validator.escape((rejectionReason || "Seller request rejected by admin").trim());
+      user.sellerRequest.subscriptionType = "free";
+      user.sellerRequest.subscriptionLevel = 0;
+      user.sellerRequest.subscriptionStart = null;
+      user.sellerRequest.subscriptionEnd = null;
+      user.sellerRequest.boostActive = false;
       
       await user.save();
       await sendSellerRejectionEmail(user); // If you have this helper
       
-      return res.json({ message: "Seller request rejected", user });
+      return res.json({
+        success: true,
+        message: "Seller request rejected",
+        data: user,
+      });
     }
 
     // --- 2. PROCEED WITH APPROVAL ---
@@ -857,57 +999,46 @@ const approveSeller = asyncHandler(async (req, res) => {
     const subscriptionType = subTypeBody || user.sellerRequest?.subscriptionType || "free";
 
     // Validate
-    const validSubscriptions = ["free", "paid_1_month", "paid_6_month", "paid_1_year"];
-    if (!validSubscriptions.includes(subscriptionType)) {
-      return res.status(400).json({ message: "Invalid subscription type" });
+    if (!SUBSCRIPTION_TYPES.includes(subscriptionType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid subscription type",
+        data: null,
+      });
     }
 
     // Update Profile Info
     user.isSeller = true;
-    user.sellerProfile.storeName = storeName || user.sellerProfile.storeName;
-    user.sellerProfile.storeDescription = storeDescription || user.sellerProfile.storeDescription;
+    user.sellerRequest.isRequested = false;
+    user.sellerRequest.rejectionReason = "";
+    user.sellerProfile.storeName =
+      validator.escape((storeName || user.sellerProfile.storeName || "").trim());
+    user.sellerProfile.storeDescription =
+      validator.escape((storeDescription || user.sellerProfile.storeDescription || "").trim());
 
     // Handle Subscription Dates & Priority Levels
     user.sellerRequest.status = "approved";
-    user.sellerRequest.subscriptionType = subscriptionType;
-    user.sellerRequest.subscriptionStart = new Date();
-
-    const now = new Date();
-    
-    if (subscriptionType === "free") {
-      user.sellerRequest.subscriptionLevel = 0; 
-      user.sellerRequest.subscriptionEnd = null;
-      user.sellerRequest.boostActive = false;
-    } else {
-      user.sellerRequest.boostActive = true;
-      let monthsToAdd = 0;
-
-      if (subscriptionType === "paid_1_month") {
-        user.sellerRequest.subscriptionLevel = 1;
-        monthsToAdd = 1;
-      } else if (subscriptionType === "paid_6_month") {
-        user.sellerRequest.subscriptionLevel = 2;
-        monthsToAdd = 6;
-      } else if (subscriptionType === "paid_1_year") {
-        user.sellerRequest.subscriptionLevel = 3;
-        monthsToAdd = 12;
-      }
-
-      // Create a fresh date to avoid reference issues
-      const expiryDate = new Date();
-      expiryDate.setMonth(expiryDate.getMonth() + monthsToAdd);
-      user.sellerRequest.subscriptionEnd = expiryDate;
-    }
+    const subscriptionData = calculateSubscription(subscriptionType);
+    user.sellerRequest.subscriptionType = subscriptionData.subscriptionType;
+    user.sellerRequest.subscriptionLevel = subscriptionData.subscriptionLevel;
+    user.sellerRequest.subscriptionStart = subscriptionData.subscriptionStart;
+    user.sellerRequest.subscriptionEnd = subscriptionData.subscriptionEnd;
+    user.sellerRequest.boostActive = subscriptionData.boostActive;
 
     await user.save();
     await sendSellerApprovalEmail(user);
 
-    res.json({ 
-      message: `Seller approved with level ${user.sellerRequest.subscriptionLevel}`, 
-      user 
+    res.json({
+      success: true,
+      message: `Seller approved with level ${user.sellerRequest.subscriptionLevel}`,
+      data: user,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message,
+      data: null,
+    });
   } 
 }); 
  
@@ -915,11 +1046,32 @@ const approveSeller = asyncHandler(async (req, res) => {
 // Admin: reject seller request
 const rejectSeller = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
-  if (!user) return res.status(404).json({ message: "User not found" });
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: "User not found",
+      data: null,
+    });
+  }
 
+  user.isSeller = false;
+  user.sellerRequest.isRequested = false;
   user.sellerRequest.status = "rejected";
+  user.sellerRequest.rejectionReason = validator.escape(
+    (req.body?.rejectionReason || "Seller request rejected by admin").trim()
+  );
+  user.sellerRequest.subscriptionType = "free";
+  user.sellerRequest.subscriptionLevel = 0;
+  user.sellerRequest.subscriptionStart = null;
+  user.sellerRequest.subscriptionEnd = null;
+  user.sellerRequest.boostActive = false;
   await user.save();
-  res.json({ message: "Seller request rejected", user });
+  await sendSellerRejectionEmail(user);
+  res.json({
+    success: true,
+    message: "Seller request rejected",
+    data: user,
+  });
 });
 
 

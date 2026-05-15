@@ -43,6 +43,8 @@ const SellerRequestListScreen = () => {
     { label: "Pending", value: "pending" },
     { label: "Approved", value: "approved" },
     { label: "Rejected", value: "rejected" },
+    { label: "Suspended", value: "suspended" },
+    { label: "Expired Subs", value: "expired_subscription" },
   ];
 
   const filteredUsers = useMemo(() => {
@@ -55,9 +57,18 @@ const SellerRequestListScreen = () => {
       
       const userSub = user.sellerRequest?.subscriptionType;
       const userStatus = user.sellerRequest?.status || "pending";
+      const isSuspended = user.accountStatus === "suspended";
+      const hasExpiredSubscription =
+        user.sellerRequest?.subscriptionEnd &&
+        new Date(user.sellerRequest.subscriptionEnd) < new Date() &&
+        (user.sellerRequest?.subscriptionLevel || 0) > 0;
 
       const matchesPlan = activeFilter === "All" || userSub === activeFilter;
-      const matchesStatus = statusFilter === "All" || userStatus === statusFilter;
+      const matchesStatus =
+        statusFilter === "All" ||
+        userStatus === statusFilter ||
+        (statusFilter === "suspended" && isSuspended) ||
+        (statusFilter === "expired_subscription" && hasExpiredSubscription);
 
       return matchesSearch && matchesPlan && matchesStatus;
     });
@@ -84,13 +95,20 @@ const SellerRequestListScreen = () => {
       case "approved": return { bg: "#E8F5E9", text: "#2E7D32", icon: "checkmark-circle" };
       case "rejected": return { bg: "#FFEBEE", text: "#C62828", icon: "close-circle" };
       case "pending": return { bg: "#FFF3E0", text: "#EF6C00", icon: "time" };
+      case "suspended": return { bg: "#F3E5F5", text: "#6A1B9A", icon: "pause-circle" };
       default: return { bg: "#F5F5F5", text: "#616161", icon: "help-circle" };
     }
   };
 
   const renderUser = ({ item: user }) => {
     const subStyle = getSubscriptionStyle(user.sellerRequest?.subscriptionType);
-    const statusStyle = getStatusStyle(user.sellerRequest?.status || "pending");
+    const statusValue = user.accountStatus === "suspended" ? "suspended" : user.sellerRequest?.status || "pending";
+    const statusStyle = getStatusStyle(statusValue);
+    const subscriptionEnd = user?.sellerRequest?.subscriptionEnd ? new Date(user.sellerRequest.subscriptionEnd) : null;
+    const daysExpired =
+      subscriptionEnd && subscriptionEnd < new Date()
+        ? Math.ceil((new Date() - subscriptionEnd) / (1000 * 60 * 60 * 24))
+        : 0;
 
     return (
       <View style={styles.card}>
@@ -107,10 +125,10 @@ const SellerRequestListScreen = () => {
           
           <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
             <Ionicons name={statusStyle.icon} size={12} color={statusStyle.text} />
-            <Text style={[styles.statusBadgeText, { color: statusStyle.text }]}>
-              {(user.sellerRequest?.status || "pending").toUpperCase()}
-            </Text>
-          </View>
+              <Text style={[styles.statusBadgeText, { color: statusStyle.text }]}>
+                {(statusValue || "pending").toUpperCase()}
+              </Text>
+            </View>
         </View>
 
         <View style={styles.cardDetails}>
@@ -123,6 +141,11 @@ const SellerRequestListScreen = () => {
             Requested: {new Date(user.createdAt).toLocaleDateString()}
           </Text>
         </View> 
+        {daysExpired > 0 && (
+          <Text style={styles.expiredText}>
+            Subscription expired {daysExpired} day(s) ago
+          </Text>
+        )}
 
         <View style={styles.cardActions}>
           <TouchableOpacity 
@@ -304,6 +327,7 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   badgeText: { fontSize: 10, fontWeight: "700" },
   dateText: { fontSize: 11, color: "#ADB5BD" },
+  expiredText: { fontSize: 11, color: "#C62828", fontWeight: "700", marginBottom: 10 },
   cardActions: { flexDirection: "row", borderTopWidth: 1, borderTopColor: "#F1F3F5", paddingTop: 12 },
   btn: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 10, borderRadius: 10, flex: 1 },
   editBtn: { backgroundColor: "#F0F7FF", marginRight: 12 },

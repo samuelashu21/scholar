@@ -154,6 +154,9 @@ userSchema.pre("save", async function () {
 userSchema.index({ email: 1 });
 userSchema.index({ phone: 1 });
 userSchema.index({ "sellerRequest.status": 1 });
+userSchema.index({ "sellerRequest.subscriptionEnd": 1 });
+userSchema.index({ "sellerRequest.subscriptionLevel": -1 });
+userSchema.index({ "sellerRequest.boostActive": 1 });
 userSchema.index({ accountStatus: 1 });
 
 const User = mongoose.model("User", userSchema);

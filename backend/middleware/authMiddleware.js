@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import asyncHandler from "./asyncHandler.js";
 import User from "../models/userModel.js";
+import { downgradeExpiredSubscription } from "../utils/sellerSubscription.js";
 
 const protect = asyncHandler(async (req, res, next) => {
   const bearerToken =
@@ -30,6 +31,10 @@ const protect = asyncHandler(async (req, res, next) => {
   if (!req.user) {
     res.status(401);
     throw new Error("Not authorized, user not found");
+  }
+
+  if (req.user.isSeller && downgradeExpiredSubscription(req.user)) {
+    await req.user.save();
   }
 
   next();
@@ -80,5 +85,68 @@ const sellerOrAdmin = (req, res, next) => {
   }
 };
 
-export { protect, protectOptional, admin, seller, sellerOrAdmin };
+const approvedSellerOnly = asyncHandler(async (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Authentication required",
+      data: null,
+    });
+  }
+
+  if (req.user.isAdmin) return next();
+
+  if (!req.user.isSeller) {
+    return res.status(403).json({
+      success: false,
+      message: "Only approved sellers can post products",
+      data: null,
+    });
+  }
+
+  const status = req.user?.sellerRequest?.status;
+  if (status === "pending") {
+    return res.status(403).json({
+      success: false,
+      message: "Seller request pending admin approval",
+      data: null,
+    });
+  }
+
+  if (status === "rejected") {
+    return res.status(403).json({
+      success: false,
+      message: "Seller request rejected",
+      data: null,
+    });
+  }
+
+  if (status !== "approved") {
+    return res.status(403).json({
+      success: false,
+      message: "Only approved sellers can post products",
+      data: null,
+    });
+  }
+
+  if (req.user.accountStatus === "suspended") {
+    return res.status(403).json({
+      success: false,
+      message: "Seller account suspended",
+      data: null,
+    });
+  }
+
+  if (req.user.accountStatus !== "active") {
+    return res.status(403).json({
+      success: false,
+      message: "Only approved sellers can post products",
+      data: null,
+    });
+  }
+
+  next();
+});
+
+export { protect, protectOptional, admin, seller, sellerOrAdmin, approvedSellerOnly };
  

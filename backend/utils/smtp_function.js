@@ -159,13 +159,14 @@ export async function sendSellerRejectionEmail(user) {
     const mailOptions = {
         from: `"Shola Marketplace" <${process.env.AUTH_EMAIL}>`,
         to: user.email,
-        subject: "Rejection Email!",
+        subject: "Update on your seller application",
         html: ` 
             <div style="${emailStyles.container}">
                 <div style="background-color: #a72828ff; color: white; padding: 20px; text-align: center;"><h1>Store Rejected!</h1></div>
                 <div style="${emailStyles.body}">
-                    <h2>Dear, ${user.FirstName}!</h2>
+                    <h2>Dear ${user.FirstName},</h2>
                     <p>Your store <b>"${user.sellerProfile.storeName}"</b> has been rejected.</p> 
+                    ${user?.sellerRequest?.rejectionReason ? `<p><b>Reason:</b> ${user.sellerRequest.rejectionReason}</p>` : ""}
                     <p><b>Subscription:</b> ${user.sellerRequest.subscriptionType}</p>
                     ${user.sellerRequest.subscriptionEnd ? `<p><b>Ends on:</b> ${new Date(user.sellerRequest.subscriptionEnd).toDateString()}</p>` : ""}
                     <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;"> 
@@ -182,5 +183,55 @@ export async function sendSellerRejectionEmail(user) {
         await transporter.sendMail(mailOptions);
     } catch (error) {
         console.error("Approval Email Error:", error);
+    }
+}
+
+export async function sendSubscriptionWarningEmail(user, daysLeft) {
+    const transporter = createTransporter();
+    const mailOptions = {
+        from: `"Shola Marketplace" <${process.env.AUTH_EMAIL}>`,
+        to: user.email,
+        subject: "Your premium seller subscription expires soon",
+        html: `
+            <div style="${emailStyles.container}">
+                <div style="background-color: #f59f00; color: white; padding: 20px; text-align: center;"><h1>Subscription Reminder</h1></div>
+                <div style="${emailStyles.body}">
+                    <p>Hello ${user.FirstName},</p>
+                    <p>Your premium seller subscription will expire in <b>${daysLeft} day(s)</b>.</p>
+                    <p>Renew now to keep boosted visibility and featured placement.</p>
+                </div>
+                ${getFooter()}
+            </div>
+        `,
+    };
+    try {
+        await transporter.sendMail(mailOptions);
+    } catch (error) {
+        console.error("Subscription warning email error:", error);
+    }
+}
+
+export async function sendSubscriptionExpiredEmail(user) {
+    const transporter = createTransporter();
+    const mailOptions = {
+        from: `"Shola Marketplace" <${process.env.AUTH_EMAIL}>`,
+        to: user.email,
+        subject: "Your premium seller subscription has expired",
+        html: `
+            <div style="${emailStyles.container}">
+                <div style="background-color: #495057; color: white; padding: 20px; text-align: center;"><h1>Subscription Expired</h1></div>
+                <div style="${emailStyles.body}">
+                    <p>Hello ${user.FirstName},</p>
+                    <p>Your premium subscription has expired. Your products are now displayed as standard listings.</p>
+                    <p>Your seller account remains active and you can continue selling normally.</p>
+                </div>
+                ${getFooter()}
+            </div>
+        `,
+    };
+    try {
+        await transporter.sendMail(mailOptions);
+    } catch (error) {
+        console.error("Subscription expired email error:", error);
     }
 }

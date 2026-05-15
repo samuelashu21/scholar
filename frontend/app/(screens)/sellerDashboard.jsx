@@ -11,6 +11,21 @@ export default function SellerDashboard() {
 
   const status = userInfo?.sellerRequest?.status || "pending";
   const storeName = userInfo?.sellerProfile?.storeName || "Your Store";
+  const subscriptionType = userInfo?.sellerRequest?.subscriptionType || "free";
+  const subscriptionLevel = userInfo?.sellerRequest?.subscriptionLevel || 0;
+  const subscriptionEnd = userInfo?.sellerRequest?.subscriptionEnd
+    ? new Date(userInfo.sellerRequest.subscriptionEnd)
+    : null;
+  const now = new Date();
+  const remainingDays = subscriptionEnd ? Math.max(0, Math.ceil((subscriptionEnd - now) / (1000 * 60 * 60 * 24))) : 0;
+  const isNearExpiry = remainingDays > 0 && remainingDays <= 7;
+  const isExpired = Boolean(subscriptionEnd && subscriptionEnd <= now && subscriptionLevel > 0);
+  const hasBoost = Boolean(
+    userInfo?.sellerRequest?.boostActive &&
+      subscriptionEnd &&
+      subscriptionEnd > now &&
+      subscriptionLevel > 0
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -25,8 +40,35 @@ export default function SellerDashboard() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.card}>
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.subscriptionCard}>
+            <Text style={styles.subscriptionTitle}>Subscription Status</Text>
+            <Text style={styles.subscriptionPackage}>
+              Current package: {subscriptionType.replaceAll("_", " ").toUpperCase()}
+            </Text>
+            {subscriptionEnd ? (
+              <Text style={styles.subscriptionMeta}>
+                Active until: {subscriptionEnd.toLocaleDateString()} • {remainingDays} day(s) left
+              </Text>
+            ) : (
+              <Text style={styles.subscriptionMeta}>Free plan (standard listing visibility)</Text>
+            )}
+            <Text style={styles.subscriptionMeta}>
+              Boost visibility: {hasBoost ? "Active" : "Standard"}
+            </Text>
+            {(isNearExpiry || isExpired) && (
+              <Text style={styles.warningText}>
+                {isExpired
+                  ? "Your premium subscription has expired. Your products are now displayed as standard listings."
+                  : `Your premium subscription expires in ${remainingDays} day(s). Renew to keep boosted visibility.`}
+              </Text>
+            )}
+            <TouchableOpacity style={styles.renewBtn} onPress={() => router.push("/RequestToBeSeller")}>
+              <Text style={styles.renewBtnText}>Renew subscription</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.card}>
           <View style={styles.iconCircle}>
             <MaterialCommunityIcons name="clock-fast" size={50} color={Colors.primary} />
           </View>
@@ -76,6 +118,24 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: "800", color: "#1A1A1A" },
   backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#F8F9FA", justifyContent: "center", alignItems: "center" },
   content: { padding: 20, flexGrow: 1, justifyContent: 'center' },
+  subscriptionCard: {
+    backgroundColor: "#101828",
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 16,
+  },
+  subscriptionTitle: { color: "#D0D5DD", fontSize: 12, fontWeight: "700", textTransform: "uppercase" },
+  subscriptionPackage: { color: "white", fontSize: 18, fontWeight: "800", marginTop: 6 },
+  subscriptionMeta: { color: "#EAECF0", marginTop: 6, fontSize: 13 },
+  warningText: { color: "#FEC84B", marginTop: 10, fontSize: 12, fontWeight: "700" },
+  renewBtn: {
+    marginTop: 12,
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  renewBtnText: { color: "white", fontSize: 13, fontWeight: "800" },
   card: { backgroundColor: "white", padding: 30, borderRadius: 30, alignItems: "center", elevation: 4, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 10 },
   iconCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: "#F0F4FF", justifyContent: "center", alignItems: "center", marginBottom: 20 },
   title: { fontSize: 22, fontWeight: "800", color: "#1A1A1A", marginBottom: 10 },

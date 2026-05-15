@@ -13,7 +13,7 @@ import {
 } from "../controllers/productController.js";
 
 import { toggleLike } from "../controllers/likeController.js";
-import { protect, protectOptional, sellerOrAdmin } from "../middleware/authMiddleware.js";
+import { protect, protectOptional, approvedSellerOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -26,13 +26,13 @@ router.get("/banner", getBannerProducts);
 router
   .route("/")
   .get(protectOptional, getProducts)
-  .post(protect, sellerOrAdmin, createProduct); 
+  .post(protect, approvedSellerOnly, createProduct); 
 
 router 
   .route("/:id")
   .get(protectOptional, getProductById)
-  .put(protect, sellerOrAdmin, updateProduct)
-  .delete(protect, sellerOrAdmin, deleteProduct); 
+  .put(protect, approvedSellerOnly, updateProduct)
+  .delete(protect, approvedSellerOnly, deleteProduct); 
 
 router.put("/:id/view", protectOptional, addView);
 router.put("/:id/like", protect, toggleLike);
