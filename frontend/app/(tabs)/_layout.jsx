@@ -197,7 +197,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: Spacing.md,
   },
   iconInnerActive: {
     backgroundColor: Colors.infoLight,
