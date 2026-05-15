@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Colors } from "../constants/Utils";
 import { useRouter } from "expo-router";
+import { isAdminUser } from "../constants/roles";
 
 const OrderSummary = ({
   order,
@@ -84,7 +85,7 @@ const OrderSummary = ({
         </View>
       )}
 
-      {userInfo && userInfo.isAdmin && order.isPaid && !order.isDelivered && (
+      {userInfo && isAdminUser(userInfo) && order.isPaid && !order.isDelivered && (
         <View style={styles.adminActionSection}>
           <TouchableOpacity
             style={[styles.button, isLoadingDeliver && styles.buttonDisabled]}

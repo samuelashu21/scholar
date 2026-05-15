@@ -10,19 +10,21 @@ import {
   Platform,
   SafeAreaView,
   KeyboardAvoidingView,
-  Switch,
   StatusBar,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { useRouter, useLocalSearchParams, Stack } from "expo-router";
+import { useSelector } from "react-redux";
 import Message from "../../../components/Message";
 import { Colors } from "../../../constants/Utils";
 import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
+import { Picker } from "@react-native-picker/picker";
 import {
   useGetUserDetailsQuery,
   useUpdateUserMutation,
 } from "../../../slices/userAPiSlice";
+import { getUserRole, isAdminUser, ROLES } from "../../../constants/roles";
 
 
   const FormInput = ({
@@ -56,6 +58,7 @@ import {
 
 
 const UserEditScreen = () => {
+  const { userInfo } = useSelector((state) => state.auth);
   const router = useRouter();
   const { id: userId } = useLocalSearchParams();
 
@@ -64,8 +67,7 @@ const UserEditScreen = () => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [accountStatus, setAccountStatus] = useState("active");
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isSeller, setIsSeller] = useState(false);
+  const [role, setRole] = useState(ROLES.CUSTOMER);
 
   const {
     data: user,
@@ -82,8 +84,7 @@ const UserEditScreen = () => {
       setEmail(user.email || "");
       setPhone(user.phone || "");
       setAccountStatus(user.accountStatus || "active");
-      setIsAdmin(user.isAdmin || false);
-      setIsSeller(user.isSeller || false);
+      setRole(getUserRole(user));
     }
   }, [user]);
 
@@ -96,8 +97,7 @@ const UserEditScreen = () => {
         email,
         phone,
         accountStatus,
-        isAdmin,
-        isSeller,
+        role,
       }).unwrap();
 
       Toast.show({
@@ -120,6 +120,11 @@ const UserEditScreen = () => {
 
 
   return (
+    !isAdminUser(userInfo) ? (
+      <View style={styles.centerContainer}>
+        <Text style={styles.headerTitle}>Admin access required.</Text>
+      </View>
+    ) : (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
       <Stack.Screen options={{ headerShown: false }} />
@@ -207,32 +212,18 @@ const UserEditScreen = () => {
               <View style={styles.card}>
                 <View style={styles.switchRow}>
                   <View style={styles.switchInfo}>
-                    <Text style={styles.switchLabel}>Administrator Access</Text>
+                    <Text style={styles.switchLabel}>Role</Text>
                     <Text style={styles.switchSubLabel}>
-                      Allows full access to management tools
+                      Controls customer, seller, or admin access
                     </Text>
                   </View>
-                  <Switch
-                    value={isAdmin}
-                    onValueChange={setIsAdmin}
-                    trackColor={{ false: "#DEE2E6", true: Colors.primary }}
-                    thumbColor="#FFF"
-                  />
-                </View>
-
-                <View style={[styles.switchRow, styles.borderTop]}>
-                  <View style={styles.switchInfo}>
-                    <Text style={styles.switchLabel}>Seller Account</Text>
-                    <Text style={styles.switchSubLabel}>
-                      Allows user to list products
-                    </Text>
+                  <View style={styles.rolePickerWrap}>
+                    <Picker selectedValue={role} onValueChange={setRole} style={styles.rolePicker}>
+                      <Picker.Item label="Customer" value={ROLES.CUSTOMER} />
+                      <Picker.Item label="Seller" value={ROLES.SELLER} />
+                      <Picker.Item label="Admin" value={ROLES.ADMIN} />
+                    </Picker>
                   </View>
-                  <Switch
-                    value={isSeller}
-                    onValueChange={setIsSeller}
-                    trackColor={{ false: "#DEE2E6", true: "#FD7E14" }}
-                    thumbColor="#FFF"
-                  />
                 </View>
 
                 <View style={[styles.switchRow, styles.borderTop]}>
@@ -271,6 +262,7 @@ const UserEditScreen = () => {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    )
   );
 };
 
@@ -282,6 +274,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
+  centerContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -354,6 +347,17 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   statusToggleText: { fontSize: 12, fontWeight: "600", color: "#495057" },
+  rolePickerWrap: {
+    width: 160,
+    borderWidth: 1,
+    borderColor: "#DEE2E6",
+    borderRadius: 8,
+    overflow: "hidden",
+    backgroundColor: "#F8F9FA",
+  },
+  rolePicker: {
+    height: 44,
+  },
 
   deleteUserBtn: { marginTop: 30, alignItems: "center", padding: 15 },
   deleteUserText: { color: "#D63939", fontWeight: "600", fontSize: 14 },

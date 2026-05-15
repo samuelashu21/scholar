@@ -1,11 +1,12 @@
 import cron from "node-cron";
 import User from "../models/userModel.js";
+import { ROLES } from "../constants/roles.js";
 
 export const runSubscriptionExpirationJob = async () => {
   const now = new Date();
   const result = await User.updateMany(
     {
-      isSeller: true,
+      role: ROLES.SELLER,
       "sellerRequest.status": "approved",
       "sellerRequest.subscriptionEnd": { $lte: now },
       "sellerRequest.subscriptionLevel": { $gt: 0 },

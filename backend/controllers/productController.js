@@ -4,6 +4,7 @@ import Category from "../models/categoryModel.js";
 import Subcategory from "../models/subcategoryModel.js"; // Import Subcategory
 import Like from "../models/likeModel.js";
 import mongoose from 'mongoose';
+import { isAdminRole } from "../constants/roles.js";
 
  
 export const getProducts = asyncHandler(async (req, res) => {
@@ -262,7 +263,7 @@ const updateProduct = asyncHandler(async (req, res) => {
   // Only the seller who owns the product or admin can update
   if (
     product.user.toString() !== req.user._id.toString() &&
-    !req.user.isAdmin
+    !isAdminRole(req.user)
   ) {
     res.status(401);
     throw new Error("Not authorized to update this product");
@@ -306,7 +307,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
   // Only the seller who owns the product or admin can delete
   if (
     product.user.toString() !== req.user._id.toString() &&
-    !req.user.isAdmin
+    !isAdminRole(req.user)
   ) {
     res.status(401);
     throw new Error("Not authorized to delete this product");

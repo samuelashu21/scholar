@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import React, { useState, useMemo } from "react";
 import { useRouter, Stack } from "expo-router";
+import { useSelector } from "react-redux";
 import Toast from "react-native-toast-message";
 import Message from "../../../components/Message";
 import {
@@ -22,8 +23,10 @@ import {
 } from "../../../slices/userAPiSlice";
 import { Colors } from "../../../constants/Utils";
 import { Ionicons } from "@expo/vector-icons";
+import { getUserRole, isAdminUser, isSellerUser, ROLES } from "../../../constants/roles";
 
 const UserListScreen = () => {
+  const { userInfo } = useSelector((state) => state.auth);
   const { data: users, refetch, isLoading, error } = useGetUsersQuery();
   const [deleteUser] = useDeleteUserMutation();
   const router = useRouter();
@@ -44,9 +47,9 @@ const UserListScreen = () => {
 
         const matchesTab =
           activeFilter === "All" ||
-          (activeFilter === "Admin" && user.isAdmin) ||
-          (activeFilter === "Seller" && user.isSeller) || // Assuming isSeller exists in your model
-          (activeFilter === "Customer" && !user.isAdmin && !user.isSeller);
+          (activeFilter === "Admin" && isAdminUser(user)) ||
+          (activeFilter === "Seller" && isSellerUser(user)) ||
+          (activeFilter === "Customer" && getUserRole(user) === ROLES.CUSTOMER);
 
         return matchesSearch && matchesTab;
       })
@@ -84,6 +87,14 @@ const UserListScreen = () => {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (!isAdminUser(userInfo)) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.headerTitle}>Admin access required.</Text>
       </View>
     );
   }
@@ -159,11 +170,11 @@ const UserListScreen = () => {
                     <Text style={styles.userName} numberOfLines={1}>{user.FirstName}</Text>
                     
                     {/* DYNAMIC BADGES */}
-                    {user.isAdmin ? (
+                    {getUserRole(user) === ROLES.ADMIN ? (
                       <View style={[styles.badge, styles.badgeAdmin]}>
                         <Text style={styles.badgeTextAdmin}>ADMIN</Text>
                       </View>
-                    ) : user.isSeller ? (
+                    ) : getUserRole(user) === ROLES.SELLER ? (
                       <View style={[styles.badge, styles.badgeSeller]}>
                         <Text style={styles.badgeTextSeller}>SELLER</Text>
                       </View>
@@ -183,7 +194,7 @@ const UserListScreen = () => {
                   >
                     <Ionicons name="create-outline" size={20} color={Colors.primary} />
                   </TouchableOpacity>
-                  {!user.isAdmin && (
+                  {!isAdminUser(user) && (
                     <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteHandler(user._id)}>
                       <Ionicons name="trash-outline" size={20} color="#FF4D4D" />
                     </TouchableOpacity>

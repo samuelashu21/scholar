@@ -30,6 +30,7 @@ import {
   useUploadProfileImageMutation,
 } from "../../slices/userAPiSlice";
 import { setCredentials } from "../../slices/authSlice";
+import { ROLES } from "../../constants/roles";
 
 const PLANS = [
   { id: "free", label: "FREE", price: "$0", tier: 0, icon: "person-outline", features: ["Standard placement", "Basic store profile", "Self-service dashboard"] },
@@ -129,8 +130,15 @@ export default function RequestToBeSeller() {
       
       dispatch(setCredentials({
         ...userInfo,
+        role: ROLES.CUSTOMER,
         sellerProfile: { storeName, storeDescription, storeLogo },
-        sellerRequest: { isRequested: true, status: "pending", subscriptionType },
+        sellerRequest: {
+          isRequested: true,
+          status: "pending",
+          requestedAt: new Date().toISOString(),
+          approvedAt: null,
+          subscriptionType,
+        },
       }));
 
       Toast.show({ type: "success", text1: "Request Sent" });

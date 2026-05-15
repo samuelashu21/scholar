@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import validator from "validator";
+import { ROLES, normalizeRole } from "../constants/roles.js";
 
 const userSchema = mongoose.Schema(
   {
@@ -38,13 +39,10 @@ const userSchema = mongoose.Schema(
         message: "Phone must start with +251 and be followed by 9 digits",
       },
     },
-    isSeller: {
-      type: Boolean,
-      default: false,
-    },
-    isAdmin: {
-      type: Boolean,
-      default: false,
+    role: {
+      type: String,
+      enum: Object.values(ROLES),
+      default: ROLES.CUSTOMER,
     },
     profileImage: {
       type: String,
@@ -66,9 +64,11 @@ sellerRequest: {
       isRequested: { type: Boolean, default: false },
       status: {
         type: String,
-        enum: ["pending", "approved", "rejected"],
-        default: "pending",
+        enum: ["none", "pending", "approved", "rejected"],
+        default: "none",
       },
+      requestedAt: { type: Date, default: null },
+      approvedAt: { type: Date, default: null },
       rejectionReason: { type: String, default: "" }, 
       subscriptionType: { 
         type: String,
@@ -150,9 +150,15 @@ userSchema.pre("save", async function () {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
+userSchema.pre("validate", function (next) {
+  this.role = normalizeRole(this.role);
+  next();
+});
+
 // Indexes for better query performance
 userSchema.index({ email: 1 });
 userSchema.index({ phone: 1 });
+userSchema.index({ role: 1 });
 userSchema.index({ "sellerRequest.status": 1 });
 userSchema.index({ "sellerRequest.subscriptionEnd": 1 });
 userSchema.index({ "sellerRequest.subscriptionLevel": -1 });

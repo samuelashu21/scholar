@@ -20,9 +20,12 @@ import { resetCart } from "../../slices/cartSlice";
 
 import { Colors } from "../../constants/Utils";
 import { BASE_URL } from "../../constants/Urls";
+import { isAdminUser, isSellerUser } from "../../constants/roles";
 
 const Account = () => {
   const { userInfo } = useSelector((state) => state.auth);
+  const isAdmin = isAdminUser(userInfo);
+  const isSeller = isSellerUser(userInfo);
 
   const dispatch = useDispatch();
   const router = useRouter();
@@ -277,12 +280,12 @@ const Account = () => {
             SELLER SECTION
         ========================== */}
 
-        {!userInfo.isAdmin && (
+        {!isAdmin && (
           <>
             <SectionHeader title="Selling" />
 
             <View style={styles.menuCard}>
-              {userInfo.isSeller ? (
+              {isSeller ? (
                 <MenuItem
                   icon="cube-outline"
                   title="Seller Dashboard"
@@ -313,7 +316,7 @@ const Account = () => {
             ADMIN SECTION
         ========================== */}
 
-        {userInfo.isAdmin && (
+        {isAdmin && (
           <>
             <SectionHeader title="Administrator Tools" />
 

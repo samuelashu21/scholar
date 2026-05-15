@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../../constants/Utils";
 import { useGetMyProductsQuery } from "../../slices/productsApiSlice";
+import { isSellerUser } from "../../constants/roles";
 
 const StatCard = ({ label, value, icon, color = Colors.primary }) => (
   <View style={styles.statCard}>
@@ -29,6 +30,7 @@ const StatCard = ({ label, value, icon, color = Colors.primary }) => (
 export default function SellerDashboard() {
   const router = useRouter();
   const { userInfo } = useSelector((state) => state.auth);
+  const canAccessSellerDashboard = isSellerUser(userInfo);
 
   const { data, isLoading } = useGetMyProductsQuery({
     pageNumber: 1,
@@ -36,7 +38,7 @@ export default function SellerDashboard() {
     sort: "-createdAt",
   });
 
-  const status = userInfo?.sellerRequest?.status || "pending";
+  const status = userInfo?.sellerRequest?.status || "none";
   const storeName = userInfo?.sellerProfile?.storeName || "Your Store";
   const subscriptionType = userInfo?.sellerRequest?.subscriptionType || "free";
   const subscriptionEnd = userInfo?.sellerRequest?.subscriptionEnd
@@ -77,6 +79,14 @@ export default function SellerDashboard() {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (!canAccessSellerDashboard) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.emptyText}>Seller access required.</Text>
       </View>
     );
   }

@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import React, { useState, useMemo } from "react";
 import { useRouter, Stack } from "expo-router";
+import { useSelector } from "react-redux";
 import Toast from "react-native-toast-message";
 import Message from "../../../components/Message";
 import { useDeleteUserMutation, useGetSellerRequestsQuery } from "../../../slices/userAPiSlice";
@@ -23,8 +24,10 @@ import {
   filterByDateRange,
   runPdfAction,
 } from "../../../utils/reportGenerator";
+import { isAdminUser } from "../../../constants/roles";
 
 const SellerRequestListScreen = () => {
+  const { userInfo } = useSelector((state) => state.auth);
   const { data: users, refetch, isLoading, error } = useGetSellerRequestsQuery();
   const [deleteUser] = useDeleteUserMutation();
   const router = useRouter();
@@ -65,7 +68,7 @@ const SellerRequestListScreen = () => {
         user.email?.toLowerCase().includes(searchQuery.toLowerCase());
 
       const userSub = user.sellerRequest?.subscriptionType;
-      const userStatus = user.sellerRequest?.status || "pending";
+      const userStatus = user.sellerRequest?.status || "none";
       const isSuspended = user.accountStatus === "suspended";
       const hasExpiredSubscription =
         user.sellerRequest?.subscriptionEnd &&
@@ -152,7 +155,7 @@ const SellerRequestListScreen = () => {
   const renderUser = ({ item: user }) => {
     const subStyle = getSubscriptionStyle(user.sellerRequest?.subscriptionType);
     const statusValue =
-      user.accountStatus === "suspended" ? "suspended" : user.sellerRequest?.status || "pending";
+      user.accountStatus === "suspended" ? "suspended" : user.sellerRequest?.status || "none";
     const statusStyle = getStatusStyle(statusValue);
     const subscriptionEnd = user?.sellerRequest?.subscriptionEnd
       ? new Date(user.sellerRequest.subscriptionEnd)
@@ -180,7 +183,7 @@ const SellerRequestListScreen = () => {
           <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
             <Ionicons name={statusStyle.icon} size={12} color={statusStyle.text} />
             <Text style={[styles.statusBadgeText, { color: statusStyle.text }]}>
-              {(statusValue || "pending").toUpperCase()}
+              {(statusValue || "none").toUpperCase()}
             </Text>
           </View>
         </View>
@@ -189,7 +192,7 @@ const SellerRequestListScreen = () => {
           <View style={[styles.badge, { backgroundColor: subStyle.bg }]}>
             <Text style={[styles.badgeText, { color: subStyle.text }]}>{subStyle.label} PLAN</Text>
           </View>
-          <Text style={styles.dateText}>Requested: {new Date(user.createdAt).toLocaleDateString()}</Text>
+          <Text style={styles.dateText}>Requested: {new Date(user.sellerRequest?.requestedAt || user.createdAt).toLocaleDateString()}</Text>
         </View>
         {daysExpired > 0 && (
           <Text style={styles.expiredText}>Subscription expired {daysExpired} day(s) ago</Text>
@@ -240,6 +243,14 @@ const SellerRequestListScreen = () => {
     return (
       <View style={styles.loaderContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (!isAdminUser(userInfo)) {
+    return (
+      <View style={styles.loaderContainer}>
+        <Text style={styles.emptyText}>Admin access required.</Text>
       </View>
     );
   }
