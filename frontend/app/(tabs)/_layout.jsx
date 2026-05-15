@@ -1,14 +1,48 @@
+import { useMemo } from "react";
 import { Tabs } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { View, Text, Image, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors, Layout, Radius, Shadows, Spacing, Typography } from "../../constants/Utils";
 import { useGetWishlistQuery } from "../../slices/wishlistApiSlice";
 import { useGetMyChatsQuery } from "../../slices/chatApiSlice";
 import { useSelector } from "react-redux";
 import { BASE_URL } from "../../constants/Urls";
 
+const MIN_TOUCH_TARGET = 44;
+const BASE_TAB_BAR_HEIGHT = 64;
+const TAB_BAR_ITEM_MIN_HEIGHT = 56;
+const ICON_WRAP_WIDTH = 52;
+const ICON_WRAP_MIN_HEIGHT = 48;
+
+const getTabBarLayout = (bottomInset) => {
+  const horizontalInset = Layout.isSmallDevice ? Spacing.md : Spacing.lg;
+  const safeBottom = Math.max(bottomInset, Spacing.sm);
+
+  return {
+    left: horizontalInset,
+    right: horizontalInset,
+    bottom: Math.max(Math.min(bottomInset, Spacing.md), Spacing.sm),
+    height: BASE_TAB_BAR_HEIGHT + safeBottom,
+    paddingTop: Spacing.sm,
+    paddingBottom: safeBottom,
+  };
+};
+
+const TabIcon = ({ focused, badge, children }) => (
+  <View style={styles.iconWrap}>
+    <View style={[styles.iconInner, focused && styles.iconInnerActive]}>{children}</View>
+    {!!badge && (
+      <View style={styles.badge}>
+        <Text style={styles.badgeText}>{badge > 9 ? "9+" : badge}</Text>
+      </View>
+    )}
+  </View>
+);
+
 export default function TabLayout() {
   const { userInfo } = useSelector((state) => state.auth);
+  const insets = useSafeAreaInsets();
 
   const { data: wishlist } = useGetWishlistQuery();
   const wishlistCount = wishlist?.length || 0;
@@ -30,18 +64,7 @@ export default function TabLayout() {
     return imagePath.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
   };
 
-  const TabIcon = ({ focused, name, activeName, color, badge }) => (
-    <View style={styles.iconWrap}>
-      <View style={[styles.iconInner, focused && styles.iconInnerActive]}>
-        <Ionicons size={20} name={focused ? activeName : name} color={color} />
-      </View>
-      {!!badge && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{badge > 9 ? "9+" : badge}</Text>
-        </View>
-      )}
-    </View>
-  );
+  const tabBarStyle = useMemo(() => [styles.tabBar, getTabBarLayout(insets.bottom)], [insets.bottom]);
 
   return (
     <Tabs
@@ -49,7 +72,9 @@ export default function TabLayout() {
         headerShown: false,
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.gray,
-        tabBarStyle: styles.tabBar,
+        tabBarHideOnKeyboard: true,
+        tabBarStyle: tabBarStyle,
+        tabBarItemStyle: styles.tabBarItem,
         tabBarLabelStyle: styles.tabBarLabel,
       }}
     >
@@ -58,7 +83,9 @@ export default function TabLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ focused, color }) => (
-            <TabIcon focused={focused} name="home-outline" activeName="home" color={color} />
+            <TabIcon focused={focused}>
+              <Ionicons size={20} name={focused ? "home" : "home-outline"} color={color} />
+            </TabIcon>
           ),
         }}
       />
@@ -68,7 +95,9 @@ export default function TabLayout() {
         options={{
           title: "Shop",
           tabBarIcon: ({ focused, color }) => (
-            <TabIcon focused={focused} name="grid-outline" activeName="grid" color={color} />
+            <TabIcon focused={focused}>
+              <Ionicons size={20} name={focused ? "grid" : "grid-outline"} color={color} />
+            </TabIcon>
           ),
         }}
       />
@@ -78,13 +107,9 @@ export default function TabLayout() {
         options={{
           title: "Saved",
           tabBarIcon: ({ focused, color }) => (
-            <TabIcon
-              focused={focused}
-              name="bookmark-outline"
-              activeName="bookmark"
-              color={color}
-              badge={wishlistCount}
-            />
+            <TabIcon focused={focused} badge={wishlistCount}>
+              <Ionicons size={20} name={focused ? "bookmark" : "bookmark-outline"} color={color} />
+            </TabIcon>
           ),
         }}
       />
@@ -94,13 +119,9 @@ export default function TabLayout() {
         options={{
           title: "Chat",
           tabBarIcon: ({ focused, color }) => (
-            <TabIcon
-              focused={focused}
-              name="chatbubbles-outline"
-              activeName="chatbubbles"
-              color={color}
-              badge={totalUnread}
-            />
+            <TabIcon focused={focused} badge={totalUnread}>
+              <Ionicons size={20} name={focused ? "chatbubbles" : "chatbubbles-outline"} color={color} />
+            </TabIcon>
           ),
         }}
       />
@@ -110,7 +131,9 @@ export default function TabLayout() {
         options={{
           title: "Orders",
           tabBarIcon: ({ focused, color }) => (
-            <TabIcon focused={focused} name="bag-check-outline" activeName="bag-check" color={color} />
+            <TabIcon focused={focused}>
+              <Ionicons size={20} name={focused ? "bag-check" : "bag-check-outline"} color={color} />
+            </TabIcon>
           ),
         }}
       />
@@ -122,21 +145,20 @@ export default function TabLayout() {
           tabBarIcon: ({ focused, color }) => {
             if (userInfo?.profileImage) {
               return (
-                <View style={[styles.profileWrap, focused && styles.profileWrapActive]}>
-                  <Image
-                    source={{ uri: getImageUrl(userInfo.profileImage) }}
-                    style={styles.profileImage}
-                  />
-                </View>
+                <TabIcon focused={focused}>
+                  <View style={[styles.profileWrap, focused && styles.profileWrapActive]}>
+                    <Image
+                      source={{ uri: getImageUrl(userInfo.profileImage) }}
+                      style={styles.profileImage}
+                    />
+                  </View>
+                </TabIcon>
               );
             }
             return (
-              <TabIcon
-                focused={focused}
-                name="person-outline"
-                activeName="person"
-                color={color}
-              />
+              <TabIcon focused={focused}>
+                <Ionicons size={20} name={focused ? "person" : "person-outline"} color={color} />
+              </TabIcon>
             );
           },
         }}
@@ -147,24 +169,31 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: Layout.tabBarHeight,
+    position: "absolute",
     backgroundColor: Colors.white,
     borderTopWidth: 0,
-    paddingTop: Spacing.xs,
-    paddingBottom: Spacing.sm,
-    ...Shadows.md,
+    borderRadius: Radius.xl,
+    paddingHorizontal: Spacing.sm,
+    ...Shadows.lg,
+  },
+  tabBarItem: {
+    minHeight: TAB_BAR_ITEM_MIN_HEIGHT,
+    paddingVertical: Spacing.xs,
   },
   tabBarLabel: {
     fontSize: Typography.size.xs,
     fontWeight: Typography.weight.semibold,
+    marginTop: Spacing.xs,
   },
   iconWrap: {
+    width: ICON_WRAP_WIDTH,
+    minHeight: ICON_WRAP_MIN_HEIGHT,
     alignItems: "center",
     justifyContent: "center",
   },
   iconInner: {
-    width: 36,
-    height: 28,
+    width: MIN_TOUCH_TARGET,
+    height: MIN_TOUCH_TARGET,
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
@@ -174,8 +203,8 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: "absolute",
-    top: -2,
-    right: -9,
+    top: 3,
+    right: 1,
     backgroundColor: Colors.primary,
     borderRadius: Radius.pill,
     minWidth: 16,
@@ -192,16 +221,22 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weight.bold,
   },
   profileWrap: {
+    width: 32,
+    height: 32,
     borderRadius: Radius.pill,
     padding: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.surfaceMuted,
   },
   profileWrapActive: {
     borderWidth: 2,
     borderColor: Colors.primary,
+    backgroundColor: Colors.white,
   },
   profileImage: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
 }); 
