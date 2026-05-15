@@ -1,41 +1,56 @@
-
 import {
   StyleSheet,
   Text,
   View,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   Platform,
   SafeAreaView,
-} from "react-native"; 
-import React, { useEffect } from "react";
+  Image,
+} from "react-native";
+import React, { useEffect, useMemo } from "react";
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Product from "../../components/Product";
-import Message from "../../components/Message";
 import Header from "../../components/Header";
 
-import { Colors } from "../../constants/Utils";
+import { Colors, Radius, Shadows, Spacing, Typography } from "../../constants/Utils";
 import { useGetProductsQuery } from "../../slices/productsApiSlice";
+import { BASE_URL } from "../../constants/Urls";
+import EmptyState from "../../components/ui/EmptyState";
+import Message from "../../components/Message";
+import SkeletonBlock from "../../components/ui/SkeletonBlock";
 
 const Home = () => {
-  // 1. Destructure 'category' from search params
   const { keyword = "", pageNumber = "1", category = "" } = useLocalSearchParams();
+  const router = useRouter();
 
-  const router = useRouter(); 
-
-  // 2. Pass 'category' into the RTK Query hook
   const { data, isLoading, error, refetch } = useGetProductsQuery({
     keyword,
     pageNumber: Number(pageNumber),
-    category, // This matches your backend controller's req.query.category
+    category,
   });
 
-  // 3. Ensure refetch happens when category changes
   useEffect(() => {
     refetch();
   }, [keyword, pageNumber, category, refetch]);
+
+  const products = data?.products || [];
+
+  const trendingProducts = useMemo(
+    () => [...products].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 8),
+    [products]
+  );
+
+  const recommendedProducts = useMemo(
+    () => [...products].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 8),
+    [products]
+  );
+
+  const getImage = (path) => {
+    if (!path) return null;
+    return path.startsWith("http") ? path : `${BASE_URL}${path}`;
+  };
 
   const renderPaginationButtons = () => {
     if (!data?.pages || data.pages <= 1) return null;
@@ -45,24 +60,16 @@ const Home = () => {
         {Array.from({ length: data.pages }, (_, i) => i + 1).map((page) => (
           <TouchableOpacity
             key={page}
-            style={[
-              styles.pageButton,
-              page === data.page && styles.activePageButton,
-            ]}
+            style={[styles.pageButton, page === data.page && styles.activePageButton]}
             onPress={() => {
               router.setParams({
                 pageNumber: page.toString(),
                 ...(keyword ? { keyword } : {}),
-                ...(category ? { category } : {}), // Persist category during pagination
+                ...(category ? { category } : {}),
               });
             }}
           >
-            <Text
-              style={[
-                styles.pageButtonText,
-                page === data.page && styles.activePageButtonText,
-              ]}
-            >
+            <Text style={[styles.pageButtonText, page === data.page && styles.activePageButtonText]}>
               {page}
             </Text>
           </TouchableOpacity>
@@ -70,53 +77,94 @@ const Home = () => {
       </View>
     );
   };
- 
+
+  const HorizontalRail = ({ title, items }) => {
+    if (!items?.length) return null;
+
+    return (
+      <View style={styles.railWrap}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <FlatList
+          data={items}
+          horizontal
+          keyExtractor={(item) => item._id}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.railList}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.railCard}
+              onPress={() => router.push({ pathname: "/(screens)/ProductScreen", params: { productId: item._id } })}
+              activeOpacity={0.9}
+            >
+              <Image source={{ uri: getImage(item.image) }} style={styles.railImage} />
+              <Text numberOfLines={2} style={styles.railName}>{item.name}</Text>
+              <Text style={styles.railPrice}>${item.price}</Text>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
+    );
+  };
+
   const ListHeader = () => (
     <>
       <Header />
+
+      {isLoading && (
+        <View style={styles.skeletonWrap}>
+          <SkeletonBlock height={100} style={styles.skeletonCard} />
+          <SkeletonBlock height={100} style={styles.skeletonCard} />
+        </View>
+      )}
+
+      {!isLoading && !error && (
+        <>
+          <HorizontalRail title="Trending now" items={trendingProducts} />
+          <HorizontalRail title="Recommended for you" items={recommendedProducts} />
+
+          <View style={styles.gridHeaderWrap}>
+            <Text style={styles.sectionTitle}>All products</Text>
+          </View>
+        </>
+      )}
+
       {error && (
-        <Message variant="error" style={styles.errorMessage}>
+        <Message variant="error">
           {error?.data?.message || error?.error || "Failed to fetch products"}
         </Message>
       )}
     </>
   );
 
-  const ListFooter = () => renderPaginationButtons();
-
   return (
     <SafeAreaView style={styles.safeArea}>
-      {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
-      ) : (
-        <FlatList
-          data={data?.products}
-          keyExtractor={(item) => item._id}
-          renderItem={({ item }) => <Product product={item} />}
-          contentContainerStyle={styles.list}
-          numColumns={2}
-          columnWrapperStyle={styles.columnWrapper}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={ListHeader}
-          ListFooterComponent={ListFooter}
-          ListEmptyComponent={
-            !error && (
-              <Message variant="info" style={styles.emptyMessage}>
-                No products available in this category
-              </Message>
-            )
-          }
-        />
-      )}
+      <FlatList
+        data={isLoading ? [] : products}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item }) => <Product product={item} />}
+        contentContainerStyle={styles.list}
+        numColumns={2}
+        columnWrapperStyle={styles.columnWrapper}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={ListHeader}
+        ListFooterComponent={renderPaginationButtons}
+        ListEmptyComponent={
+          !isLoading &&
+          !error && (
+            <EmptyState
+              title="No products found"
+              description="Try another category or search keyword."
+              actionLabel="Clear filters"
+              onAction={() => router.setParams({ category: "", keyword: "", pageNumber: "1" })}
+            />
+          )
+        }
+      />
     </SafeAreaView>
   );
 };
 
 export default Home;
- 
-// ... styles remain the same
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -124,54 +172,92 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.offWhite,
     paddingTop: Platform.OS === "android" ? 25 : 0,
   },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  errorMessage: {
-    marginHorizontal: 10,
-    marginBottom: 10,
-  },
-  emptyMessage: {
-    marginTop: 20,
-    alignSelf: "center",
-  },
   list: {
-    paddingBottom: 20,
-    paddingHorizontal: 10,
+    paddingBottom: Spacing.xxl,
+    paddingHorizontal: Spacing.screen,
   },
   columnWrapper: {
     justifyContent: "space-between",
-    marginBottom: 15,
+  },
+  skeletonWrap: {
+    marginTop: Spacing.md,
+    gap: Spacing.sm,
+  },
+  skeletonCard: {
+    borderRadius: Radius.lg,
+  },
+  railWrap: {
+    marginTop: Spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.bold,
+    color: Colors.darkGray,
+  },
+  railList: {
+    paddingTop: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  railCard: {
+    width: 148,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.white,
+    padding: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.lightGray,
+    ...Shadows.sm,
+  },
+  railImage: {
+    width: "100%",
+    height: 94,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surfaceMuted,
+  },
+  railName: {
+    marginTop: Spacing.sm,
+    minHeight: 34,
+    color: Colors.darkGray,
+    fontWeight: Typography.weight.semibold,
+    fontSize: Typography.size.sm,
+  },
+  railPrice: {
+    marginTop: 2,
+    color: Colors.primary,
+    fontWeight: Typography.weight.bold,
+    fontSize: Typography.size.md,
+  },
+  gridHeaderWrap: {
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.sm,
   },
   paginationContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 20,
+    paddingVertical: Spacing.xl,
     flexWrap: "wrap",
-    gap: 10,
+    gap: Spacing.sm,
   },
   pageButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: Radius.pill,
     backgroundColor: Colors.white,
     borderWidth: 1,
-    borderColor: Colors.primary,
-    minWidth: 40,
+    borderColor: Colors.lightGray,
     alignItems: "center",
+    justifyContent: "center",
   },
   activePageButton: {
     backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   pageButtonText: {
-    color: Colors.primary,
-    fontWeight: "600",
+    color: Colors.darkGray,
+    fontWeight: Typography.weight.semibold,
+    fontSize: Typography.size.sm,
   },
   activePageButtonText: {
     color: Colors.white,
   },
-});
- 
+}); 
