@@ -10,6 +10,10 @@ import { useSelector } from "react-redux";
 import { BASE_URL } from "../../constants/Urls";
 
 const MIN_TOUCH_TARGET = 44;
+const BASE_TAB_BAR_HEIGHT = 64;
+const TAB_BAR_ITEM_MIN_HEIGHT = 56;
+const ICON_WRAP_WIDTH = 52;
+const ICON_WRAP_MIN_HEIGHT = 48;
 
 const getTabBarLayout = (bottomInset) => {
   const horizontalInset = Layout.isSmallDevice ? Spacing.md : Spacing.lg;
@@ -19,7 +23,7 @@ const getTabBarLayout = (bottomInset) => {
     left: horizontalInset,
     right: horizontalInset,
     bottom: Math.max(Math.min(bottomInset, Spacing.md), Spacing.sm),
-    height: Math.max(Layout.tabBarHeight, 64 + bottomInset),
+    height: Math.max(Layout.tabBarHeight, BASE_TAB_BAR_HEIGHT + bottomInset),
     paddingTop: Spacing.sm,
     paddingBottom: safeBottom,
   };
@@ -173,17 +177,17 @@ const styles = StyleSheet.create({
     ...Shadows.lg,
   },
   tabBarItem: {
-    minHeight: 56,
+    minHeight: TAB_BAR_ITEM_MIN_HEIGHT,
     paddingVertical: Spacing.xs,
   },
   tabBarLabel: {
     fontSize: Typography.size.xs,
     fontWeight: Typography.weight.semibold,
-    marginTop: 4,
+    marginTop: Spacing.xs,
   },
   iconWrap: {
-    width: 52,
-    minHeight: 48,
+    width: ICON_WRAP_WIDTH,
+    minHeight: ICON_WRAP_MIN_HEIGHT,
     alignItems: "center",
     justifyContent: "center",
   },
