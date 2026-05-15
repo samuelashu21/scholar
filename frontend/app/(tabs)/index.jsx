@@ -16,6 +16,7 @@ import Header from "../../components/Header";
 
 import { Colors, Radius, Shadows, Spacing, Typography } from "../../constants/Utils";
 import { useGetProductsQuery } from "../../slices/productsApiSlice";
+import { useGetBannerProductsQuery } from "../../slices/productsApiSlice";
 import { BASE_URL } from "../../constants/Urls";
 import EmptyState from "../../components/ui/EmptyState";
 import Message from "../../components/Message";
@@ -30,6 +31,7 @@ const Home = () => {
     pageNumber: Number(pageNumber),
     category,
   });
+  const { data: bannerProducts = [] } = useGetBannerProductsQuery(8);
 
   useEffect(() => {
     refetch();
@@ -110,6 +112,42 @@ const Home = () => {
     <>
       <Header />
 
+      {!!bannerProducts?.length && (
+        <View style={styles.bannerWrap}>
+          <Text style={styles.sectionTitle}>Featured Marketplace Picks</Text>
+          <FlatList
+            data={bannerProducts}
+            horizontal
+            keyExtractor={(item) => `banner-${item._id}`}
+            showsHorizontalScrollIndicator={false}
+            pagingEnabled
+            snapToAlignment="center"
+            decelerationRate="fast"
+            contentContainerStyle={styles.bannerList}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.bannerCard}
+                onPress={() =>
+                  router.push({ pathname: "/(screens)/ProductScreen", params: { productId: item._id } })
+                }
+                activeOpacity={0.9}
+              >
+                <Image source={{ uri: getImage(item.image) }} style={styles.bannerImage} />
+                <View style={styles.bannerOverlay}>
+                  <View style={styles.sponsoredBadge}>
+                    <Text style={styles.sponsoredText}>Sponsored</Text>
+                  </View>
+                  <Text numberOfLines={1} style={styles.bannerName}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.bannerPrice}>${item.price}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      )}
+
       {isLoading && (
         <View style={styles.skeletonWrap}>
           <SkeletonBlock height={100} style={styles.skeletonCard} />
@@ -188,6 +226,56 @@ const styles = StyleSheet.create({
   },
   railWrap: {
     marginTop: Spacing.lg,
+  },
+  bannerWrap: {
+    marginTop: Spacing.md,
+  },
+  bannerList: {
+    gap: Spacing.sm,
+    paddingTop: Spacing.sm,
+  },
+  bannerCard: {
+    width: 300,
+    height: 170,
+    borderRadius: Radius.xl,
+    overflow: "hidden",
+    marginRight: Spacing.sm,
+  },
+  bannerImage: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: Colors.surfaceMuted,
+  },
+  bannerOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: Spacing.sm,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  sponsoredBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#F59E0B",
+    borderRadius: Radius.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginBottom: 4,
+  },
+  sponsoredText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: Typography.weight.bold,
+  },
+  bannerName: {
+    color: "#fff",
+    fontSize: Typography.size.md,
+    fontWeight: Typography.weight.bold,
+  },
+  bannerPrice: {
+    color: "#fff",
+    fontSize: Typography.size.sm,
+    marginTop: 2,
   },
   sectionTitle: {
     fontSize: Typography.size.lg,

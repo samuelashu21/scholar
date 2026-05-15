@@ -17,6 +17,7 @@ import uploadProfileRoutes from "./routes/uploadProfileRoutes.js";
 import User from "./models/userModel.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import { startSubscriptionExpirationCron } from "./jobs/subscriptionExpirationJob.js";
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ if (missing.length > 0) {
 }
 
 connectDB();
+startSubscriptionExpirationCron();
 
 const app = express();
 const port = 9090;

@@ -4,7 +4,7 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  ActivityIndicator,
+  ActivityIndicator, 
   ScrollView,
   Platform,
   SafeAreaView,

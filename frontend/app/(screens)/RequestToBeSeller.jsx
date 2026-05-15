@@ -69,7 +69,7 @@ export default function RequestToBeSeller() {
   const sellerRequest = userInfo?.sellerRequest;
   const isPending = sellerRequest?.status === "pending";
   const isRejected = sellerRequest?.status === "rejected";
-  const isProcessed = isPending || isRejected;
+  const isProcessed = isPending;
   const rejectionReason = sellerRequest?.rejectionReason;
 
   const selectedPlan = PLANS.find(p => p.id === subscriptionType);
@@ -170,7 +170,7 @@ export default function RequestToBeSeller() {
                 <Text style={styles.statusTitle}>{isRejected ? "Review Completed" : "Application in Progress"}</Text>
                 <View style={[styles.statusBadge, isRejected ? styles.rejectedBadge : styles.pendingBadge]}>
                   <Text style={[styles.statusBadgeText, isRejected ? styles.rejectedBadgeText : styles.pendingBadgeText]}>
-                    {isRejected ? "REJECTED" : "PENDING"}
+                    {isRejected ? "REAPPLY AVAILABLE" : "PENDING"}
                   </Text>
                 </View>
               </View>
@@ -294,7 +294,7 @@ export default function RequestToBeSeller() {
                 <ActivityIndicator color="white" />
               ) : (
                 <Text style={styles.submitText}>
-                  {isRejected ? "Request Rejected" : isPending ? "Waiting for Approval" : "Launch My Store"}
+                  {isRejected ? "Reapply for Seller Access" : isPending ? "Waiting for Approval" : "Launch My Store"}
                 </Text>
               )}
             </TouchableOpacity>
@@ -388,4 +388,4 @@ const styles = StyleSheet.create({
   submitText: { color: "white", fontSize: 16, fontWeight: "700" },
   uploadLink: { marginTop: 15, alignItems: 'center' },
   uploadLinkText: { color: Colors.primary || "#007AFF", fontSize: 13, fontWeight: '600' }
-});
+}); 

@@ -29,6 +29,8 @@ export const getProducts = asyncHandler(async (req, res) => {
   if (subcategory) query.subcategory = new mongoose.Types.ObjectId(subcategory);
 
   // 2. The Aggregation Pipeline (The "Magic" Sort)
+  const now = new Date();
+
   const products = await Product.aggregate([
     { $match: query }, // Filter products first
     {
@@ -42,20 +44,26 @@ export const getProducts = asyncHandler(async (req, res) => {
     { $unwind: "$seller" }, // Convert seller array to object
     {
       $addFields: {
-        // We create a priority score. 
-        // If subscription is expired, we force it to level 0 (Free)
         effectivePriority: {
           $cond: [
-            { $gt: ["$seller.sellerRequest.subscriptionEnd", new Date()] },
+            {
+              $and: [
+                { $eq: ["$seller.sellerRequest.status", "approved"] },
+                { $eq: ["$seller.accountStatus", "active"] },
+                { $eq: ["$seller.sellerRequest.boostActive", true] },
+                { $gt: ["$seller.sellerRequest.subscriptionEnd", now] },
+              ],
+            },
             { $ifNull: ["$seller.sellerRequest.subscriptionLevel", 0] },
-            0
-          ]
-        }
-      }
+            0,
+          ],
+        },
+      },
     },
     { 
       $sort: {
         effectivePriority: -1, 
+        views: -1,
         createdAt: -1
       }
     },
@@ -232,7 +240,11 @@ const createProduct = asyncHandler(async (req, res) => {
   });
 
   const createdProduct = await product.save();
-  res.status(201).json(createdProduct);
+  res.status(201).json({
+    success: true,
+    message: "Product created successfully",
+    data: createdProduct,
+  });
 }); 
 
 
@@ -275,7 +287,11 @@ const updateProduct = asyncHandler(async (req, res) => {
   await updatedProduct.populate("category", "categoryname");
   await updatedProduct.populate("subcategory", "subcategoryName"); 
 
-  res.json(updatedProduct);
+  res.json({
+    success: true,
+    message: "Product updated successfully",
+    data: updatedProduct,
+  });
 });
 
 // @desc    Delete product (seller only if owner, admin can delete any)
@@ -297,7 +313,11 @@ const deleteProduct = asyncHandler(async (req, res) => {
   }
 
   await Product.deleteOne({ _id: product._id });
-  res.json({ message: "Product successfully deleted" });
+  res.json({
+    success: true,
+    message: "Product successfully deleted",
+    data: { _id: product._id },
+  });
 });
 
 export const addView = async (req, res) => {
@@ -372,6 +392,7 @@ const createProductReview = asyncHandler(async (req, res) => {
 // controllers/productController.js
  const getBannerProducts = asyncHandler(async (req, res) => {
   const limit = Number(req.query.limit) || 10;
+  const now = new Date();
 
   const products = await Product.aggregate([
     {
@@ -387,6 +408,8 @@ const createProductReview = asyncHandler(async (req, res) => {
       $match: {
         "seller.sellerRequest.status": "approved",
         "seller.sellerRequest.boostActive": true,
+        "seller.accountStatus": "active",
+        "seller.sellerRequest.subscriptionEnd": { $gt: now },
       },
     },
     { $sort: { createdAt: -1 } }, // or random/sample
@@ -410,4 +433,4 @@ export {
   deleteProduct, 
   createProductReview,
   getBannerProducts
-};
+}; 
