@@ -35,6 +35,8 @@ const generateToken = async (res, userId) => {
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     path: "/api/users/refresh",
   });
+
+  return accessToken;
 };
 
 export { signAccessToken };

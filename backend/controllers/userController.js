@@ -75,8 +75,8 @@ const authUser = asyncHandler(async (req, res) => {
     { new: true }
   );
 
-  // Generate token
-  const token = signAccessToken(updatedUser._id);
+  // Generate access + refresh cookies and return current access token
+  const token = await generateToken(res, updatedUser._id);
   // Send response
   res.json({
     _id: user._id,
@@ -464,7 +464,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     maxAge: 15 * 60 * 1000,
   });
 
-  res.json({ message: "Token refreshed" });
+  res.json({ message: "Token refreshed", token: accessToken });
 });
 
 
@@ -947,4 +947,4 @@ export {
   getSellerRequests,
   approveSeller,
   rejectSeller,
-}; 
+};  
