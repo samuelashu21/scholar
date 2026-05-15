@@ -4,8 +4,6 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
-  Platform,
   SafeAreaView,
   StatusBar,
 } from "react-native";
@@ -18,14 +16,15 @@ import {
 } from "../../slices/productsApiSlice";
 
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "../../constants/Utils";
+import { Colors, Radius, Shadows, Spacing, Typography } from "../../constants/Utils";
 import { useSelector, useDispatch } from "react-redux";
 import { addToCart } from "../../slices/cartSlice";
-import Message from "../../components/Message";
 import ProductImageCard from "../../components/ProductImageCard";
 import ProductDetailsCard from "../../components/ProductDetailsCard";
 import ProductReviewSection from "../../components/ProductReviewSection";
 import AddReviewModal from "../../components/AddReviewModal";
+import EmptyState from "../../components/ui/EmptyState";
+import ScreenLoader from "../../components/ui/ScreenLoader";
 
 import { useRouter, useLocalSearchParams } from "expo-router";
 
@@ -43,28 +42,18 @@ const ProductScreen = () => {
   const viewAddedRef = useRef(false);
 
   const [addView] = useAddViewMutation();
-  const [createReview, { isLoading: loadingProductReview }] =
-    useCreateReviewMutation();
+  const [createReview, { isLoading: loadingProductReview }] = useCreateReviewMutation();
 
-  const {
-    data: product,
-    isLoading,
-    refetch,
-    error,
-  } = useGetProductDetailsQuery(productId, {
+  const { data: product, isLoading, refetch, error } = useGetProductDetailsQuery(productId, {
     skip: !productId || productId === "undefined",
   });
 
-  /* ---------------- ADD VIEW (ONCE) ---------------- */
   useEffect(() => {
-    if (!product?._id || product._id === "undefined" || viewAddedRef.current) return;
+    if (!product?._id || viewAddedRef.current) return;
 
     const incrementView = async () => {
       try {
-        await addView({
-          productId: product._id,
-          deviceId: "mobile_user",
-        }).unwrap();
+        await addView({ productId: product._id, deviceId: "mobile_user" }).unwrap();
         viewAddedRef.current = true;
       } catch (err) {
         console.log("View error detail:", err);
@@ -74,29 +63,6 @@ const ProductScreen = () => {
     incrementView();
   }, [product, addView]);
 
-  /* ---------------- GUARDS ---------------- */
-  if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
-    );
-  }
-
-  if (error || !product) {
-    return (
-      <View style={styles.center}>
-        <Message variant={error ? "error" : "info"}>
-          {error?.data?.message || "Product not found"}
-        </Message>
-        <TouchableOpacity onPress={() => router.back()} style={styles.errorBackBtn}>
-          <Text style={styles.backText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  /* ---------------- HANDLERS ---------------- */
   const handleAddToCart = () => {
     dispatch(addToCart({ ...product, qty }));
     Toast.show({
@@ -129,72 +95,79 @@ const ProductScreen = () => {
     }
   };
 
-  /* ---------------- UI ---------------- */
+  if (isLoading) {
+    return <ScreenLoader />;
+  }
+
+  if (error || !product) {
+    return (
+      <SafeAreaView style={styles.errorSafeArea}>
+        <EmptyState
+          icon="alert-circle-outline"
+          title="We couldn't load this product"
+          description={error?.data?.message || "Please try again in a moment."}
+          actionLabel="Go Back"
+          onAction={() => router.back()}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const totalPrice = Number(product.price) * qty;
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.offWhite} />
+
+      <View style={styles.topNavigation}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.roundBtn}>
+          <Ionicons name="chevron-back" size={22} color={Colors.darkGray} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle} numberOfLines={1}>Product details</Text>
+        <TouchableOpacity onPress={() => router.push("/(screens)/Cart")} style={styles.roundBtn}>
+          <Ionicons name="bag-handle-outline" size={20} color={Colors.darkGray} />
+        </TouchableOpacity>
+      </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
-        
-        {/* NON-STICKY TOP NAVIGATION (Moves with scroll) */}
-        <View style={styles.topNavigation}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.roundBtn}>
-            <Ionicons name="chevron-back" size={26} color="#333" />
-          </TouchableOpacity>
-          {/* Add a placeholder or other icons here if needed */}
-          <View style={{ width: 45 }} /> 
-        </View>
+        <ProductImageCard imageUrl={product.image || ""} images={product.images || []} />
 
-        {/* IMAGE SECTION */}
-        <View style={styles.imageWrapper}>
-          <ProductImageCard imageUrl={product.image || ""} />
-        </View>
+        <ProductDetailsCard
+          product={product}
+          qty={qty}
+          setQty={setQty}
+          handleAddToCart={handleAddToCart}
+          disableAddToCart={product.countInStock === 0}
+          hideButton
+        />
 
-        {/* CONTENT SECTION */}
-        <View style={styles.detailsWrapper}>
-          <ProductDetailsCard
-            product={product}
-            qty={qty}
-            setQty={setQty}
-            handleAddToCart={handleAddToCart}
-            disableAddToCart={product.countInStock === 0}
-            hideButton={true} 
-          />
+        <View style={styles.sectionGap} />
 
-          <View style={styles.divider} />
-
-          <ProductReviewSection
-            reviews={product.reviews || []}
-            userInfo={userInfo}
-            onAddReviewPress={() => setIsReviewModalOpen(true)}
-          />
-        </View>
+        <ProductReviewSection
+          reviews={product.reviews || []}
+          userInfo={userInfo}
+          onAddReviewPress={() => setIsReviewModalOpen(true)}
+        />
       </ScrollView>
 
-      {/* STICKY BOTTOM ACTION BAR (Stays fixed) */}
       <View style={styles.bottomBar}>
         <View style={styles.priceSection}>
-          <Text style={styles.priceLabel}>Total Price</Text>
-          <Text style={styles.totalPrice}>
-            ${(product.price * qty).toFixed(2)}
-          </Text>
+          <Text style={styles.priceLabel}>Total</Text>
+          <Text style={styles.totalPrice}>${totalPrice.toFixed(2)}</Text>
         </View>
+
         <TouchableOpacity
-          style={[
-            styles.mainBtn,
-            product.countInStock === 0 && styles.disabledBtn,
-          ]}
+          style={[styles.mainBtn, product.countInStock === 0 && styles.disabledBtn]}
           onPress={handleAddToCart}
           disabled={product.countInStock === 0}
         >
-          <Ionicons name="bag-add-outline" size={22} color="#FFF" />
+          <Ionicons name="bag-add-outline" size={20} color={Colors.white} />
           <Text style={styles.mainBtnText}>
             {product.countInStock === 0 ? "Out of Stock" : "Add to Cart"}
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* REVIEW MODAL */}
       <AddReviewModal
         isVisible={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}
@@ -211,56 +184,48 @@ const ProductScreen = () => {
 
 export default ProductScreen;
 
-/* ---------------- STYLES ---------------- */
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#FFF",
+    backgroundColor: Colors.offWhite,
+  },
+  errorSafeArea: {
+    flex: 1,
+    backgroundColor: Colors.offWhite,
+    justifyContent: "center",
+    padding: Spacing.screen,
   },
   topNavigation: {
-    // Note: No absolute positioning here so it scrolls away
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 45 : 10,
-    paddingBottom: 10,
-    backgroundColor: "#F9F9F9", // Match image background
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.screen,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.offWhite,
   },
   roundBtn: {
-    width: 45,
-    height: 45,
-    borderRadius: 25,
-    backgroundColor: "#FFF",
+    width: 40,
+    height: 40,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.white,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    ...Shadows.sm,
+  },
+  headerTitle: {
+    flex: 1,
+    marginHorizontal: Spacing.md,
+    textAlign: "center",
+    fontSize: Typography.size.lg,
+    fontWeight: Typography.weight.bold,
+    color: Colors.darkGray,
   },
   scrollContainer: {
-    paddingBottom: 120, // Space for bottom bar
+    paddingHorizontal: Spacing.screen,
+    paddingBottom: 120,
   },
-  imageWrapper: {
-    backgroundColor: "#F9F9F9",
-    height: 350,
-    justifyContent: 'center',
-    marginTop: -10, // Slight overlap for design
-  },
-  detailsWrapper: {
-    paddingHorizontal: 20,
-    marginTop: -35,
-    backgroundColor: "#FFF",
-    borderTopLeftRadius: 35,
-    borderTopRightRadius: 35,
-    paddingTop: 30,
-    minHeight: 400,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#F5F5F5",
-    marginVertical: 25,
+  sectionGap: {
+    height: Spacing.md,
   },
   bottomBar: {
     position: "absolute",
@@ -268,64 +233,46 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: "row",
-    backgroundColor: "#FFF",
-    padding: 20,
-    paddingBottom: Platform.OS === "ios" ? 35 : 20,
+    backgroundColor: Colors.white,
+    paddingHorizontal: Spacing.screen,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: "#F0F0F0",
+    borderTopColor: Colors.lightGray,
     alignItems: "center",
-    elevation: 25,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
+    gap: Spacing.md,
+    ...Shadows.lg,
   },
   priceSection: {
     flex: 1,
   },
   priceLabel: {
-    fontSize: 12,
-    color: "#999",
-    fontWeight: "600",
-    textTransform: 'uppercase',
+    fontSize: Typography.size.xs,
+    color: Colors.secondaryTextColor,
+    fontWeight: Typography.weight.semibold,
+    textTransform: "uppercase",
   },
   totalPrice: {
-    fontSize: 22,
-    fontWeight: "900",
+    fontSize: Typography.size.xl,
+    fontWeight: Typography.weight.heavy,
     color: Colors.primary,
   },
   mainBtn: {
-    flex: 1.8,
+    flex: 1.7,
     backgroundColor: Colors.primary,
-    height: 58,
-    borderRadius: 18,
+    height: 52,
+    borderRadius: Radius.md,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
   mainBtnText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "700",
+    color: Colors.white,
+    fontSize: Typography.size.md,
+    fontWeight: Typography.weight.bold,
   },
   disabledBtn: {
-    backgroundColor: "#E0E0E0",
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FFF",
-  },
-  errorBackBtn: {
-    backgroundColor: Colors.primary,
-    padding: 12,
-    borderRadius: 10,
-    marginTop: 20,
-  },
-  backText: {
-    color: "#FFF",
-    fontWeight: "600",
+    backgroundColor: Colors.gray,
   },
 });

@@ -1,30 +1,48 @@
-import { StyleSheet, Text, View, Image } from "react-native";
-import React from "react"; 
-import { Colors } from "../constants/Utils";
+import { StyleSheet, View, Image, FlatList } from "react-native";
+import React, { useMemo, useState } from "react";
+import { Colors, Radius, Shadows, Spacing } from "../constants/Utils";
 import { BASE_URL } from "../constants/Urls";
 
-const ProductImageCard = ({ imageUrl }) => {
+const ProductImageCard = ({ imageUrl, images = [] }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const imageList = useMemo(() => {
+    const fromArray = Array.isArray(images) ? images : [];
+    const merged = [imageUrl, ...fromArray].filter(Boolean);
+    return [...new Set(merged)];
+  }, [imageUrl, images]);
+
   const getImageUrl = (imagePath) => {
     if (!imagePath) return null;
-    if (imagePath.startsWith("http")) {
-      return imagePath;
-    }
-
-    const fullUrl = `${BASE_URL}${imagePath}`;
-    return fullUrl;
+    return imagePath.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
   };
 
   return (
     <View style={styles.imageCard}>
-      <Image
-        source={{ uri: getImageUrl(imageUrl) }}
-        style={styles.productImage}
-        resizeMode="contain"
-        onError={(e) => {
-          console.log("product image card error"), e.nativeEvent.error;
+      <FlatList
+        data={imageList}
+        horizontal
+        pagingEnabled
+        keyExtractor={(item, index) => `${item}-${index}`}
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(e) => {
+          const index = Math.round(e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width);
+          setActiveIndex(index);
         }}
-        onLoad={() => console.log("image loaded successfully")}
+        renderItem={({ item }) => (
+          <View style={styles.slide}>
+            <Image source={{ uri: getImageUrl(item) }} style={styles.productImage} resizeMode="contain" />
+          </View>
+        )}
       />
+
+      {imageList.length > 1 && (
+        <View style={styles.dotWrap}>
+          {imageList.map((_, index) => (
+            <View key={index} style={[styles.dot, activeIndex === index && styles.activeDot]} />
+          ))}
+        </View>
+      )}
     </View>
   );
 };
@@ -34,21 +52,39 @@ export default ProductImageCard;
 const styles = StyleSheet.create({
   imageCard: {
     backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-    alignItems: "center",
+    borderRadius: Radius.lg,
+    marginBottom: Spacing.md,
+    overflow: "hidden",
+    ...Shadows.md,
+  },
+  slide: {
+    width: "100%",
+    height: 320,
     justifyContent: "center",
-    height: 300,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2,
+    alignItems: "center",
+    backgroundColor: Colors.surfaceMuted,
   },
   productImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 10,
+    width: "92%",
+    height: "92%",
+  },
+  dotWrap: {
+    position: "absolute",
+    bottom: 14,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 6,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.7)",
+  },
+  activeDot: {
+    width: 18,
+    backgroundColor: Colors.primary,
   },
 });
