@@ -23,7 +23,7 @@ const getTabBarLayout = (bottomInset) => {
     left: horizontalInset,
     right: horizontalInset,
     bottom: Math.max(Math.min(bottomInset, Spacing.md), Spacing.sm),
-    height: Math.max(Layout.tabBarHeight, BASE_TAB_BAR_HEIGHT + bottomInset),
+    height: Math.max(Layout.tabBarHeight, BASE_TAB_BAR_HEIGHT + safeBottom),
     paddingTop: Spacing.sm,
     paddingBottom: safeBottom,
   };
@@ -192,8 +192,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   iconInner: {
-    minWidth: MIN_TOUCH_TARGET,
-    height: MIN_TOUCH_TARGET,
+    width: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
     borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceMuted,
   },
   profileWrapActive: {
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: Colors.primary,
     backgroundColor: Colors.white,
   },
