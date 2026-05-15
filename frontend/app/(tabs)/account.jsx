@@ -18,8 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLogoutMutation } from "../../slices/userAPiSlice";
 import { logout } from "../../slices/authSlice";
 import { resetCart } from "../../slices/cartSlice";
-import { Colors } from "../../constants/Utils";
-import { BASE_URL } from "../../constants/Urls";
+import { Colors, resolveImageUrl } from "../../constants/Utils";
 
 const Account = () => {
   const { userInfo } = useSelector((state) => state.auth);
@@ -36,11 +35,6 @@ const Account = () => {
     } catch (error) {
       console.log("logout error:", error);
     }
-  };
-
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return null;
-    return imagePath.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
   };
 
   if (!userInfo) {
@@ -114,7 +108,7 @@ const Account = () => {
             <Image
               source={{
                 uri: userInfo.profileImage
-                  ? getImageUrl(userInfo.profileImage)
+                  ? resolveImageUrl(userInfo.profileImage)
                   : "https://cdn-icons-png.flaticon.com/512/149/149071.png",
               }}
               style={styles.profileImage}

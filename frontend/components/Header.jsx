@@ -12,9 +12,8 @@ import {
 import { useSelector } from "react-redux";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Feather from "@expo/vector-icons/Feather";
-import { Colors, Radius, Shadows, Spacing, Typography } from "../constants/Utils";
+import { Colors, Radius, Shadows, Spacing, Typography, resolveImageUrl } from "../constants/Utils";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { BASE_URL } from "../constants/Urls";
 import { useGetCategoriesQuery } from "../slices/categoryApiSlice";
 import { useGetBannerProductsQuery } from "../slices/productsApiSlice";
 
@@ -33,11 +32,6 @@ const Header = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const carouselRef = useRef(null);
 
-  const getImage = (path) => {
-    if (!path) return null;
-    return path.startsWith("http") ? path : `${BASE_URL}${path}`;
-  };
-
   const openSearchPage = () => router.push("/(screens)/SearchPage");
 
   const handleCategoryPress = (categoryId) => {
@@ -45,7 +39,7 @@ const Header = () => {
   };
 
   const images = useMemo(
-    () => (bannerProducts || []).map((p) => getImage(p.image)).filter(Boolean),
+    () => (bannerProducts || []).map((p) => resolveImageUrl(p.image)).filter(Boolean),
     [bannerProducts]
   );
 

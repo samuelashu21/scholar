@@ -1,18 +1,13 @@
 import React from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
-import { Colors } from "../constants/Utils";
+import { Colors, resolveImageUrl } from "../constants/Utils";
 import { useRouter } from "expo-router";
-import { BASE_URL } from "../constants/Urls";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 const ProductCard = ({ product, isWishlistItem = false, onRemove }) => {
   const router = useRouter();
 
-  const getImageUrl = () => {   
-    if (!product.image) return null;
-    if (product.image.startsWith("http")) return product.image;
-    return `${BASE_URL}${product.image}`;
-  };
+  const getImageUrl = () => resolveImageUrl(product.image);
 
   return ( 
     

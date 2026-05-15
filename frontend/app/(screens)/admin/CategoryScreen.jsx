@@ -17,8 +17,7 @@ import Toast from "react-native-toast-message";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
 import { Picker } from "@react-native-picker/picker";
-import { Colors } from "../../../constants/Utils";
-import { BASE_URL } from "../../../constants/Urls";
+import { Colors, resolveImageUrl } from "../../../constants/Utils";
 
 import {
   useGetCategoriesQuery,
@@ -133,8 +132,6 @@ const CategoryScreen = () => {
     }
   };
 
-  const getImageUri = (img) => (img?.startsWith("http") ? img : `${BASE_URL}${img}`);
-
   if (catLoading || subLoading) return <ActivityIndicator size="large" color={Colors.primary} style={styles.center} />;
 
   return (
@@ -202,7 +199,7 @@ const CategoryScreen = () => {
 
               <View style={styles.formFooter}>
                 {image ? (
-                  <Image source={{ uri: getImageUri(image) }} style={styles.imagePreview} />
+                  <Image source={{ uri: resolveImageUrl(image) }} style={styles.imagePreview} />
                 ) : (
                   <View style={[styles.imagePreview, styles.imagePlaceholder]}>
                     <Ionicons name="image-outline" size={20} color="#ccc" />

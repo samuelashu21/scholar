@@ -340,8 +340,7 @@ import { Ionicons, Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 // --- API & Utils Imports ---
-import { Colors } from "../../constants/Utils"; // Adjust path if needed
-import { BASE_URL } from "../../constants/Urls"; // Adjust path if needed
+import { Colors, resolveImageUrl } from "../../constants/Utils"; // Adjust path if needed
 import { useGetCategoriesQuery } from "../../slices/categoryApiSlice.js";
 import { useGetSubcategoriesQuery } from "../../slices/subcategoryApiSlice.js";
 
@@ -369,8 +368,6 @@ const CategoryScreen = () => {
   ) || [];
 
   const activeCategoryName = categories?.find(c => c._id === selectedCategory)?.categoryname;
-
-  const getImageUri = (img) => (img?.startsWith("http") ? img : `${BASE_URL}${img}`);
 
   if (catLoading || subLoading) {
     return (
@@ -473,7 +470,7 @@ const CategoryScreen = () => {
                   >
                     <View style={styles.imgWrapper}>
                       <Image 
-                        source={{ uri: getImageUri(item.image) }} 
+                        source={{ uri: resolveImageUrl(item.image) }}
                         style={styles.img} 
                       />
                     </View>
@@ -669,4 +666,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 10,
   },
-}); 
+});

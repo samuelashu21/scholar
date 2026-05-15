@@ -20,8 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSelector } from "react-redux";
 
 // Logic Imports
-import { Colors } from "../../constants/Utils";
-import { BASE_URL } from "../../constants/Urls";
+import { Colors, resolveImageUrl } from "../../constants/Utils";
 import { useSearchSellersQuery, useGetUsersQuery } from "../../slices/userAPiSlice";
 
 const { width } = Dimensions.get("window");
@@ -96,10 +95,7 @@ export default function FindSellersPage() {
     setShowResults(false);
   };
 
-  const getImageUrl = (path) => {
-    if (!path) return "https://via.placeholder.com/150";
-    return path.startsWith("http") ? path : `${BASE_URL}${path}`;
-  };
+  const getImageUrl = (path) => resolveImageUrl(path, "https://via.placeholder.com/150");
 
   // --- UI Components ---
 

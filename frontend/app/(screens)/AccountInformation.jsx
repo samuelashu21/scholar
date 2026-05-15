@@ -24,8 +24,7 @@ import Toast from "react-native-toast-message";
 
 import { useUpdateUserProfileMutation, useUploadProfileImageMutation } from "../../slices/userAPiSlice";
 import { setCredentials } from "../../slices/authSlice";
-import { Colors } from "../../constants/Utils";
-import { BASE_URL } from "../../constants/Urls";
+import { Colors, resolveImageUrl } from "../../constants/Utils";
 import Message from "../../components/Message";
 
 const AccountInformation = () => {
@@ -57,11 +56,6 @@ const AccountInformation = () => {
       setProfileImage(userInfo.profileImage || "");
     }
   }, [userInfo]);
-
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-    return imagePath.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
-  };
 
   const uploadFileHandler = async () => {
     try {
@@ -178,7 +172,15 @@ const AccountInformation = () => {
               {loadingUpload ? (
                 <ActivityIndicator color={Colors.primary} />
               ) : (
-                <Image source={{ uri: getImageUrl(profileImage) }} style={styles.avatar} />
+                <Image
+                  source={{
+                    uri: resolveImageUrl(
+                      profileImage,
+                      "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                    ),
+                  }}
+                  style={styles.avatar}
+                />
               )}
             </View>
             <TouchableOpacity style={styles.cameraBtn} onPress={uploadFileHandler}>

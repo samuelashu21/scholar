@@ -1,7 +1,6 @@
 import { StyleSheet, View, Image, FlatList } from "react-native";
 import React, { useMemo, useState } from "react";
-import { Colors, Radius, Shadows, Spacing } from "../constants/Utils";
-import { BASE_URL } from "../constants/Urls";
+import { Colors, Radius, Shadows, Spacing, resolveImageUrl } from "../constants/Utils";
 
 const ProductImageCard = ({ imageUrl, images = [] }) => {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -11,11 +10,6 @@ const ProductImageCard = ({ imageUrl, images = [] }) => {
     const merged = [imageUrl, ...fromArray].filter(Boolean);
     return [...new Set(merged)];
   }, [imageUrl, images]);
-
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return null;
-    return imagePath.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
-  };
 
   return (
     <View style={styles.imageCard}>
@@ -31,7 +25,7 @@ const ProductImageCard = ({ imageUrl, images = [] }) => {
         }}
         renderItem={({ item }) => (
           <View style={styles.slide}>
-            <Image source={{ uri: getImageUrl(item) }} style={styles.productImage} resizeMode="contain" />
+            <Image source={{ uri: resolveImageUrl(item) }} style={styles.productImage} resizeMode="contain" />
           </View>
         )}
       />

@@ -179,7 +179,7 @@
 //           <View style={[styles.previewCard, isPending && styles.previewCardLocked]}>
 //             <Text style={styles.previewTag}>{isPending ? "SUBMITTED PREVIEW" : "LIVE PREVIEW"}</Text>
 //             <View style={styles.previewContent}>
-//               <Image source={{ uri: getImageUrl(storeLogo) }} style={styles.previewImage} />
+//               <Image source={{ uri: resolveImageUrl(storeLogo, "https://cdn-icons-png.flaticon.com/512/3597/3597075.png") }} style={styles.previewImage} />
 //               <View>
 //                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
 //                   <Text style={styles.previewName}>{storeName || "Your Store Name"}</Text>
@@ -343,8 +343,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-toast-message";
 
-import { Colors } from "../../constants/Utils";
-import { BASE_URL } from "../../constants/Urls";
+import { Colors, resolveImageUrl } from "../../constants/Utils";
 import {
   useRequestSellerMutation,
   useUploadProfileImageMutation,
@@ -409,11 +408,6 @@ export default function RequestToBeSeller() {
       }
     }, [userInfo])
   );
-
-  const getImageUrl = (path) => {
-    if (!path) return "https://cdn-icons-png.flaticon.com/512/3597/3597075.png";
-    return path.startsWith("http") ? path : `${BASE_URL}${path}`;
-  };
 
   const uploadLogoHandler = async () => {
     if (isProcessed) return;
@@ -534,7 +528,7 @@ export default function RequestToBeSeller() {
           <View style={[styles.previewCard, isProcessed && styles.previewCardLocked]}>
             <Text style={styles.previewTag}>{isProcessed ? "SUBMITTED PREVIEW" : "LIVE PREVIEW"}</Text>
             <View style={styles.previewContent}>
-              <Image source={{ uri: getImageUrl(storeLogo) }} style={styles.previewImage} />
+              <Image source={{ uri: resolveImageUrl(storeLogo, "https://cdn-icons-png.flaticon.com/512/3597/3597075.png") }} style={styles.previewImage} />
               <View>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Text style={styles.previewName}>{storeName || "Your Store Name"}</Text>

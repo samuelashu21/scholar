@@ -22,8 +22,7 @@ import {
   useGetProductsQuery,
   useDeleteProductMutation,
 } from "../../../slices/productsApiSlice";
-import { Colors } from "../../../constants/Utils";
-import { BASE_URL } from "../../../constants/Urls";
+import { Colors, resolveImageUrl } from "../../../constants/Utils";
 
 const ProductListScreen = () => {
   const { pageNumber = "1" } = useLocalSearchParams();
@@ -40,10 +39,7 @@ const ProductListScreen = () => {
 
   const [deleteProduct] = useDeleteProductMutation();
 
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return "https://via.placeholder.com/100";
-    return imagePath.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
-  };
+  const getImageUrl = (imagePath) => resolveImageUrl(imagePath, "https://via.placeholder.com/100");
 
   const deleteHandler = async (id) => {
     Alert.alert("Delete Product", "Are you sure?", [

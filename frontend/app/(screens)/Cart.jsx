@@ -14,8 +14,7 @@ import { useSelector, useDispatch } from "react-redux";
 import React from "react";
 import Ionicons from "@expo/vector-icons/Ionicons"; 
 import { addToCart, removeFromCart } from "../../slices/cartSlice";
-import { Colors } from "../../constants/Utils";
-import { BASE_URL } from "../../constants/Urls"; // 1. Import BASE_URL 
+import { Colors, resolveImageUrl } from "../../constants/Utils";
 
 const Cart = () => {
   const router = useRouter();
@@ -24,11 +23,7 @@ const Cart = () => {
   const { userInfo } = useSelector((state) => state.auth);
 
   // 2. Add your Image URL helper
-  const getImageUrl = (imagePath) => {   
-    if (!imagePath) return null;
-    if (imagePath.startsWith("http")) return imagePath;
-    return `${BASE_URL}${imagePath}`;
-  };
+  const getImageUrl = (imagePath) => resolveImageUrl(imagePath);
    
   const totalItems = cartItems.reduce((acc, item) => acc + item.qty, 0);
   const totalPrice = cartItems

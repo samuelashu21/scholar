@@ -232,8 +232,7 @@ import {
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "../../constants/Utils";
-import { BASE_URL } from "../../constants/Urls";
+import { Colors, resolveImageUrl } from "../../constants/Utils";
 import { useSelector } from "react-redux";
 import { useGetMyChatsQuery } from "../../slices/chatApiSlice";
 import { io } from "socket.io-client";
@@ -279,10 +278,7 @@ const ChatListScreen = () => {
     });
   }, [conversations, searchQuery, userInfo]);
 
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return "https://via.placeholder.com/150";
-    return imagePath.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
-  };
+  const getImageUrl = (imagePath) => resolveImageUrl(imagePath, "https://via.placeholder.com/150");
 
   const formatTime = (dateString) => {
     const date = new Date(dateString);

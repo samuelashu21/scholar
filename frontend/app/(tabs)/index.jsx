@@ -14,9 +14,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import Product from "../../components/Product";
 import Header from "../../components/Header";
 
-import { Colors, Radius, Shadows, Spacing, Typography } from "../../constants/Utils";
+import { Colors, Radius, Shadows, Spacing, Typography, resolveImageUrl } from "../../constants/Utils";
 import { useGetProductsQuery } from "../../slices/productsApiSlice";
-import { BASE_URL } from "../../constants/Urls";
 import EmptyState from "../../components/ui/EmptyState";
 import Message from "../../components/Message";
 import SkeletonBlock from "../../components/ui/SkeletonBlock";
@@ -46,11 +45,6 @@ const Home = () => {
     () => [...products].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 8),
     [products]
   );
-
-  const getImage = (path) => {
-    if (!path) return null;
-    return path.startsWith("http") ? path : `${BASE_URL}${path}`;
-  };
 
   const renderPaginationButtons = () => {
     if (!data?.pages || data.pages <= 1) return null;
@@ -96,7 +90,7 @@ const Home = () => {
               onPress={() => router.push({ pathname: "/(screens)/ProductScreen", params: { productId: item._id } })}
               activeOpacity={0.9}
             >
-              <Image source={{ uri: getImage(item.image) }} style={styles.railImage} />
+              <Image source={{ uri: resolveImageUrl(item.image) }} style={styles.railImage} />
               <Text numberOfLines={2} style={styles.railName}>{item.name}</Text>
               <Text style={styles.railPrice}>${item.price}</Text>
             </TouchableOpacity>

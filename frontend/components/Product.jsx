@@ -1,8 +1,7 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { useState, useEffect } from "react";
 import Rating from "./Rating";
-import { Colors, Radius, Shadows, Spacing, Typography } from "../constants/Utils";
-import { BASE_URL } from "../constants/Urls";
+import { Colors, Radius, Shadows, Spacing, Typography, resolveImageUrl } from "../constants/Utils";
 import { Ionicons } from "@expo/vector-icons";
 import { timeAgo } from "../utils/timeAgo";
 import { useRouter } from "expo-router";
@@ -102,11 +101,6 @@ function Product({ product }) {
     router.push({ pathname: "/ProductScreen", params: { productId: product._id } });
   };
 
-  const getImageUrl = () => {
-    if (!product.image) return null;
-    return product.image.startsWith("http") ? product.image : `${BASE_URL}${product.image}`;
-  };
-
   return (
     <TouchableOpacity activeOpacity={0.9} style={styles.card} onPress={handlePress}>
       {theme.label && (
@@ -116,7 +110,7 @@ function Product({ product }) {
         </View>
       )}
 
-      <Image source={{ uri: getImageUrl() }} style={styles.image} resizeMode="cover" />
+      <Image source={{ uri: resolveImageUrl(product.image) }} style={styles.image} resizeMode="cover" />
 
       <View style={styles.info}>
         <Text numberOfLines={2} style={styles.name}>{product.name}</Text>

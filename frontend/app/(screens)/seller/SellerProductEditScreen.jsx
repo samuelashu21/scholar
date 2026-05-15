@@ -29,8 +29,7 @@ import { useGetSubcategoriesQuery } from "../../../slices/subcategoryApiSlice";
 
 import * as ImagePicker from "expo-image-picker";
 import { Picker } from "@react-native-picker/picker";
-import { Colors } from "../../../constants/Utils";
-import { BASE_URL } from "../../../constants/Urls";
+import { Colors, resolveImageUrl } from "../../../constants/Utils";
 
 const SellerProductEditScreen = () => {
   const router = useRouter();
@@ -76,11 +75,6 @@ const SellerProductEditScreen = () => {
       setSelectedSubcategoryId(product.subcategory?._id || product.subcategory || "");
     }
   }, [product]);
-
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return null;
-    return imagePath.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
-  };
 
   const uploadFileHandler = async () => {
     try {
@@ -174,7 +168,7 @@ const SellerProductEditScreen = () => {
           {/* Image Container */}
           <View style={styles.imageContainer}>
             {image ? (
-              <Image source={{ uri: getImageUrl(image) }} style={styles.productImage} />
+              <Image source={{ uri: resolveImageUrl(image) }} style={styles.productImage} />
             ) : (
               <View style={[styles.productImage, styles.imagePlaceholder]}>
                 <Ionicons name="cloud-upload-outline" size={40} color="#ADB5BD" />

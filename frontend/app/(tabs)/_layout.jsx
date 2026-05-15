@@ -1,11 +1,10 @@
 import { Tabs } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { View, Text, Image, StyleSheet } from "react-native";
-import { Colors, Layout, Radius, Shadows, Spacing, Typography } from "../../constants/Utils";
+import { Colors, Layout, Radius, Shadows, Spacing, Typography, resolveImageUrl } from "../../constants/Utils";
 import { useGetWishlistQuery } from "../../slices/wishlistApiSlice";
 import { useGetMyChatsQuery } from "../../slices/chatApiSlice";
 import { useSelector } from "react-redux";
-import { BASE_URL } from "../../constants/Urls";
 
 export default function TabLayout() {
   const { userInfo } = useSelector((state) => state.auth);
@@ -24,11 +23,6 @@ export default function TabLayout() {
         chat.messages?.filter((m) => m.sender !== userInfo?._id && !m.isRead).length || 0;
       return sum + count;
     }, 0) || 0;
-
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return null;
-    return imagePath.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
-  };
 
   const TabIcon = ({ focused, name, activeName, color, badge }) => (
     <View style={styles.iconWrap}>
@@ -124,7 +118,7 @@ export default function TabLayout() {
               return (
                 <View style={[styles.profileWrap, focused && styles.profileWrapActive]}>
                   <Image
-                    source={{ uri: getImageUrl(userInfo.profileImage) }}
+                    source={{ uri: resolveImageUrl(userInfo.profileImage) }}
                     style={styles.profileImage}
                   />
                 </View>

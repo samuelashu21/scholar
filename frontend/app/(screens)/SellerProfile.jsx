@@ -12,12 +12,11 @@ import {
   StatusBar,
 } from "react-native";
 import { useLocalSearchParams, useRouter, Link } from "expo-router";
-import { Colors } from "../../constants/Utils";
+import { Colors, resolveImageUrl } from "../../constants/Utils";
 import { useGetSellerByIdQuery } from "../../slices/userAPiSlice";
 import { useGetProductsQuery } from "../../slices/productsApiSlice";
 import Rating from "../../components/Rating";
 import { timeAgo } from "../../utils/timeAgo";
-import { BASE_URL } from "../../constants/Urls";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSelector } from "react-redux"; // Added
 
@@ -46,10 +45,7 @@ const SellerProfile = () => {
   });
 
   // Image URL Helper
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return "https://via.placeholder.com/150";
-    return imagePath.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
-  };
+  const getImageUrl = (imagePath) => resolveImageUrl(imagePath, "https://via.placeholder.com/150");
 
   // Filter products for this specific seller
   const sellerProducts = Array.isArray(productsData?.products)

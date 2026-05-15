@@ -23,8 +23,7 @@ import {
 } from "../../slices/userAPiSlice";
 import Toast from "react-native-toast-message";
 import * as ImagePicker from "expo-image-picker";
-import { Colors } from "../../constants/Utils";
-import { BASE_URL } from "../../constants/Urls";
+import { Colors, resolveImageUrl } from "../../constants/Utils";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 
 const RegisterScreen = () => {
@@ -47,9 +46,6 @@ const RegisterScreen = () => {
   const redirect = localSearchParams.redirect || "/";
 
   const handleChange = (field, value) => setForm({ ...form, [field]: value });
-
-  const getImageUrl = (imagePath) =>
-    imagePath?.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
 
   const getPasswordStrength = (password) => {
     if (!password) return { label: "", color: "#EEE", width: "0%" };
@@ -141,7 +137,7 @@ const RegisterScreen = () => {
             <View style={styles.avatarSection}>
               <TouchableOpacity onPress={pickImage} style={styles.avatarWrapper}>
                 {profileImage ? (
-                  <Image source={{ uri: getImageUrl(profileImage) }} style={styles.avatarImage} />
+                  <Image source={{ uri: resolveImageUrl(profileImage) }} style={styles.avatarImage} />
                 ) : (
                   <View style={styles.avatarPlaceholder}><FontAwesome6 name="user-plus" size={24} color="#999" /></View>
                 )}
@@ -247,4 +243,4 @@ const styles = StyleSheet.create({
   termsText: { textAlign: "center", color: "#AAA", fontSize: 11, marginTop: 25 },
 });
 
-export default RegisterScreen; 
+export default RegisterScreen;
