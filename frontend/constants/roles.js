@@ -12,11 +12,8 @@ export const normalizeRole = (role) => {
 };
 
 export const getUserRole = (user) => {
-  if (!user) return ROLES.CUSTOMER;
-  if (!Object.prototype.hasOwnProperty.call(user, "role")) {
-    return ROLES.CUSTOMER;
-  }
-  return normalizeRole(user.role);
+  const role = user?.role;
+  return normalizeRole(role);
 };
 
 export const isAdminUser = (user) => getUserRole(user) === ROLES.ADMIN;
