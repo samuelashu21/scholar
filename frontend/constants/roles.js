@@ -5,6 +5,7 @@ export const ROLES = Object.freeze({
 });
 
 export const normalizeRole = (role) => {
+  if (typeof role !== "string") return ROLES.CUSTOMER;
   if (role === "user") return ROLES.CUSTOMER;
   if (Object.values(ROLES).includes(role)) return role;
   return ROLES.CUSTOMER;
@@ -12,6 +13,9 @@ export const normalizeRole = (role) => {
 
 export const getUserRole = (user) => {
   if (!user) return ROLES.CUSTOMER;
+  if (!Object.prototype.hasOwnProperty.call(user, "role")) {
+    return ROLES.CUSTOMER;
+  }
   return normalizeRole(user.role);
 };
 
