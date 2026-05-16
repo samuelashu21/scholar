@@ -41,6 +41,14 @@ startSubscriptionExpirationCron();
 const app = express();
 const port = 9090;
 
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled promise rejection:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught exception:", error);
+});
+
 // ---- Allowed origins whitelist ----
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
@@ -70,8 +78,8 @@ const io = new Server(httpServer, {
 
 app.use(helmet());
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(cookieParser());
 app.use((req, res, next) => {
   const sanitizeRequestObject = (target) => {
@@ -109,9 +117,13 @@ io.on("connection", (socket) => {
 
   // Mark user as Online
   socket.on("userOnline", async (userId) => {
-    socket.userId = userId; 
-    await User.findByIdAndUpdate(userId, { isOnline: true });
-    io.emit("userStatusChanged", { userId, isOnline: true });
+    try {
+      socket.userId = userId; 
+      await User.findByIdAndUpdate(userId, { isOnline: true });
+      io.emit("userStatusChanged", { userId, isOnline: true });
+    } catch (error) {
+      console.error("Socket userOnline error:", error);
+    }
   });
      
   // Join a private chat room
@@ -142,16 +154,20 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", async () => {
     if (socket.userId) {
-      const now = new Date();
-      await User.findByIdAndUpdate(socket.userId, { isOnline: false, lastSeen: now });
-      io.emit("userStatusChanged", { userId: socket.userId, isOnline: false, lastSeen: now });
+      try {
+        const now = new Date();
+        await User.findByIdAndUpdate(socket.userId, { isOnline: false, lastSeen: now });
+        io.emit("userStatusChanged", { userId: socket.userId, isOnline: false, lastSeen: now });
+      } catch (error) {
+        console.error("Socket disconnect error:", error);
+      }
     }
     console.log("User Disconnected"); 
   }); 
 });
 
 // Auto-clean expired OTP every 10 mins
-setInterval(async () => {
+const otpCleanupInterval = setInterval(async () => {
   try {
     await User.updateMany(
       { otpExpires: { $lt: Date.now() } },
@@ -162,6 +178,7 @@ setInterval(async () => {
     //console.error("OTP cleanup error:", err);
   }
 }, 10 * 60 * 1000); 
+otpCleanupInterval.unref?.();
 
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });

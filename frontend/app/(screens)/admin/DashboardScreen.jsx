@@ -128,7 +128,7 @@ export default function DashboardScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push("/account")} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace("/account")} style={styles.backButton}>
           <Ionicons name="arrow-back" size={23} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Admin Dashboard</Text>

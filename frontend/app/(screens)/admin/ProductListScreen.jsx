@@ -99,13 +99,12 @@ const ProductListScreen = () => {
       {
         text: "Delete",
         style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteProduct(id).unwrap();
-            refetch();
-          } catch (err) {
-            Alert.alert("Error", err?.data?.message || err?.error || "Delete failed");
-          }
+          onPress: async () => {
+            try {
+              await deleteProduct(id).unwrap();
+            } catch (err) {
+              Alert.alert("Error", err?.data?.message || err?.error || "Delete failed");
+            }
         },
       },
     ]);
@@ -155,7 +154,7 @@ const ProductListScreen = () => {
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push("/account")} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace("/account")} style={styles.backButton}>
           <Ionicons name="arrow-back" size={26} color="#1A1A1A" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Products</Text>

@@ -8,7 +8,7 @@ import {
   SafeAreaView,
   Image,
 } from "react-native";
-import React, { useEffect, useMemo } from "react";
+import React, { useMemo } from "react";
 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Product from "../../components/Product";
@@ -26,16 +26,12 @@ const Home = () => {
   const { keyword = "", pageNumber = "1", category = "" } = useLocalSearchParams();
   const router = useRouter();
 
-  const { data, isLoading, error, refetch } = useGetProductsQuery({
+  const { data, isLoading, error } = useGetProductsQuery({
     keyword,
     pageNumber: Number(pageNumber),
     category,
   });
   const { data: bannerProducts = [] } = useGetBannerProductsQuery(8);
-
-  useEffect(() => {
-    refetch();
-  }, [keyword, pageNumber, category, refetch]);
 
   const products = data?.products || [];
 
@@ -180,6 +176,10 @@ const Home = () => {
         data={isLoading ? [] : products}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => <Product product={item} />}
+        removeClippedSubviews
+        initialNumToRender={6}
+        maxToRenderPerBatch={8}
+        windowSize={7}
         contentContainerStyle={styles.list}
         numColumns={2}
         columnWrapperStyle={styles.columnWrapper}

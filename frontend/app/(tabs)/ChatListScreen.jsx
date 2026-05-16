@@ -251,7 +251,6 @@ const ChatListScreen = () => {
 
   const { data: conversations, isLoading, refetch, isFetching } = useGetMyChatsQuery(undefined, {
     skip: !userInfo,
-    pollingInterval: 15000,
   });
 
   useEffect(() => {
@@ -259,15 +258,18 @@ const ChatListScreen = () => {
       socket.current = io(BASE_URL);
       socket.current.emit("joinRoom", userInfo._id);
       socket.current.on("messageReceived", () => refetch());
-      return () => socket.current?.disconnect();
+      return () => {
+        socket.current?.off("messageReceived");
+        socket.current?.disconnect();
+      };
     }
-  }, [userInfo]);
+  }, [userInfo?._id, refetch]);
 
   useFocusEffect(
     useCallback(() => {
       if (!userInfo) router.replace("/LoginScreen");
       else refetch();
-    }, [userInfo])
+    }, [userInfo, router, refetch])
   );
 
   const filteredConversations = useMemo(() => {
@@ -485,4 +487,3 @@ const styles = StyleSheet.create({
   badgeText: { color: "#fff", fontSize: 11, fontWeight: "bold" },
   loadingCenter: { flex: 1, justifyContent: "center" },
 });
-

@@ -15,10 +15,10 @@ import {
 import React, { useState } from "react";
 import Toast from "react-native-toast-message";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import * as ImagePicker from "expo-image-picker";
 import { Picker } from "@react-native-picker/picker";
 import { Colors } from "../../../constants/Utils";
 import { BASE_URL } from "../../../constants/Urls";
+import { buildImageFormData, pickSingleImage } from "../../../utils/imageUpload";
 
 import {
   useGetCategoriesQuery,
@@ -42,8 +42,8 @@ const CategoryScreen = () => {
   const [parentCategory, setParentCategory] = useState("");
   const [editingId, setEditingId] = useState(null);
 
-  const { data: categories, isLoading: catLoading, refetch: refetchCats } = useGetCategoriesQuery();
-  const { data: subcategories, isLoading: subLoading, refetch: refetchSubs } = useGetSubcategoriesQuery();
+  const { data: categories, isLoading: catLoading } = useGetCategoriesQuery();
+  const { data: subcategories, isLoading: subLoading } = useGetSubcategoriesQuery();
 
   const [createCategory, { isLoading: loadingCreate }] = useCreateCategoryMutation();
   const [updateCategory, { isLoading: loadingUpdate }] = useUpdateCategoryMutation();
@@ -54,6 +54,8 @@ const CategoryScreen = () => {
   const [deleteSub] = useDeleteSubcategoryMutation();
 
   const [uploadImage, { isLoading: loadingUpload }] = useUploadCategoryImageMutation();
+  const isSaving =
+    loadingCreate || loadingUpdate || loadingCreateSub || loadingUpdateSub || loadingUpload;
 
   const resetForm = () => {
     setName("");
@@ -75,33 +77,9 @@ const CategoryScreen = () => {
 
   const uploadFileHandler = async () => {
     try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permissionResult.granted) {
-        Toast.show({ type: "error", text1: "Permission denied" });
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.5,
-      });
-
-      if (result.canceled || !result.assets?.length) return;
-
-      const asset = result.assets[0];
-      const fileType = asset.mimeType || "image/jpeg";
-      const mimeParts = typeof fileType === "string" ? fileType.split("/") : [];
-      const fileExt = mimeParts.length > 1 && mimeParts[1] ? mimeParts[1] : "jpg";
-      const fileName = asset.fileName || `upload.${fileExt}`;
-
-      const formData = new FormData();
-      formData.append("image", {
-        uri: asset.uri,
-        type: fileType,
-        name: fileName,
-      });
+      const asset = await pickSingleImage({ quality: 0.5, aspect: [1, 1] });
+      if (!asset) return;
+      const formData = buildImageFormData(asset);
 
       const res = await uploadImage(formData).unwrap();
       if (!res?.image) throw new Error("Upload response missing image path");
@@ -117,6 +95,7 @@ const CategoryScreen = () => {
   };
 
   const submitHandler = async () => {
+    if (isSaving) return;
     if (!name || !image || (activeTab === "subcategories" && !parentCategory)) {
       Toast.show({ type: "error", text1: "Missing Fields" });
       return;
@@ -126,12 +105,10 @@ const CategoryScreen = () => {
         editingId 
           ? await updateCategory({ categoryId: editingId, categoryname: name, image }).unwrap() 
           : await createCategory({ categoryname: name, image }).unwrap();
-        refetchCats();
       } else {
         editingId 
           ? await updateSub({ subcategoryId: editingId, subcategoryName: name, parentCategory, image }).unwrap() 
           : await createSub({ subcategoryName: name, parentCategory, image }).unwrap();
-        refetchSubs();
       }
       Toast.show({ type: "success", text1: "Saved successfully" });
       resetForm();
@@ -143,7 +120,6 @@ const CategoryScreen = () => {
   const deleteItemHandler = async (id) => {
     try {
       activeTab === "categories" ? await deleteCategory(id).unwrap() : await deleteSub(id).unwrap();
-      activeTab === "categories" ? refetchCats() : refetchSubs();
       Toast.show({ type: "success", text1: "Deleted" });
     } catch (err) {
       Toast.show({ type: "error", text1: "Delete failed" });
@@ -231,16 +207,27 @@ const CategoryScreen = () => {
                 )}
 
                 <View style={styles.actionButtons}>
-                  <TouchableOpacity style={styles.uploadButton} onPress={uploadFileHandler}>
+                  <TouchableOpacity
+                    style={[styles.uploadButton, loadingUpload && styles.disabledButton]}
+                    onPress={uploadFileHandler}
+                    disabled={loadingUpload}
+                  >
                     <Ionicons name="camera" size={16} color={Colors.white} />
                     <Text style={styles.buttonTextSmall}> Image</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity 
-                    style={[styles.submitButton, editingId && { backgroundColor: Colors.secondary }]} 
+                    style={[
+                      styles.submitButton,
+                      editingId && { backgroundColor: Colors.secondary },
+                      isSaving && styles.disabledButton,
+                    ]} 
                     onPress={submitHandler}
+                    disabled={isSaving}
                   >
-                    <Text style={styles.submitButtonText}>{editingId ? "Update" : "Create"}</Text>
+                    <Text style={styles.submitButtonText}>
+                      {isSaving ? "Saving..." : editingId ? "Update" : "Create"}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -346,6 +333,7 @@ const styles = StyleSheet.create({
   actionButtons: { flex: 1, flexDirection: 'row', gap: 8 },
   uploadButton: { flex: 1, flexDirection: "row", backgroundColor: Colors.secondary, height: 40, borderRadius: 8, justifyContent: "center", alignItems: "center" },
   submitButton: { flex: 1.5, backgroundColor: Colors.primary, height: 40, borderRadius: 8, justifyContent: "center", alignItems: "center" },
+  disabledButton: { opacity: 0.65 },
   buttonTextSmall: { color: Colors.white, fontSize: 12, fontWeight: '600' },
   submitButtonText: { color: Colors.white, fontWeight: "bold", fontSize: 13 },
   cancelBtn: { marginTop: 8, alignSelf: 'center' },
