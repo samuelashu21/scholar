@@ -97,18 +97,29 @@ const ProductEditScreen = () => {
         quality: 0.8,
       });
 
-      if (!result.canceled) {
-        const formData = new FormData();
-        formData.append("image", {
-          uri: result.assets[0].uri,
-          type: "image/jpeg",
-          name: "product.jpg",
-        });
-        const response = await uploadProductImage(formData).unwrap();
-        setImage(response.image);
-      }
+      if (result.canceled || !result.assets?.length) return;
+
+      const asset = result.assets[0];
+      const normalizedUri =
+        Platform.OS === "ios" ? asset.uri.replace("file://", "") : asset.uri;
+      const fileType = asset.mimeType || "image/jpeg";
+      const fileName = asset.fileName || `product.${fileType.split("/")[1] || "jpg"}`;
+
+      const formData = new FormData();
+      formData.append("image", {
+        uri: normalizedUri,
+        type: fileType,
+        name: fileName,
+      });
+      const response = await uploadProductImage(formData).unwrap();
+      if (!response?.image) throw new Error("Upload response missing image path");
+      setImage(response.image);
     } catch (err) {
-      Toast.show({ type: "error", text1: "Upload Failed" });
+      Toast.show({
+        type: "error",
+        text1: "Upload Failed",
+        text2: err?.data?.message || err?.message,
+      });
     }
   };
 
