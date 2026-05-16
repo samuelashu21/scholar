@@ -100,14 +100,14 @@ const ProductEditScreen = () => {
       if (result.canceled || !result.assets?.length) return;
 
       const asset = result.assets[0];
-      const normalizedUri =
-        Platform.OS === "ios" ? asset.uri.replace("file://", "") : asset.uri;
       const fileType = asset.mimeType || "image/jpeg";
-      const fileName = asset.fileName || `product.${fileType.split("/")[1] || "jpg"}`;
+      const mimeParts = typeof fileType === "string" ? fileType.split("/") : [];
+      const fileExt = mimeParts.length > 1 && mimeParts[1] ? mimeParts[1] : "jpg";
+      const fileName = asset.fileName || `product.${fileExt}`;
 
       const formData = new FormData();
       formData.append("image", {
-        uri: normalizedUri,
+        uri: asset.uri,
         type: fileType,
         name: fileName,
       });
