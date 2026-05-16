@@ -78,7 +78,7 @@ const SellerProductEditScreen = () => {
   }, [product]);
 
   const getImageUrl = (imagePath) => {
-    if (!imagePath) return null;
+    if (typeof imagePath !== "string" || !imagePath.trim()) return null;
     return imagePath.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
   };
 

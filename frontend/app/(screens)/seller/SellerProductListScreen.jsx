@@ -49,7 +49,9 @@ const SellerProductListScreen = () => {
   const [deleteProduct] = useDeleteProductMutation();
 
   const getImageUrl = (imagePath) => {
-    if (!imagePath) return "https://via.placeholder.com/100";
+    if (typeof imagePath !== "string" || !imagePath.trim()) {
+      return "https://via.placeholder.com/100";
+    }
     return imagePath.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
   };
 

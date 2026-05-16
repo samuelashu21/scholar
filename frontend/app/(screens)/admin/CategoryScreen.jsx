@@ -133,7 +133,11 @@ const CategoryScreen = () => {
     }
   };
 
-  const getImageUri = (img) => (img?.startsWith("http") ? img : `${BASE_URL}${img}`);
+  const getImageUri = (img) => {
+    if (typeof img !== "string" || !img.trim()) return null;
+    return img.startsWith("http") ? img : `${BASE_URL}${img}`;
+  };
+  const selectedImageUri = getImageUri(image);
 
   if (catLoading || subLoading) return <ActivityIndicator size="large" color={Colors.primary} style={styles.center} />;
 
@@ -201,8 +205,8 @@ const CategoryScreen = () => {
               />
 
               <View style={styles.formFooter}>
-                {image ? (
-                  <Image source={{ uri: getImageUri(image) }} style={styles.imagePreview} />
+                {selectedImageUri ? (
+                  <Image source={{ uri: selectedImageUri }} style={styles.imagePreview} />
                 ) : (
                   <View style={[styles.imagePreview, styles.imagePlaceholder]}>
                     <Ionicons name="image-outline" size={20} color="#ccc" />
@@ -234,25 +238,34 @@ const CategoryScreen = () => {
             {/* 4. LIST */}
             <View style={styles.listContainer}>
               <Text style={styles.sectionHeader}>Manage {activeTab}</Text>
-              {(activeTab === "categories" ? categories : subcategories)?.map((item) => (
-                <View key={item._id} style={styles.listItem}>
-                  <Image source={{ uri: getImageUri(item.image) }} style={styles.listImage} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.itemName}>{activeTab === "categories" ? item.categoryname : item.subcategoryName}</Text>
-                    {activeTab === "subcategories" && (
-                      <Text style={styles.parentText}>{item.parentCategory?.categoryname}</Text>
+              {(activeTab === "categories" ? categories : subcategories)?.map((item) => {
+                const itemImageUri = getImageUri(item.image);
+                return (
+                  <View key={item._id} style={styles.listItem}>
+                    {itemImageUri ? (
+                      <Image source={{ uri: itemImageUri }} style={styles.listImage} />
+                    ) : (
+                      <View style={[styles.listImage, styles.imagePlaceholder]}>
+                        <Ionicons name="image-outline" size={16} color="#ccc" />
+                      </View>
                     )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.itemName}>{activeTab === "categories" ? item.categoryname : item.subcategoryName}</Text>
+                      {activeTab === "subcategories" && (
+                        <Text style={styles.parentText}>{item.parentCategory?.categoryname}</Text>
+                      )}
+                    </View>
+                    <View style={styles.actions}>
+                      <TouchableOpacity onPress={() => editHandler(item, activeTab === "categories" ? "category" : "subcategory")}>
+                        <Ionicons name="pencil-outline" size={18} color={Colors.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => deleteItemHandler(item._id)}>
+                        <Ionicons name="trash-outline" size={18} color={Colors.textRed} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                  <View style={styles.actions}>
-                    <TouchableOpacity onPress={() => editHandler(item, activeTab === "categories" ? "category" : "subcategory")}>
-                      <Ionicons name="pencil-outline" size={18} color={Colors.primary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => deleteItemHandler(item._id)}>
-                      <Ionicons name="trash-outline" size={18} color={Colors.textRed} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
           </View>
         </ScrollView>
@@ -329,4 +342,4 @@ const styles = StyleSheet.create({
   actions: { flexDirection: "row", gap: 12 },
 });
 
-export default CategoryScreen;
+export default CategoryScreen; 

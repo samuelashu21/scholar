@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 
 const users = [
   // ================= ADMIN =================
-  {
+  { 
     FirstName: "Admin", 
     LastName: "User",
     email: "admin@gmail.com",

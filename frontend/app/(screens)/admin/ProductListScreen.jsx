@@ -50,7 +50,9 @@ const ProductListScreen = () => {
   const [deleteProduct] = useDeleteProductMutation();
 
   const getImageUrl = (imagePath) => {
-    if (!imagePath) return "https://via.placeholder.com/100";
+    if (typeof imagePath !== "string" || !imagePath.trim()) {
+      return "https://via.placeholder.com/100";
+    }
     return imagePath.startsWith("http") ? imagePath : `${BASE_URL}${imagePath}`;
   };
 
@@ -473,4 +475,4 @@ const styles = StyleSheet.create({
   activePageButton: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   pageButtonText: { color: "#495057", fontWeight: "700" },
   activePageButtonText: { color: "#FFF" },
-}); 
+});  

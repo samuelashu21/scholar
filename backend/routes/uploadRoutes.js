@@ -49,7 +49,11 @@ router.post("/", upload.single("image"), (req, res) => {
 
 
 router.use((err, req, res, next) => {
-  res.status(500).json({ message: err.message || "Error processing upload" });
+  const message =
+    typeof err === "string"
+      ? err
+      : err?.message || "Error processing upload";
+  res.status(500).json({ message });
 });
 
-export default router; 
+export default router;  
