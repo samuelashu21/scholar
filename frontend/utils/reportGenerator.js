@@ -128,10 +128,6 @@ export const runPdfAction = async ({ html, mode }) => {
     }
   }
 
-  if (mode === "print") {
-    await Print.printAsync({ uri });
-  }
-
   return uri;
 };
 

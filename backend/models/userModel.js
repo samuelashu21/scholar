@@ -143,16 +143,14 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 };
 
 // Pre-save middleware for password hashing
-userSchema.pre("save", async function (next) {
+userSchema.pre("save", async function () {
   if (!this.isModified("password")) {
-    return next();
+    return;
   }
 
   const salt = await bcrypt.genSalt(10);
 
   this.password = await bcrypt.hash(this.password, salt);
-
-  next();
 });
 
 // Normalize role before validation
@@ -171,4 +169,4 @@ userSchema.index({ "sellerRequest.boostActive": 1 });
 userSchema.index({ accountStatus: 1 });
 
 const User = mongoose.model("User", userSchema);
-export default User; 
+export default User;  

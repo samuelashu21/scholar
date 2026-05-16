@@ -113,7 +113,7 @@ const SellerRequestListScreen = () => {
         sellerFilter: reportSellerFilter,
       });
       const uri = await runPdfAction({ html, mode });
-      const modeLabel = mode === "share" ? "shared" : mode === "print" ? "sent to print" : "saved";
+      const modeLabel = mode === "share" ? "shared" : "saved";
       Alert.alert("PDF Report Ready", `Seller report ${modeLabel}. File: ${uri.split("/").pop()}`);
     } catch (err) {
       Alert.alert("Report Error", err?.message || "Unable to generate seller report.");
@@ -313,13 +313,6 @@ const SellerRequestListScreen = () => {
             disabled={isGeneratingReport}
           >
             <Text style={styles.reportBtnSecondaryText}>Share</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.reportBtn, styles.reportBtnSecondary, isGeneratingReport && styles.disabledBtn]}
-            onPress={() => runReport("print")}
-            disabled={isGeneratingReport}
-          >
-            <Text style={styles.reportBtnSecondaryText}>Print</Text>
           </TouchableOpacity>
         </View>
         <Text style={styles.reportMeta}>Included sellers: {reportUsers.length}</Text>
