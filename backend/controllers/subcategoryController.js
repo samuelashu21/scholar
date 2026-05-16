@@ -1,13 +1,21 @@
 import asyncHandler from "../middleware/asyncHandler.js";
 import Subcategory from "../models/subcategoryModel.js";
 import Category from "../models/categoryModel.js";
+import mongoose from "mongoose";
 
 const escapeRegExp = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // @desc    Get all subcategories (Optionally filter by parentCategory)
 const getSubcategories = asyncHandler(async (req, res) => {
   const { categoryId } = req.query; // If passed, filter by main category
-  const filter = categoryId ? { parentCategory: categoryId } : {};
+  if (categoryId && !mongoose.isValidObjectId(categoryId)) {
+    res.status(400);
+    throw new Error("Invalid category ID");
+  }
+
+  const filter = categoryId
+    ? { parentCategory: new mongoose.Types.ObjectId(categoryId) }
+    : {};
   
   const subcategories = await Subcategory.find(filter)
     .populate("parentCategory", "categoryname")
@@ -27,7 +35,8 @@ const createSubcategory = asyncHandler(async (req, res) => {
     throw new Error("Subcategory name and parent category ID are required");
   }
 
-  const parentExists = await Category.exists({ _id: parentCategory });
+  const sanitizedParentCategoryId = new mongoose.Types.ObjectId(parentCategory);
+  const parentExists = await Category.exists({ _id: sanitizedParentCategoryId });
   if (!parentExists) {
     res.status(400);
     throw new Error("Parent category not found");
@@ -43,7 +52,7 @@ const createSubcategory = asyncHandler(async (req, res) => {
 
   const subcategory = new Subcategory({
     subcategoryName,
-    parentCategory, // This should be the _id of the Category
+    parentCategory: sanitizedParentCategoryId, // This should be the _id of the Category
     image,
   });
 
@@ -77,12 +86,13 @@ const updateSubcategory = asyncHandler(async (req, res) => {
   }
 
   if (parentCategory) {
-    const parentExists = await Category.exists({ _id: parentCategory });
+    const sanitizedParentCategoryId = new mongoose.Types.ObjectId(parentCategory);
+    const parentExists = await Category.exists({ _id: sanitizedParentCategoryId });
     if (!parentExists) {
       res.status(400);
       throw new Error("Parent category not found");
     }
-    subcategory.parentCategory = parentCategory;
+    subcategory.parentCategory = sanitizedParentCategoryId;
   }
 
   if (image) subcategory.image = image;

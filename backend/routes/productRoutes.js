@@ -24,6 +24,13 @@ const writeLimiter = rateLimit({
   legacyHeaders: false, 
   message: { success: false, message: "Too many requests, please try again later.", data: null },
 });
+const readLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 240,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many requests, please try again later.", data: null },
+});
 
 // ✅ put static route first
 router.get("/my-products", protect, getMyProducts);
@@ -31,9 +38,9 @@ router.get("/my-products", protect, getMyProducts);
 // routes/productRoutes.js
 router.get("/banner", getBannerProducts);
  
-router
+router 
   .route("/")
-  .get(protectOptional, getProducts)
+  .get(readLimiter, protectOptional, getProducts)
   .post(writeLimiter, protect, approvedSellerOnly, createProduct); 
 
 router 

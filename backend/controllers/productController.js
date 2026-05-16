@@ -237,9 +237,12 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new Error("Invalid category or subcategory");
   }
 
+  const sanitizedCategoryId = new mongoose.Types.ObjectId(categoryId);
+  const sanitizedSubcategoryId = new mongoose.Types.ObjectId(subcategoryId);
+
   const [category, subcategory] = await Promise.all([
-    Category.findById(categoryId).select("_id").lean(),
-    Subcategory.findById(subcategoryId).select("_id parentCategory").lean(),
+    Category.findById(sanitizedCategoryId).select("_id").lean(),
+    Subcategory.findById(sanitizedSubcategoryId).select("_id parentCategory").lean(),
   ]);
 
   if (!category || !subcategory) {
@@ -257,8 +260,8 @@ const createProduct = asyncHandler(async (req, res) => {
     price,
     description: description || "No description provided",
     image: image || "/uploads/sample.jpg",
-    category: categoryId,
-    subcategory: subcategoryId,
+    category: sanitizedCategoryId,
+    subcategory: sanitizedSubcategoryId,
     countInStock: countInStock || 0,
     numReviews: 0,
   });
@@ -292,8 +295,12 @@ const updateProduct = asyncHandler(async (req, res) => {
   }
 
   if (categoryId || subcategoryId) {
-    const nextCategoryId = categoryId || product.category?.toString();
-    const nextSubcategoryId = subcategoryId || product.subcategory?.toString();
+    const nextCategoryId = new mongoose.Types.ObjectId(
+      categoryId || product.category?.toString()
+    );
+    const nextSubcategoryId = new mongoose.Types.ObjectId(
+      subcategoryId || product.subcategory?.toString()
+    );
     const [category, subcategory] = await Promise.all([
       Category.findById(nextCategoryId).select("_id").lean(),
       Subcategory.findById(nextSubcategoryId).select("_id parentCategory").lean(),
@@ -325,10 +332,10 @@ const updateProduct = asyncHandler(async (req, res) => {
   product.countInStock = countInStock ?? product.countInStock;
 
   if (categoryId) {
-    product.category = categoryId;
+    product.category = new mongoose.Types.ObjectId(categoryId);
   }  
    if (subcategoryId) {
-    product.subcategory = subcategoryId;
+    product.subcategory = new mongoose.Types.ObjectId(subcategoryId);
   }  
   
   const updatedProduct = await product.save();
