@@ -6,7 +6,7 @@ const products = [
     description:
       "The iPhone 16 Pro Max is Apple's most advanced smartphone, featuring a stunning Super Retina XDR display, a powerful A18 Bionic chip, and a revolutionary camera system with enhanced low-light performance and cinematic video capabilities. Experience unparalleled speed, stunning visuals, and all-day battery life.",
     category: "smartphones",
-    price: 1399.99, // Estimated price
+    price: 1399.99, // Estimated price 
     countInStock: 25,
     rating: 0,
     numReviews: 0,

@@ -9,25 +9,26 @@ import {
   Platform,
   SafeAreaView,
   KeyboardAvoidingView,
-  Switch,
   StatusBar,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { useRouter, useLocalSearchParams, Stack } from "expo-router";
+import { useSelector } from "react-redux";
 import { Picker } from "@react-native-picker/picker";
 import Message from "../../../components/Message";
 import { Colors } from "../../../constants/Utils";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import { useApproveSellerMutation, useGetUserDetailsQuery } from "../../../slices/userAPiSlice";
+import { isAdminUser } from "../../../constants/roles";
 
 const ManageSellerRequestScreen = () => {
+  const { userInfo } = useSelector((state) => state.auth);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [accountStatus, setAccountStatus] = useState("active");
-  const [isAdmin, setIsAdmin] = useState(false);
 
   const [storeName, setStoreName] = useState("");
   const [storeDescription, setStoreDescription] = useState("");
@@ -49,7 +50,6 @@ const ManageSellerRequestScreen = () => {
       setEmail(user.email || "");
       setPhone(user.phone || "");
       setAccountStatus(user.accountStatus || "active");
-      setIsAdmin(user.isAdmin);
       setStoreName(user.sellerProfile?.storeName || "");
       setStoreDescription(user.sellerProfile?.storeDescription || "");
       setSubscriptionType(user.sellerRequest?.subscriptionType || "free");
@@ -67,7 +67,6 @@ const ManageSellerRequestScreen = () => {
         email,
         phone,
         accountStatus,
-        isAdmin,
         storeName,
         storeDescription,
         subscriptionType,
@@ -97,6 +96,14 @@ const ManageSellerRequestScreen = () => {
       <ActivityIndicator size="large" color={Colors.primary} />
     </View>
   );
+
+  if (!isAdminUser(userInfo)) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.sectionTitle}>Admin access required.</Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -136,17 +143,6 @@ const ManageSellerRequestScreen = () => {
                   <TextInput style={styles.input} value={email} editable={false} />
                 </View>
 
-                <View style={styles.switchRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.boldLabel}>Admin Privileges</Text>
-                    <Text style={styles.subLabel}>Grant access to admin tools</Text>
-                  </View>
-                  <Switch 
-                    value={isAdmin} 
-                    onValueChange={setIsAdmin} 
-                    trackColor={{ true: Colors.primary, false: "#D1D1D1" }} 
-                  />
-                </View>
               </View>
 
               {/* Store Section */}
@@ -264,4 +260,4 @@ const styles = StyleSheet.create({
   pickerContainer: { backgroundColor: "#F9FAFB", borderRadius: 12, borderWidth: 1, borderColor: "#E5E7EB", overflow: "hidden" },
   submitBtn: { backgroundColor: Colors.primary, height: 58, borderRadius: 16, flexDirection: "row", justifyContent: "center", alignItems: "center", marginTop: 8 },
   submitBtnText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
-});
+}); 

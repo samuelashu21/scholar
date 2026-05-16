@@ -20,6 +20,7 @@ import {
   downgradeExpiredSubscription,
   hasActivePremiumSubscription,
 } from "../utils/sellerSubscription.js";
+import { ROLES, isAdminRole, resolveUserRole } from "../constants/roles.js";
      
       
 const authUser = asyncHandler(async (req, res) => {
@@ -55,9 +56,22 @@ const authUser = asyncHandler(async (req, res) => {
     throw new Error("Please verify your email before logging in.");
   }
   // Handle seller logic
-  let sellerInfo = null;
+  let sellerInfo = user.sellerRequest
+    ? {
+        subscriptionType: user.sellerRequest.subscriptionType,
+        subscriptionStart: user.sellerRequest.subscriptionStart,
+        subscriptionEnd: user.sellerRequest.subscriptionEnd,
+        boostActive: user.sellerRequest.boostActive,
+        requestStatus: user.sellerRequest.status,
+        requestedAt: user.sellerRequest.requestedAt,
+        approvedAt: user.sellerRequest.approvedAt,
+        rejectionReason: user.sellerRequest.rejectionReason,
+        subscriptionActive: false,
+      }
+    : null;
   let subscriptionWarning = null;
-  if (user.isSeller) {
+  const userRole = resolveUserRole(user);
+  if (userRole === ROLES.SELLER) {
     const now = new Date();
     const isSubscriptionActive = hasActivePremiumSubscription(user.sellerRequest, now);
 
@@ -78,11 +92,7 @@ const authUser = asyncHandler(async (req, res) => {
     }
 
     sellerInfo = {
-      subscriptionType: user.sellerRequest.subscriptionType,
-      subscriptionStart: user.sellerRequest.subscriptionStart,
-      subscriptionEnd: user.sellerRequest.subscriptionEnd,
-      boostActive: user.sellerRequest.boostActive,
-      requestStatus: user.sellerRequest.status,
+      ...sellerInfo,
       subscriptionActive: isSubscriptionActive,
     };
   }
@@ -105,8 +115,7 @@ const authUser = asyncHandler(async (req, res) => {
     email: user.email,
     phone: user.phone,
     profileImage: user.profileImage,   
-    isSeller: user.isSeller,
-    isAdmin: user.isAdmin,
+    role: userRole,
     accountStatus: user.accountStatus,
     verified: user.verified, 
     sellerRequest: sellerInfo,
@@ -127,7 +136,6 @@ const registerUser = asyncHandler(async (req, res) => {
       phone,
       profileImage,
       password,
-      requestSeller = false,
     } = req.body; 
 
     // ---- Validate required fields ----
@@ -192,23 +200,11 @@ const registerUser = asyncHandler(async (req, res) => {
       profileImage,
       password,
       isVerified: false,
-      isAdmin: false,
-      isSeller: false,
+      role: ROLES.CUSTOMER,
       accountStatus: "active",
       otp,
       otpExpires: Date.now() + 5 * 60 * 1000,
     };
-
-    if (requestSeller) {
-      newUserData.sellerRequest = {
-        isRequested: true,
-        status: "pending",
-        subscriptionType: "free",
-        subscriptionStart: null,
-        subscriptionEnd: null,
-        boostActive: false,
-      };
-    }
     
     const user = await User.create(newUserData);
 
@@ -232,8 +228,7 @@ const registerUser = asyncHandler(async (req, res) => {
       email: user.email,
       phone: user.phone,
       profileImage: user.profileImage,
-      isSeller: user.isSeller,
-      isAdmin: user.isAdmin,
+      role: resolveUserRole(user),
       isVerified: user.isVerified,
       accountStatus: user.accountStatus,
       sellerRequest: user.sellerRequest || null,
@@ -506,8 +501,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
     name: `${user.FirstName} ${user.LastName}`,
     email: user.email,
     profileImage: user.profileImage,   
-    isAdmin: user.isAdmin,
-    isSeller: user.isSeller,
+    role: resolveUserRole(user),
     isVerified: user.isVerified,
     accountStatus: user.accountStatus,
     sellerRequest: user.sellerRequest || null,
@@ -569,8 +563,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   if (password) user.password = password;
 
   // Prevent role changes
-  delete req.body.isAdmin;
-  delete req.body.isSeller;
+  delete req.body.role;
   delete req.body.sellerRequest;
 
   const updatedUser = await user.save();
@@ -581,8 +574,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
     email: updatedUser.email,
     phone: updatedUser.phone,
     profileImage: updatedUser.profileImage,
-    isSeller: updatedUser.isSeller,
-    isAdmin: updatedUser.isAdmin,
+    role: resolveUserRole(updatedUser),
     isVerified: updatedUser.isVerified,
     accountStatus: updatedUser.accountStatus,
     updatedAt: updatedUser.updatedAt,
@@ -628,7 +620,7 @@ const deleteUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
 
   if (user) {
-    if (user.isAdmin) {
+    if (isAdminRole(user)) {
       res.status(400);
       throw new Error("cannot delete admin user");
     }
@@ -679,7 +671,7 @@ const searchSellers = asyncHandler(async (req, res) => {
     return res.json([]);
   } 
   const searchCriteria = {
-    isSeller: true,
+    role: ROLES.SELLER,
     accountStatus: "active",
     "sellerRequest.status": "approved",
     $or: [
@@ -723,7 +715,7 @@ const searchSellers = asyncHandler(async (req, res) => {
         profileImage: 1,
         sellerProfile: 1,
         sellerRequest: 1,
-        isSeller: 1,
+        role: 1,
         verified: 1,
       },
     },
@@ -762,13 +754,13 @@ const updateUser = asyncHandler(async (req, res) => {
     user.emailVerificationExpire = undefined;
   }
 
-  // --- Update roles (Admin Only) ---
-  if (req.body.isAdmin !== undefined) {
-    user.isAdmin = Boolean(req.body.isAdmin);
-  }
-
-  if (req.body.isSeller !== undefined) {
-    user.isSeller = Boolean(req.body.isSeller);
+  // --- Update role (Admin Only) ---
+  if (req.body.role !== undefined) {
+    if (!Object.values(ROLES).includes(req.body.role)) {
+      res.status(400);
+      throw new Error("Invalid role");
+    }
+    user.role = req.body.role;
   }
 
   // --- Update Account Status ---
@@ -788,8 +780,7 @@ const updateUser = asyncHandler(async (req, res) => {
     LastName: updatedUser.LastName,
     email: updatedUser.email,
     phone: updatedUser.phone,
-    isSeller: updatedUser.isSeller,
-    isAdmin: updatedUser.isAdmin,
+    role: resolveUserRole(updatedUser),
     accountStatus: updatedUser.accountStatus,
     isVerified: updatedUser.isVerified,
     //sellerRequest: updatedUser.sellerRequest,
@@ -861,6 +852,13 @@ const requestSeller = asyncHandler(async (req, res) => {
         data: null,
       });
     }
+    if (resolveUserRole(user) !== ROLES.CUSTOMER) {
+      return res.status(403).json({
+        success: false,
+        message: "Only customers can submit seller requests",
+        data: null,
+      });
+    }
     if (sanitizedStoreDescription.length < 20 || sanitizedStoreDescription.length > 500) {
       return res.status(400).json({
         success: false,
@@ -877,7 +875,7 @@ const requestSeller = asyncHandler(async (req, res) => {
       });
     }
 
-    if (user.sellerRequest?.status === "approved" || user.isSeller) {
+    if (resolveUserRole(user) === ROLES.SELLER || user.sellerRequest?.status === "approved") {
       return res.status(400).json({
         success: false,
         message: "You are already an approved seller",
@@ -891,6 +889,8 @@ const requestSeller = asyncHandler(async (req, res) => {
     user.sellerRequest = {
       isRequested: true,
       status: "pending",
+      requestedAt: new Date(),
+      approvedAt: null,
       rejectionReason: "",
       subscriptionType,
       subscriptionLevel: 0,
@@ -934,7 +934,7 @@ await sendSellerRequestEmail(user, adminEmail);
 // Admin: get all pending seller requests
 const getSellerRequests = asyncHandler(async (req, res) => {
   const requests = await User.find({
-    $or: [{ "sellerRequest.isRequested": true }, { isSeller: true }],
+    $or: [{ "sellerRequest.isRequested": true }, { role: ROLES.SELLER }],
   }).sort({ "sellerRequest.status": 1, createdAt: -1 });
   res.json(requests);
 });
@@ -955,12 +955,8 @@ const approveSeller = asyncHandler(async (req, res) => {
       subscriptionType: subTypeBody,
       rejectionReason = "",
       accountStatus,
-      isAdmin,
     } = req.body;
-
-    if (typeof isAdmin !== "undefined") {
-      user.isAdmin = Boolean(isAdmin);
-    }
+ 
     if (accountStatus) {
       if (!["active", "suspended", "inactive"].includes(accountStatus)) {
         return res.status(400).json({
@@ -972,11 +968,16 @@ const approveSeller = asyncHandler(async (req, res) => {
       user.accountStatus = accountStatus;
     }
 
+    if (!user.sellerRequest) {
+      user.sellerRequest = {};
+    }
+
     // --- 1. HANDLE REJECTION ---
     if (status === "rejected") {
-      user.isSeller = false;
+      user.role = ROLES.CUSTOMER;
       user.sellerRequest.status = "rejected";
       user.sellerRequest.isRequested = false;
+      user.sellerRequest.approvedAt = null;
       user.sellerRequest.rejectionReason = validator.escape((rejectionReason || "Seller request rejected by admin").trim());
       user.sellerRequest.subscriptionType = "free";
       user.sellerRequest.subscriptionLevel = 0;
@@ -990,6 +991,27 @@ const approveSeller = asyncHandler(async (req, res) => {
       return res.json({
         success: true,
         message: "Seller request rejected",
+        data: user,
+      });
+    }
+
+    if (status === "pending") {
+      user.role = ROLES.CUSTOMER;
+      user.sellerRequest.status = "pending";
+      user.sellerRequest.isRequested = true;
+      user.sellerRequest.rejectionReason = "";
+      user.sellerRequest.requestedAt = user.sellerRequest.requestedAt || new Date();
+      user.sellerRequest.approvedAt = null;
+      user.sellerProfile.storeName =
+        validator.escape((storeName || user.sellerProfile.storeName || "").trim());
+      user.sellerProfile.storeDescription =
+        validator.escape((storeDescription || user.sellerProfile.storeDescription || "").trim());
+
+      await user.save();
+
+      return res.json({
+        success: true,
+        message: "Seller request kept pending",
         data: user,
       });
     }
@@ -1008,7 +1030,7 @@ const approveSeller = asyncHandler(async (req, res) => {
     }
 
     // Update Profile Info
-    user.isSeller = true;
+    user.role = ROLES.SELLER;
     user.sellerRequest.isRequested = false;
     user.sellerRequest.rejectionReason = "";
     user.sellerProfile.storeName =
@@ -1018,6 +1040,7 @@ const approveSeller = asyncHandler(async (req, res) => {
 
     // Handle Subscription Dates & Priority Levels
     user.sellerRequest.status = "approved";
+    user.sellerRequest.approvedAt = new Date();
     const subscriptionData = calculateSubscription(subscriptionType);
     user.sellerRequest.subscriptionType = subscriptionData.subscriptionType;
     user.sellerRequest.subscriptionLevel = subscriptionData.subscriptionLevel;
@@ -1054,9 +1077,10 @@ const rejectSeller = asyncHandler(async (req, res) => {
     });
   }
 
-  user.isSeller = false;
+  user.role = ROLES.CUSTOMER;
   user.sellerRequest.isRequested = false;
   user.sellerRequest.status = "rejected";
+  user.sellerRequest.approvedAt = null;
   user.sellerRequest.rejectionReason = validator.escape(
     (req.body?.rejectionReason || "Seller request rejected by admin").trim()
   );
@@ -1099,4 +1123,4 @@ export {
   getSellerRequests,
   approveSeller,
   rejectSeller,
-};  
+};   

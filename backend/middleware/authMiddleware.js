@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import asyncHandler from "./asyncHandler.js";
 import User from "../models/userModel.js";
 import { downgradeExpiredSubscription } from "../utils/sellerSubscription.js";
+import { isAdminRole, isSellerOrAdminRole, isSellerRole } from "../constants/roles.js";
 
 const protect = asyncHandler(async (req, res, next) => {
   const bearerToken =
@@ -33,7 +34,7 @@ const protect = asyncHandler(async (req, res, next) => {
     throw new Error("Not authorized, user not found");
   }
 
-  if (req.user.isSeller && downgradeExpiredSubscription(req.user)) {
+  if (isSellerRole(req.user) && downgradeExpiredSubscription(req.user)) {
     await req.user.save();
   }
 
@@ -58,7 +59,7 @@ const protectOptional = asyncHandler(async (req, res, next) => {
 
 
 const admin = (req, res, next) => {
-  if (req.user && req.user.isAdmin) {
+  if (req.user && isAdminRole(req.user)) {
     next();
   } else { 
     res.status(401); 
@@ -66,7 +67,7 @@ const admin = (req, res, next) => {
   }
 };
 const seller = (req, res, next) => {
-  if (req.user && req.user.isSeller) {
+  if (req.user && isSellerRole(req.user)) {
      next();
   }
   else {
@@ -76,7 +77,7 @@ const seller = (req, res, next) => {
 };
 
 const sellerOrAdmin = (req, res, next) => {
-  if (req.user && (req.user.isSeller || req.user.isAdmin)) {
+  if (req.user && isSellerOrAdminRole(req.user)) {
       next();
   }
   else {
@@ -94,9 +95,9 @@ const approvedSellerOnly = asyncHandler(async (req, res, next) => {
     });
   }
  
-  if (req.user.isAdmin) return next();
+  if (isAdminRole(req.user)) return next();
 
-  if (!req.user.isSeller) {
+  if (!isSellerRole(req.user)) {
     return res.status(403).json({
       success: false,
       message: "Only approved sellers can post products",
@@ -149,4 +150,4 @@ const approvedSellerOnly = asyncHandler(async (req, res, next) => {
 });
 
 export { protect, protectOptional, admin, seller, sellerOrAdmin, approvedSellerOnly };
- 
+  

@@ -1,3 +1,4 @@
+import { ROLES, resolveUserRole } from "../constants/roles.js";
 export const SUBSCRIPTION_TYPES = ["free", "paid_1_month", "paid_6_month", "paid_1_year"];
 
 export const calculateSubscription = (subscriptionType = "free", startDate = new Date()) => {
@@ -54,7 +55,7 @@ export const hasActivePremiumSubscription = (sellerRequest, now = new Date()) =>
 
 export const isSellerApprovedAndActive = (user, now = new Date()) =>
   Boolean(
-    user?.isSeller &&
+    resolveUserRole(user) === ROLES.SELLER &&
       user?.accountStatus === "active" &&
       user?.sellerRequest?.status === "approved" &&
       hasActivePremiumSubscription(user?.sellerRequest, now)
@@ -71,4 +72,4 @@ export const downgradeExpiredSubscription = (user, now = new Date()) => {
   user.sellerRequest.subscriptionEnd = null;
   user.sellerRequest.boostActive = false;
   return true;
-}; 
+};  

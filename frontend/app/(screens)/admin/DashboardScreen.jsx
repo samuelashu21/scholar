@@ -12,10 +12,12 @@ import {
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSelector } from "react-redux";
 import { Colors } from "../../../constants/Utils";
 import { useGetOrdersQuery } from "../../../slices/ordersApiSlice";
 import { useGetUsersQuery, useGetSellerRequestsQuery } from "../../../slices/userAPiSlice";
 import { useGetProductsQuery } from "../../../slices/productsApiSlice";
+import { isAdminUser, isSellerUser } from "../../../constants/roles";
 
 const SummaryCard = ({ icon, label, value, tone = "default" }) => (
   <View style={[styles.summaryCard, tone === "accent" && styles.summaryCardAccent]}>
@@ -46,6 +48,7 @@ const Bar = ({ label, value, max, color }) => {
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const { userInfo } = useSelector((state) => state.auth);
 
   const { data: orders, isLoading: loadingOrders } = useGetOrdersQuery();
   const { data: users, isLoading: loadingUsers } = useGetUsersQuery();
@@ -69,14 +72,14 @@ export default function DashboardScreen() {
     const deliveredOrders = orderList.filter((item) => item.isDelivered).length;
     const pendingOrders = Math.max(orderList.length - deliveredOrders, 0);
 
-    const admins = userList.filter((item) => item.isAdmin).length;
-    const sellers = userList.filter((item) => item.isSeller).length;
+    const admins = userList.filter((item) => isAdminUser(item)).length;
+    const sellers = userList.filter((item) => isSellerUser(item)).length;
 
     const approvedSellers = sellerList.filter(
       (item) => item.sellerRequest?.status === "approved"
     ).length;
     const pendingSellerRequests = sellerList.filter(
-      (item) => (item.sellerRequest?.status || "pending") === "pending"
+      (item) => (item.sellerRequest?.status || "none") === "pending"
     ).length;
 
     const lowStock = products.filter((item) => Number(item.countInStock || 0) <= 5);
@@ -107,6 +110,14 @@ export default function DashboardScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (!isAdminUser(userInfo)) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.emptyText}>Admin access required.</Text>
       </View>
     );
   }
@@ -361,4 +372,4 @@ const styles = StyleSheet.create({
   alertDot: { width: 8, height: 8, borderRadius: 99, backgroundColor: "#F59E0B" },
   stockText: { fontSize: 12, color: "#B45309", fontWeight: "700" },
   emptyText: { color: "#6B7280", fontSize: 12, textAlign: "center", paddingVertical: 8 },
-});
+}); 

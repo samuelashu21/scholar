@@ -3,7 +3,7 @@ export const BASE_URL = "http://192.168.137.1:9090";
 // Product API endpoints
 export const PRODUCT_URL = "/api/products";
 
-// User API endpoints
+// User API endpoints 
 export const USERS_URL = "/api/users";
 
 // Order API endpoints

@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   FlatList,
   Dimensions,
-  Linking,
+  Linking, 
   StatusBar,
 } from "react-native";
 import { useLocalSearchParams, useRouter, Link } from "expo-router";
@@ -20,6 +20,7 @@ import { timeAgo } from "../../utils/timeAgo";
 import { BASE_URL } from "../../constants/Urls";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSelector } from "react-redux"; // Added
+import { isSellerUser } from "../../constants/roles";
 
 const { width } = Dimensions.get("window");
 const columnWidth = (width - 48) / 2;
@@ -106,7 +107,7 @@ const SellerProfile = () => {
           />
           {/* Green dot for online status - ideally powered by your socket state */}
           <View style={styles.onlineIndicator} />
-          {seller?.isSeller && (
+          {isSellerUser(seller) && (
             <View style={styles.verifiedBadge}>
               <MaterialCommunityIcons
                 name="check-decagram"
