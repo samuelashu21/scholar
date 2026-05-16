@@ -128,7 +128,7 @@ export default function DashboardScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push("/account")} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace("/account")} style={styles.backButton}>
           <Ionicons name="arrow-back" size={23} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Admin Dashboard</Text>
@@ -372,4 +372,4 @@ const styles = StyleSheet.create({
   alertDot: { width: 8, height: 8, borderRadius: 99, backgroundColor: "#F59E0B" },
   stockText: { fontSize: 12, color: "#B45309", fontWeight: "700" },
   emptyText: { color: "#6B7280", fontSize: 12, textAlign: "center", paddingVertical: 8 },
-}); 
+});  

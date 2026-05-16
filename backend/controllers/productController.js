@@ -6,74 +6,83 @@ import Like from "../models/likeModel.js";
 import mongoose from 'mongoose';
 import { isAdminRole } from "../constants/roles.js";
 
+const escapeRegExp = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const PAGE_SIZE = 8;
+const SUPPORTED_PRODUCT_SORTS = {
+  createdAt: { createdAt: 1 },
+  "-createdAt": { createdAt: -1 },
+  price: { price: 1 },
+  "-price": { price: -1 },
+  name: { name: 1 },
+  "-name": { name: -1 },
+};
+
  
 export const getProducts = asyncHandler(async (req, res) => {
-  const pageSize = 8;
+  const pageSize = PAGE_SIZE;
   const page = Number(req.query.pageNumber) || 1;
-  const { keyword, category, subcategory, mine } = req.query;
-   
+  const { keyword, category, subcategory, sort } = req.query;
+    
   let query = {}; 
-  
+   
   // 1. Basic Filtering (Keyword/Category/Subcategory)
   if (keyword) {
     const [matchingCategories, matchingSubcategories] = await Promise.all([
-      Category.find({ categoryname: { $regex: keyword, $options: "i" } }).select("_id"),
-      Subcategory.find({ subcategoryName: { $regex: keyword, $options: "i" } }).select("_id")
+      Category.find({ categoryname: { $regex: escapeRegExp(keyword), $options: "i" } }).select("_id").lean(),
+      Subcategory.find({ subcategoryName: { $regex: escapeRegExp(keyword), $options: "i" } }).select("_id").lean()
     ]);
     query.$or = [
-      { name: { $regex: keyword, $options: "i" } },
+      { name: { $regex: escapeRegExp(keyword), $options: "i" } },
       { category: { $in: matchingCategories.map(c => c._id) } },
       { subcategory: { $in: matchingSubcategories.map(s => s._id) } }
     ];
   }
-  if (category) query.category = new mongoose.Types.ObjectId(category);
-  if (subcategory) query.subcategory = new mongoose.Types.ObjectId(subcategory);
+  if (category && mongoose.isValidObjectId(category)) query.category = new mongoose.Types.ObjectId(category);
+  if (subcategory && mongoose.isValidObjectId(subcategory)) query.subcategory = new mongoose.Types.ObjectId(subcategory);
 
   // 2. The Aggregation Pipeline (The "Magic" Sort)
   const now = new Date();
+  const requestedSort = SUPPORTED_PRODUCT_SORTS[sort] || null;
+  const sortStage = requestedSort
+    ? { ...requestedSort, effectivePriority: -1, views: -1, createdAt: -1 }
+    : { effectivePriority: -1, views: -1, createdAt: -1 };
 
-  const products = await Product.aggregate([
-    { $match: query }, // Filter products first
-    {
-      $lookup: {
-        from: "users", // Join with the User collection
-        localField: "user",
-        foreignField: "_id",
-        as: "seller"
-      }
-    },
-    { $unwind: "$seller" }, // Convert seller array to object
-    {
-      $addFields: {
-        effectivePriority: {
-          $cond: [
-            {
-              $and: [
-                { $eq: ["$seller.sellerRequest.status", "approved"] },
-                { $eq: ["$seller.accountStatus", "active"] },
-                { $eq: ["$seller.sellerRequest.boostActive", true] },
-                { $gt: ["$seller.sellerRequest.subscriptionEnd", now] },
-              ],
-            },
-            { $ifNull: ["$seller.sellerRequest.subscriptionLevel", 0] },
-            0,
-          ],
+  const [products, totalCount] = await Promise.all([
+    Product.aggregate([
+      { $match: query }, // Filter products first
+      {
+        $lookup: {
+          from: "users", // Join with the User collection
+          localField: "user",
+          foreignField: "_id",
+          as: "seller"
+        }
+      },
+      { $unwind: "$seller" }, // Convert seller array to object
+      {
+        $addFields: {
+          effectivePriority: {
+            $cond: [
+              {
+                $and: [
+                  { $eq: ["$seller.sellerRequest.status", "approved"] },
+                  { $eq: ["$seller.accountStatus", "active"] },
+                  { $eq: ["$seller.sellerRequest.boostActive", true] },
+                  { $gt: ["$seller.sellerRequest.subscriptionEnd", now] },
+                ],
+              },
+              { $ifNull: ["$seller.sellerRequest.subscriptionLevel", 0] },
+              0,
+            ],
+          },
         },
       },
-    },
-    { 
-      $sort: {
-        effectivePriority: -1, 
-        views: -1,
-        createdAt: -1
-      } 
-    },
-    { $skip: pageSize * (page - 1) },
-    { $limit: pageSize }
+      { $sort: sortStage },
+      { $skip: pageSize * (page - 1) },
+      { $limit: pageSize }
+    ]),
+    Product.countDocuments(query),
   ]);
-
-  // 3. Count total for pagination
-  const totalCount = await Product.countDocuments(query);
   // 4. Populate Category/Subcategory (Manually since aggregate doesn't auto-populate)
   const populatedProducts = await Product.populate(products, [
     { path: "category", select: "categoryname image" },
@@ -82,7 +91,9 @@ export const getProducts = asyncHandler(async (req, res) => {
   // 5. Like Handling (Reuse your existing logic)
   const userId = req.user?._id?.toString();
   const productIds = populatedProducts.map((p) => p._id);
-  const likes = await Like.find({ product: { $in: productIds } });
+  const likes = productIds.length
+    ? await Like.find({ product: { $in: productIds } }).select("product user").lean()
+    : [];
   
   const likeCountMap = {};
   likes.forEach((l) => {
@@ -109,42 +120,40 @@ export const getProducts = asyncHandler(async (req, res) => {
 
  
 export const getMyProducts = asyncHandler(async (req, res) => {
-  const pageSize = 8;
+  const pageSize = PAGE_SIZE;
   const page = Number(req.query.pageNumber) || 1;
-  const { keyword, category, subcategory } = req.query;
-
-  console.log("getMyProducts -> req.user:", req.user?._id); // 👈 add
+  const { keyword, category, subcategory, sort } = req.query;
 
   let query = { user: req.user._id };
 
   if (keyword) {
     const [matchingCategories, matchingSubcategories] = await Promise.all([
-      Category.find({ categoryname: { $regex: keyword, $options: "i" } }).select("_id"),
-      Subcategory.find({ subcategoryName: { $regex: keyword, $options: "i" } }).select("_id"),
+      Category.find({ categoryname: { $regex: escapeRegExp(keyword), $options: "i" } }).select("_id").lean(),
+      Subcategory.find({ subcategoryName: { $regex: escapeRegExp(keyword), $options: "i" } }).select("_id").lean(),
     ]);
 
     query.$or = [
-      { name: { $regex: keyword, $options: "i" } },
+      { name: { $regex: escapeRegExp(keyword), $options: "i" } },
       { category: { $in: matchingCategories.map((c) => c._id) } },
       { subcategory: { $in: matchingSubcategories.map((s) => s._id) } },
     ];
   }
 
-  if (category) query.category = new mongoose.Types.ObjectId(category);
-  if (subcategory) query.subcategory = new mongoose.Types.ObjectId(subcategory);
+  if (category && mongoose.isValidObjectId(category)) query.category = new mongoose.Types.ObjectId(category);
+  if (subcategory && mongoose.isValidObjectId(subcategory)) query.subcategory = new mongoose.Types.ObjectId(subcategory);
 
-  console.log("getMyProducts -> query:", query); // 👈 add
+  const sortOption = SUPPORTED_PRODUCT_SORTS[sort] || { createdAt: -1 };
 
-  const products = await Product.find(query)
-    .populate("category", "categoryname image")
-    .populate("subcategory", "subcategoryName image")
-    .sort({ createdAt: -1 }) 
-    .skip(pageSize * (page - 1))
-    .limit(pageSize);
-
-  const totalCount = await Product.countDocuments(query);
-
-  console.log("getMyProducts -> totalCount:", totalCount); // 👈 add
+  const [products, totalCount] = await Promise.all([
+    Product.find(query)
+      .populate("category", "categoryname image")
+      .populate("subcategory", "subcategoryName image")
+      .sort(sortOption)
+      .skip(pageSize * (page - 1))
+      .limit(pageSize)
+      .lean(),
+    Product.countDocuments(query),
+  ]);
 
   res.json({
     products,
@@ -167,7 +176,8 @@ const getProductById = asyncHandler(async (req, res) => {
     .populate({
       path: "reviews.user", 
       select: "FirstName LastName",
-    });
+    })
+    .lean();
 
   if (!product) {
     res.status(404);
@@ -177,17 +187,11 @@ const getProductById = asyncHandler(async (req, res) => {
   // Defensive default for arrays
   // Handle Likes for Single Product
   // Assuming 'likes' is an array of User IDs in your Product model 
-  product.likes = product.likes || [];
-  product.reviews = product.reviews || [];
-
   const userId = req.user?._id?.toString();
-   
-  // Count likes from the Like collection
-  const likesCount = await Like.countDocuments({ product: req.params.id });
-
-  const isLiked = userId 
-    ? await Like.exists({ product: req.params.id, user: userId }) 
-    : false; 
+  const [likesCount, isLiked] = await Promise.all([
+    Like.countDocuments({ product: req.params.id }),
+    userId ? Like.exists({ product: req.params.id, user: userId }) : false,
+  ]);
  
   res.json({
     _id: product._id,
@@ -228,14 +232,36 @@ const createProduct = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error("Please provide name, price, category, and subcategory");
   }
+  if (!mongoose.isValidObjectId(categoryId) || !mongoose.isValidObjectId(subcategoryId)) {
+    res.status(400);
+    throw new Error("Invalid category or subcategory");
+  }
+
+  const sanitizedCategoryId = new mongoose.Types.ObjectId(categoryId);
+  const sanitizedSubcategoryId = new mongoose.Types.ObjectId(subcategoryId);
+
+  const [category, subcategory] = await Promise.all([
+    Category.findById(sanitizedCategoryId).select("_id").lean(),
+    Subcategory.findById(sanitizedSubcategoryId).select("_id parentCategory").lean(),
+  ]);
+
+  if (!category || !subcategory) {
+    res.status(400);
+    throw new Error("Selected category or subcategory does not exist");
+  }
+  if (String(subcategory.parentCategory) !== String(category._id)) {
+    res.status(400);
+    throw new Error("Selected subcategory does not belong to the selected category");
+  }
+
   const product = new Product({
     user: req.user._id, // The seller/admin creating it
     name,
     price,
     description: description || "No description provided",
     image: image || "/uploads/sample.jpg",
-    category: categoryId,
-    subcategory: subcategoryId,
+    category: sanitizedCategoryId,
+    subcategory: sanitizedSubcategoryId,
     countInStock: countInStock || 0,
     numReviews: 0,
   });
@@ -260,6 +286,36 @@ const updateProduct = asyncHandler(async (req, res) => {
     throw new Error("Product not found");
   }
 
+  if (
+    (categoryId && !mongoose.isValidObjectId(categoryId)) ||
+    (subcategoryId && !mongoose.isValidObjectId(subcategoryId))
+  ) {
+    res.status(400);
+    throw new Error("Invalid category or subcategory");
+  }
+
+  if (categoryId || subcategoryId) {
+    const nextCategoryId = new mongoose.Types.ObjectId(
+      categoryId || product.category?.toString()
+    );
+    const nextSubcategoryId = new mongoose.Types.ObjectId(
+      subcategoryId || product.subcategory?.toString()
+    );
+    const [category, subcategory] = await Promise.all([
+      Category.findById(nextCategoryId).select("_id").lean(),
+      Subcategory.findById(nextSubcategoryId).select("_id parentCategory").lean(),
+    ]);
+
+    if (!category || !subcategory) {
+      res.status(400);
+      throw new Error("Selected category or subcategory does not exist");
+    }
+    if (String(subcategory.parentCategory) !== String(category._id)) {
+      res.status(400);
+      throw new Error("Selected subcategory does not belong to the selected category");
+    }
+  }
+
   // Only the seller who owns the product or admin can update
   if (
     product.user.toString() !== req.user._id.toString() &&
@@ -269,17 +325,17 @@ const updateProduct = asyncHandler(async (req, res) => {
     throw new Error("Not authorized to update this product");
   }
 
-  product.name = name || product.name;
-  product.price = price || product.price;
-  product.description = description || product.description;
-  product.image = image || product.image;
-  product.countInStock = countInStock || product.countInStock;
+  product.name = name ?? product.name;
+  product.price = price ?? product.price;
+  product.description = description ?? product.description;
+  product.image = image ?? product.image;
+  product.countInStock = countInStock ?? product.countInStock;
 
   if (categoryId) {
-    product.category = categoryId;
+    product.category = new mongoose.Types.ObjectId(categoryId);
   }  
    if (subcategoryId) {
-    product.subcategory = subcategoryId;
+    product.subcategory = new mongoose.Types.ObjectId(subcategoryId);
   }  
   
   const updatedProduct = await product.save();
@@ -434,4 +490,4 @@ export {
   deleteProduct, 
   createProductReview,
   getBannerProducts
-}; 
+};  

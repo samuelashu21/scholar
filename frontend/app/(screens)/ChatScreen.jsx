@@ -90,6 +90,7 @@ const ChatScreen = () => {
   const [onlineStatus, setOnlineStatus] = useState({ isOnline: false, lastSeen: null });
 
   const typingTimeoutRef = useRef(null);
+  const highlightTimeoutRef = useRef(null);
   const socket = useRef(null);
   const flatListRef = useRef(null);
 
@@ -124,8 +125,22 @@ const ChatScreen = () => {
       if (data.userId !== userInfo?._id) setShowOtherTyping(data.typing);
     });
 
-    return () => s.disconnect();
-  }, [chatId, receiverId]);
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+      s.off("userStatusChanged");
+      s.off("messageReceived");
+      s.off("deleteMessage");
+      s.off("messageEdited");
+      s.off("getMessage");
+      s.off("displayTyping");
+      s.disconnect();
+    };
+  }, [chatId, receiverId, refetch, userInfo?._id]);
 
   // --- DATA FILTERING ---
   const messages = useMemo(() => {
@@ -178,7 +193,10 @@ const ChatScreen = () => {
     if (index !== -1) {
       flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
       setHighlightedId(messageId);
-      setTimeout(() => setHighlightedId(null), 2000);
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+      highlightTimeoutRef.current = setTimeout(() => setHighlightedId(null), 2000);
     }
   }, [messages]);
 
@@ -198,9 +216,13 @@ const ChatScreen = () => {
   }, [userInfo?._id, receiverName]);
 
   const handleDelete = async (messageId, type) => {
-    await unsendMsg({ chatId, messageId, type }).unwrap();
-    if (type === "everyone") socket.current.emit("deleteMessage", { chatId, messageId });
-    refetch();
+    try {
+      await unsendMsg({ chatId, messageId, type }).unwrap();
+      if (type === "everyone") socket.current.emit("deleteMessage", { chatId, messageId });
+      refetch();
+    } catch (error) {
+      Alert.alert("Error", error?.data?.message || "Unable to delete message.");
+    }
   };
 
   if (!userInfo) return <View style={styles.centered}><Text>Please log in.</Text></View>;
@@ -306,5 +328,4 @@ const styles = StyleSheet.create({
   editBar: { flexDirection: "row", backgroundColor: "#F8F8F8", padding: 8, alignItems: "center", borderLeftWidth: 4, borderLeftColor: Colors.primary },
   editLabel: { flex: 1, fontSize: 12, color: "#666", marginLeft: 8 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-});
-
+}); 

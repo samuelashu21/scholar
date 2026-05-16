@@ -22,5 +22,7 @@ const subcategorySchema = mongoose.Schema(
   { timestamps: true }
 );
 
+subcategorySchema.index({ parentCategory: 1, subcategoryName: 1 });
+
 const Subcategory = mongoose.model("Subcategory", subcategorySchema);
-export default Subcategory;
+export default Subcategory; 

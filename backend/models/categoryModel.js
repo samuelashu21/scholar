@@ -6,6 +6,7 @@ const categorySchema = mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      trim: true,
     },
     image: {
       type: String,
@@ -17,4 +18,4 @@ const categorySchema = mongoose.Schema(
 
 const Category = mongoose.model("Category", categorySchema);
 export default Category;
- 
+  

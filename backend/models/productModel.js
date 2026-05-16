@@ -33,6 +33,8 @@ const productSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      trim: true,
+      index: true,
     },
     image: { 
       type: String,
@@ -51,6 +53,7 @@ const productSchema = new mongoose.Schema(
     description: {
       type: String,
       required: true,
+      trim: true,
     },
     price: {
       type: Number,
@@ -97,6 +100,9 @@ const productSchema = new mongoose.Schema(
 );
  
 productSchema.index({ views: -1, createdAt: -1 });
+productSchema.index({ category: 1, subcategory: 1, createdAt: -1 });
+productSchema.index({ user: 1, createdAt: -1 });
+productSchema.index({ name: "text", description: "text" });
 
 const Product = mongoose.model("Product", productSchema);
-export default Product;
+export default Product; 

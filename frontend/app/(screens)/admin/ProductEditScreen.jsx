@@ -29,10 +29,10 @@ import {
 import { useGetCategoriesQuery } from "../../../slices/categoryApiSlice";
 import { useGetSubcategoriesQuery } from "../../../slices/subcategoryApiSlice";
 
-import * as ImagePicker from "expo-image-picker";
 import { Picker } from "@react-native-picker/picker";
 import { Colors } from "../../../constants/Utils";
 import { BASE_URL } from "../../../constants/Urls";
+import { buildImageFormData, pickSingleImage } from "../../../utils/imageUpload";
 
 const ProductEditScreen = () => {
   const router = useRouter();
@@ -59,6 +59,7 @@ const ProductEditScreen = () => {
   const [updateProduct, { isLoading: loadingUpdate }] = useUpdateProductMutation();
 
   const [uploadProductImage, { isLoading: loadingUpload }] = useUploadProductImageMutation();
+  const isSubmitting = loadingCreate || loadingUpdate;
 
   const filteredSubcategories = useMemo(() => {
     return subcategories?.filter((sub) => {
@@ -86,31 +87,9 @@ const ProductEditScreen = () => {
 
   const uploadFileHandler = async () => {
     try {
-      const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!granted) {
-        Toast.show({ type: "error", text1: "Permission Denied" });
-        return;
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 0.8,
-      });
-
-      if (result.canceled || !result.assets?.length) return;
-
-      const asset = result.assets[0];
-      const fileType = asset.mimeType || "image/jpeg";
-      const mimeParts = typeof fileType === "string" ? fileType.split("/") : [];
-      const fileExt = mimeParts.length > 1 && mimeParts[1] ? mimeParts[1] : "jpg";
-      const fileName = asset.fileName || `product.${fileExt}`;
-
-      const formData = new FormData();
-      formData.append("image", {
-        uri: asset.uri,
-        type: fileType,
-        name: fileName,
-      });
+      const asset = await pickSingleImage({ quality: 0.5 });
+      if (!asset) return;
+      const formData = buildImageFormData(asset);
       const response = await uploadProductImage(formData).unwrap();
       if (!response?.image) throw new Error("Upload response missing image path");
       setImage(response.image);
@@ -123,9 +102,10 @@ const ProductEditScreen = () => {
     }
   };
 
- const submitHandler = async () => {
+  const submitHandler = async () => {
+    if (isSubmitting) return;
     // Basic frontend validation
-    if (!name || !price || !selectedCategoryId || !selectedSubcategoryId) {
+    if (!name || !price || !selectedCategoryId || !selectedSubcategoryId || !image) {
       Toast.show({ type: "error", text1: "Please fill in all required fields" });
       return;
     }
@@ -288,11 +268,11 @@ const ProductEditScreen = () => {
             </View>
 
             <TouchableOpacity
-              style={[styles.submitBtn, loadingUpdate && styles.btnDisabled]}
+              style={[styles.submitBtn, (isSubmitting || loadingUpload) && styles.btnDisabled]}
               onPress={submitHandler}
-              disabled={loadingUpdate}
+              disabled={isSubmitting || loadingUpload}
             >
-              {loadingUpdate ? (
+              {isSubmitting ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
                <Text style={styles.submitBtnText}>{isNewMode ? "Create Product" : "Save Changes"}</Text>
