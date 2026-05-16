@@ -83,7 +83,7 @@ const ProductListScreen = () => {
       });
 
       const uri = await runPdfAction({ html, mode });
-      const modeLabel = mode === "share" ? "shared" : mode === "print" ? "sent to print" : "saved";
+      const modeLabel = mode === "share" ? "shared" : "saved";
 
       Alert.alert("PDF Report Ready", `Product report ${modeLabel}. File: ${uri.split("/").pop()}`);
     } catch (err) {
@@ -225,13 +225,6 @@ const ProductListScreen = () => {
             disabled={isGeneratingReport}
           >
             <Text style={styles.reportBtnSecondaryText}>Share</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.reportBtn, styles.reportBtnSecondary, isGeneratingReport && styles.disabledBtn]}
-            onPress={() => runReport("print")}
-            disabled={isGeneratingReport}
-          >
-            <Text style={styles.reportBtnSecondaryText}>Print</Text>
           </TouchableOpacity>
         </View>
         <Text style={styles.reportMeta}>Included rows: {reportProducts.length}</Text>

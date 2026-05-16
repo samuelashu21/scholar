@@ -971,6 +971,9 @@ const approveSeller = asyncHandler(async (req, res) => {
     if (!user.sellerRequest) {
       user.sellerRequest = {};
     }
+    if (!user.sellerProfile) {
+      user.sellerProfile = {};
+    }
 
     // --- 1. HANDLE REJECTION ---
     if (status === "rejected") {

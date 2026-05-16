@@ -90,7 +90,19 @@ const csrfProtection = csurf({
     secure: process.env.NODE_ENV === "production",
   },
 });
-app.use(csrfProtection);
+const shouldApplyCsrfProtection = (req) => {
+  const origin = req.get("origin");
+  const referer = req.get("referer");
+  return Boolean(origin || referer);
+};
+
+app.use((req, res, next) => {
+  if (!shouldApplyCsrfProtection(req)) {
+    return next();
+  }
+
+  return csrfProtection(req, res, next);
+});
 app.use((req, res, next) => {
   const sanitizeRequestObject = (target) => {
     if (!target || typeof target !== "object") return;
@@ -111,7 +123,7 @@ app.use((req, res, next) => {
 });
 
 app.get("/api/csrf-token", (req, res) => {
-  res.json({ csrfToken: req.csrfToken() });
+  res.json({ csrfToken: typeof req.csrfToken === "function" ? req.csrfToken() : null });
 });
 
 
