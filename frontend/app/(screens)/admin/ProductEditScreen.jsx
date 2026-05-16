@@ -97,18 +97,29 @@ const ProductEditScreen = () => {
         quality: 0.8,
       });
 
-      if (!result.canceled) {
-        const formData = new FormData();
-        formData.append("image", {
-          uri: result.assets[0].uri,
-          type: "image/jpeg",
-          name: "product.jpg",
-        });
-        const response = await uploadProductImage(formData).unwrap();
-        setImage(response.image);
-      }
+      if (result.canceled || !result.assets?.length) return;
+
+      const asset = result.assets[0];
+      const fileType = asset.mimeType || "image/jpeg";
+      const mimeParts = typeof fileType === "string" ? fileType.split("/") : [];
+      const fileExt = mimeParts.length > 1 && mimeParts[1] ? mimeParts[1] : "jpg";
+      const fileName = asset.fileName || `product.${fileExt}`;
+
+      const formData = new FormData();
+      formData.append("image", {
+        uri: asset.uri,
+        type: fileType,
+        name: fileName,
+      });
+      const response = await uploadProductImage(formData).unwrap();
+      if (!response?.image) throw new Error("Upload response missing image path");
+      setImage(response.image);
     } catch (err) {
-      Toast.show({ type: "error", text1: "Upload Failed" });
+      Toast.show({
+        type: "error",
+        text1: "Upload Failed",
+        text2: err?.data?.message || err?.message,
+      });
     }
   };
 
@@ -435,4 +446,4 @@ const styles = StyleSheet.create({
     fontSize: 16, 
     fontWeight: "700" 
   },
-}); 
+});  

@@ -74,28 +74,45 @@ const CategoryScreen = () => {
   };
 
   const uploadFileHandler = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Toast.show({ type: "error", text1: "Permission denied" });
+        return;
+      }
 
-    if (!result.canceled) {
-      const formData = new FormData();
-      formData.append("image", {
-        uri: result.assets[0].uri,
-        type: "image/jpeg",
-        name: "upload.jpg",
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
       });
 
-      try {
-        const res = await uploadImage(formData).unwrap();
-        setImage(res.image);
-        Toast.show({ type: "success", text1: "Image Uploaded" });
-      } catch (err) {
-        Toast.show({ type: "error", text1: "Upload Failed" });
-      }
+      if (result.canceled || !result.assets?.length) return;
+
+      const asset = result.assets[0];
+      const fileType = asset.mimeType || "image/jpeg";
+      const mimeParts = typeof fileType === "string" ? fileType.split("/") : [];
+      const fileExt = mimeParts.length > 1 && mimeParts[1] ? mimeParts[1] : "jpg";
+      const fileName = asset.fileName || `upload.${fileExt}`;
+
+      const formData = new FormData();
+      formData.append("image", {
+        uri: asset.uri,
+        type: fileType,
+        name: fileName,
+      });
+
+      const res = await uploadImage(formData).unwrap();
+      if (!res?.image) throw new Error("Upload response missing image path");
+      setImage(res.image);
+      Toast.show({ type: "success", text1: "Image Uploaded" });
+    } catch (err) {
+      Toast.show({
+        type: "error",
+        text1: "Upload Failed",
+        text2: err?.data?.message || err?.message,
+      });
     }
   };
 
@@ -342,4 +359,4 @@ const styles = StyleSheet.create({
   actions: { flexDirection: "row", gap: 12 },
 });
 
-export default CategoryScreen; 
+export default CategoryScreen;  

@@ -38,7 +38,7 @@ const users = [
     password: bcrypt.hashSync("Abegaz$%", 10),
     phone: "+251911000002",
     role: "seller",
-
+ 
     verified: true,
     accountStatus: "active",
 
