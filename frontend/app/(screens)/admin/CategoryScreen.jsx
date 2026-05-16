@@ -133,7 +133,10 @@ const CategoryScreen = () => {
     }
   };
 
-  const getImageUri = (img) => (img?.startsWith("http") ? img : `${BASE_URL}${img}`);
+  const getImageUri = (img) => {
+    if (typeof img !== "string" || !img.trim()) return null;
+    return img.startsWith("http") ? img : `${BASE_URL}${img}`;
+  };
 
   if (catLoading || subLoading) return <ActivityIndicator size="large" color={Colors.primary} style={styles.center} />;
 
@@ -201,7 +204,7 @@ const CategoryScreen = () => {
               />
 
               <View style={styles.formFooter}>
-                {image ? (
+                {getImageUri(image) ? (
                   <Image source={{ uri: getImageUri(image) }} style={styles.imagePreview} />
                 ) : (
                   <View style={[styles.imagePreview, styles.imagePlaceholder]}>
@@ -236,7 +239,13 @@ const CategoryScreen = () => {
               <Text style={styles.sectionHeader}>Manage {activeTab}</Text>
               {(activeTab === "categories" ? categories : subcategories)?.map((item) => (
                 <View key={item._id} style={styles.listItem}>
-                  <Image source={{ uri: getImageUri(item.image) }} style={styles.listImage} />
+                  {getImageUri(item.image) ? (
+                    <Image source={{ uri: getImageUri(item.image) }} style={styles.listImage} />
+                  ) : (
+                    <View style={[styles.listImage, styles.imagePlaceholder]}>
+                      <Ionicons name="image-outline" size={16} color="#ccc" />
+                    </View>
+                  )}
                   <View style={{ flex: 1 }}>
                     <Text style={styles.itemName}>{activeTab === "categories" ? item.categoryname : item.subcategoryName}</Text>
                     {activeTab === "subcategories" && (
