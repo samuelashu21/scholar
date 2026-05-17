@@ -137,7 +137,6 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
     const refreshState = await refreshPromise;
     if (refreshState.ok) {
       result = await rawBaseQuery(args, api, extraOptions);
-      updateCachedCsrfToken(result);
     } else {
       return { error: refreshState.error };
     }
