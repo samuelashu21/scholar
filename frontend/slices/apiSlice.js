@@ -5,6 +5,7 @@ import { logout, setCredentials } from "./authSlice";
 
 const CSRF_URL = "/api/csrf-token";
 let csrfToken = null;
+let refreshPromise = null;
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: BASE_URL,
@@ -59,6 +60,52 @@ const ensureCsrfToken = async (api, extraOptions) => {
   return Boolean(csrfToken);
 };
 
+const refreshSession = async (api, extraOptions) => {
+  await ensureCsrfToken(api, extraOptions);
+  const refreshResult = await rawBaseQuery(
+    {
+      url: `${USERS_URL}/refresh`,
+      method: "POST",
+    },
+    api,
+    extraOptions
+  );
+  updateCachedCsrfToken(refreshResult);
+
+  if (!refreshResult?.error && refreshResult?.data?.token) {
+    const currentUserInfo = api.getState().auth.userInfo;
+    if (!currentUserInfo) {
+      csrfToken = null;
+      api.dispatch(logout());
+      return {
+        ok: false,
+        error: {
+          status: 401,
+          data: { message: "Session expired. Please log in again." },
+        },
+      };
+    }
+
+    api.dispatch(
+      setCredentials({
+        ...currentUserInfo,
+        token: refreshResult.data.token,
+      })
+    );
+    return { ok: true };
+  }
+
+  csrfToken = null;
+  api.dispatch(logout());
+  return {
+    ok: false,
+    error: {
+      status: refreshResult?.error?.status || 401,
+      data: refreshResult?.error?.data || { message: "Session expired. Please log in again." },
+    },
+  };
+};
+
 const baseQueryWithReauth = async (args, api, extraOptions) => {
   const requestUrl = typeof args === "string" ? args : args?.url;
   const isCsrfRequest = requestUrl === CSRF_URL;
@@ -81,46 +128,18 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
   }
 
   if (result?.error?.status === 401 && !isRefreshRequest) {
-    await ensureCsrfToken(api, extraOptions);
-    const refreshResult = await rawBaseQuery(
-      {
-        url: `${USERS_URL}/refresh`,
-        method: "POST",
-      },
-      api,
-      extraOptions
-    );
-    updateCachedCsrfToken(refreshResult);
+    if (!refreshPromise) {
+      refreshPromise = refreshSession(api, extraOptions).finally(() => {
+        refreshPromise = null;
+      });
+    }
 
-    if (!refreshResult?.error && refreshResult?.data?.token) {
-      const currentUserInfo = api.getState().auth.userInfo;
-      if (!currentUserInfo) {
-        csrfToken = null;
-        api.dispatch(logout());
-        return {
-          error: {
-            status: 401,
-            data: { message: "Session expired. Please log in again." },
-          },
-        };
-      }
-
-      api.dispatch(
-        setCredentials({
-          ...currentUserInfo,
-          token: refreshResult.data.token,
-        })
-      );
+    const refreshState = await refreshPromise;
+    if (refreshState.ok) {
       result = await rawBaseQuery(args, api, extraOptions);
+      updateCachedCsrfToken(result);
     } else {
-      csrfToken = null;
-      api.dispatch(logout());
-      return {
-        error: {
-          status: 401,
-          data: { message: "Session expired. Please log in again." },
-        },
-      };
+      return { error: refreshState.error };
     }
   }
 
