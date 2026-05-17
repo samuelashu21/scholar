@@ -128,11 +128,11 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
   }
 
   if (result?.error?.status === 401 && !isRefreshRequest) {
-    if (!refreshPromise) {
-      refreshPromise = refreshSession(api, extraOptions).finally(() => {
+    refreshPromise =
+      refreshPromise ||
+      refreshSession(api, extraOptions).finally(() => {
         refreshPromise = null;
       });
-    }
 
     const refreshState = await refreshPromise;
     if (refreshState.ok) {
